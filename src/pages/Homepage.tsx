@@ -166,14 +166,14 @@ export default function Homepage() {
 
             {/* Actions */}
             <div className="flex items-center space-x-4">
-              <Link to="./Login">
+              <Link to="/auth/login">
                 <Button variant="ghost" size="sm" className="hidden md:flex">
                   <User className="w-5 h-5 mr-2" />
                   Sign In
                 </Button>
               </Link>
 
-              <Link to="./Register">
+              <Link to="/auth/register">
                 <Button
                   variant="outline"
                   size="sm"
@@ -219,12 +219,12 @@ export default function Homepage() {
                   <Search className="absolute right-3 top-3 w-5 h-5 text-gray-400" />
                 </div>
                 <div className="flex space-x-2">
-                  <Link to="./Login" className="flex-1">
+                  <Link to="/auth/login" className="flex-1">
                     <Button variant="ghost" className="w-full">
                       Sign In
                     </Button>
                   </Link>
-                  <Link to="./Register" className="flex-1">
+                  <Link to="/auth/register" className="flex-1">
                     <Button variant="outline" className="w-full bg-transparent">
                       Sign Up
                     </Button>
