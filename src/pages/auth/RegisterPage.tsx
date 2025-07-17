@@ -1,6 +1,17 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Eye, EyeOff, Mail, Lock, User, ArrowLeft } from "lucide-react";
+import type React from "react";
+
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  Eye,
+  EyeOff,
+  Mail,
+  Lock,
+  User,
+  ArrowLeft,
+  CheckCircle,
+} from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +24,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+// import { ToastContainer } from "@/components/ui/toast";
+import api from "@/utils/axios";
+import axios from "axios";
 
 export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -28,6 +43,25 @@ export default function RegisterPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [isPageLoaded, setIsPageLoaded] = useState(false);
+  const [passwordStrength, setPasswordStrength] = useState(0);
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    setIsPageLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    // Calculate password strength
+    const password = formData.password;
+    let strength = 0;
+    if (password.length >= 6) strength += 1;
+    if (password.match(/[a-z]/) && password.match(/[A-Z]/)) strength += 1;
+    if (password.match(/\d/)) strength += 1;
+    if (password.match(/[^a-zA-Z\d]/)) strength += 1;
+    setPasswordStrength(strength);
+  }, [formData.password]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -69,56 +103,129 @@ export default function RegisterPage() {
     e.preventDefault();
     if (!validateForm()) return;
     setIsLoading(true);
+
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("Registered:", formData);
-    } catch (error) {
-      console.error("Error:", error);
+      await api.post("/auth/register", {
+        username: formData.fullName,
+        email: formData.email,
+        password: formData.password,
+      });
+
+      //   toast.success("Registration successful!", "Welcome to FashionStore! Please log in to continue.")
+      toast.success("Registration successful!", {
+        description: "Welcome to FashionStore! Please log in to continue.",
+      });
+
+      setTimeout(() => {
+        navigate("/auth/login");
+      }, 2000);
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.data?.message) {
+          toast.error("Registration failed", error.response.data.message);
+          setErrors({ email: error.response.data.message });
+        } else {
+          //   toast.error(
+          //     "Registration failed",
+          //     "Please try again with different information"
+          //   );
+          toast.error("Registration failed", {
+            description: "Please try again with different information",
+          });
+          setErrors({ email: "Registration failed. Please try again." });
+        }
+      } else {
+        console.error("Unexpected error:", error);
+        // toast.error("Error", "An unexpected error occurred");
+        toast.error("Error", { description: "An unexpected error occurred" });
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
+  const getPasswordStrengthColor = () => {
+    switch (passwordStrength) {
+      case 0:
+      case 1:
+        return "bg-red-500";
+      case 2:
+        return "bg-yellow-500";
+      case 3:
+        return "bg-blue-500";
+      case 4:
+        return "bg-green-500";
+      default:
+        return "bg-gray-300";
+    }
+  };
+
+  const getPasswordStrengthText = () => {
+    switch (passwordStrength) {
+      case 0:
+      case 1:
+        return "Weak";
+      case 2:
+        return "Fair";
+      case 3:
+        return "Good";
+      case 4:
+        return "Strong";
+      default:
+        return "";
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
+    <div
+      className={`min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4 transition-opacity duration-1000 ${
+        isPageLoaded ? "opacity-100" : "opacity-0"
+      }`}
+    >
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-center">
-        <div className="hidden lg:block text-center space-y-6">
-          <Link to="/" className="inline-flex items-center space-x-2 mb-8">
-            <ArrowLeft className="w-5 h-5 text-blue-600" />
-            <span className="text-blue-600 hover:text-blue-700">
+        <div className="hidden lg:block text-center space-y-6 animate-in slide-in-from-left duration-1000">
+          <Link
+            to="/"
+            className="inline-flex items-center space-x-2 mb-8 group"
+          >
+            <ArrowLeft className="w-5 h-5 text-blue-600 group-hover:-translate-x-1 transition-transform duration-200" />
+            <span className="text-blue-600 hover:text-blue-700 transition-colors duration-200">
               Back to homepage
             </span>
           </Link>
           <div className="space-y-4">
-            <div className="flex items-center justify-center space-x-2">
-              <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
+            <div className="flex items-center justify-center space-x-2 group">
+              <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                 <span className="text-white font-bold text-2xl">F</span>
               </div>
-              <span className="text-3xl font-bold text-gray-900">
+              <span className="text-3xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors duration-300">
                 FashionStore
               </span>
             </div>
-            <h1 className="text-4xl font-bold text-gray-900">Join us now!</h1>
-            <p className="text-xl text-gray-600 max-w-md mx-auto">
-              Create an account to start your fashion shopping
+            <h1 className="text-4xl font-bold text-gray-900 animate-in slide-in-from-bottom duration-1000 delay-200">
+              Join us now!
+            </h1>
+            <p className="text-xl text-gray-600 max-w-md mx-auto animate-in slide-in-from-bottom duration-1000 delay-300">
+              Create an account to start your fashion shopping journey
             </p>
           </div>
-          <div className="relative">
+          <div className="relative animate-in slide-in-from-bottom duration-1000 delay-500">
             <img
               src="https://images.unsplash.com/photo-1585386959984-a4155224a1b5?w=400&h=400&fit=crop"
               alt="Fashion Registration"
               width={400}
               height={400}
-              className="mx-auto rounded-lg shadow-lg"
+              className="mx-auto rounded-lg shadow-lg hover:scale-105 transition-transform duration-500"
             />
-            <div className="absolute -bottom-4 -left-4 bg-green-400 text-white p-3 rounded-lg shadow-lg">
+            <div className="absolute -bottom-4 -left-4 bg-green-400 text-white p-3 rounded-lg shadow-lg animate-bounce">
               <div className="text-lg font-bold">Free</div>
               <div className="text-sm">Registration</div>
             </div>
           </div>
         </div>
-        <div className="w-full max-w-md mx-auto">
-          <Card className="shadow-xl border-0">
+
+        <div className="w-full max-w-md mx-auto animate-in slide-in-from-right duration-1000 delay-300">
+          <Card className="shadow-2xl border-0 hover:shadow-3xl transition-shadow duration-500">
             <CardHeader className="text-center space-y-2">
               <div className="lg:hidden flex items-center justify-center space-x-2 mb-4">
                 <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
@@ -150,13 +257,18 @@ export default function RegisterPage() {
                       placeholder="Enter your full name"
                       value={formData.fullName}
                       onChange={handleInputChange}
-                      className={`pl-10 ${
-                        errors.fullName ? "border-red-500" : ""
+                      className={`pl-10 transition-all duration-300 focus:scale-105 ${
+                        errors.fullName ? "border-red-500 animate-shake" : ""
                       }`}
                     />
+                    {formData.fullName && !errors.fullName && (
+                      <CheckCircle className="absolute right-3 top-3 h-4 w-4 text-green-500" />
+                    )}
                   </div>
                   {errors.fullName && (
-                    <p className="text-sm text-red-500">{errors.fullName}</p>
+                    <p className="text-sm text-red-500 animate-in slide-in-from-left duration-300">
+                      {errors.fullName}
+                    </p>
                   )}
                 </div>
 
@@ -172,13 +284,20 @@ export default function RegisterPage() {
                       placeholder="Enter your email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      className={`pl-10 ${
-                        errors.email ? "border-red-500" : ""
+                      className={`pl-10 transition-all duration-300 focus:scale-105 ${
+                        errors.email ? "border-red-500 animate-shake" : ""
                       }`}
                     />
+                    {formData.email &&
+                      !errors.email &&
+                      /\S+@\S+\.\S+/.test(formData.email) && (
+                        <CheckCircle className="absolute right-3 top-3 h-4 w-4 text-green-500" />
+                      )}
                   </div>
                   {errors.email && (
-                    <p className="text-sm text-red-500">{errors.email}</p>
+                    <p className="text-sm text-red-500 animate-in slide-in-from-left duration-300">
+                      {errors.email}
+                    </p>
                   )}
                 </div>
 
@@ -194,14 +313,14 @@ export default function RegisterPage() {
                       placeholder="Enter your password"
                       value={formData.password}
                       onChange={handleInputChange}
-                      className={`pl-10 pr-10 ${
-                        errors.password ? "border-red-500" : ""
+                      className={`pl-10 pr-10 transition-all duration-300 focus:scale-105 ${
+                        errors.password ? "border-red-500 animate-shake" : ""
                       }`}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 transition-colors duration-200"
                     >
                       {showPassword ? (
                         <EyeOff className="h-4 w-4" />
@@ -210,8 +329,34 @@ export default function RegisterPage() {
                       )}
                     </button>
                   </div>
+                  {formData.password && (
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span>Password strength:</span>
+                        <span
+                          className={`font-medium ${
+                            passwordStrength >= 3
+                              ? "text-green-600"
+                              : passwordStrength >= 2
+                              ? "text-yellow-600"
+                              : "text-red-600"
+                          }`}
+                        >
+                          {getPasswordStrengthText()}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-1">
+                        <div
+                          className={`h-1 rounded-full transition-all duration-500 ${getPasswordStrengthColor()}`}
+                          style={{ width: `${(passwordStrength / 4) * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  )}
                   {errors.password && (
-                    <p className="text-sm text-red-500">{errors.password}</p>
+                    <p className="text-sm text-red-500 animate-in slide-in-from-left duration-300">
+                      {errors.password}
+                    </p>
                   )}
                 </div>
 
@@ -227,8 +372,10 @@ export default function RegisterPage() {
                       placeholder="Re-enter your password"
                       value={formData.confirmPassword}
                       onChange={handleInputChange}
-                      className={`pl-10 pr-10 ${
-                        errors.confirmPassword ? "border-red-500" : ""
+                      className={`pl-10 pr-10 transition-all duration-300 focus:scale-105 ${
+                        errors.confirmPassword
+                          ? "border-red-500 animate-shake"
+                          : ""
                       }`}
                     />
                     <button
@@ -236,7 +383,7 @@ export default function RegisterPage() {
                       onClick={() =>
                         setShowConfirmPassword(!showConfirmPassword)
                       }
-                      className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 transition-colors duration-200"
                     >
                       {showConfirmPassword ? (
                         <EyeOff className="h-4 w-4" />
@@ -244,9 +391,13 @@ export default function RegisterPage() {
                         <Eye className="h-4 w-4" />
                       )}
                     </button>
+                    {formData.confirmPassword &&
+                      formData.password === formData.confirmPassword && (
+                        <CheckCircle className="absolute right-10 top-3 h-4 w-4 text-green-500" />
+                      )}
                   </div>
                   {errors.confirmPassword && (
-                    <p className="text-sm text-red-500">
+                    <p className="text-sm text-red-500 animate-in slide-in-from-left duration-300">
                       {errors.confirmPassword}
                     </p>
                   )}
@@ -264,7 +415,9 @@ export default function RegisterPage() {
                           agreeTerms: checked as boolean,
                         }))
                       }
-                      className={errors.agreeTerms ? "border-red-500" : ""}
+                      className={`transition-all duration-200 ${
+                        errors.agreeTerms ? "border-red-500" : ""
+                      }`}
                     />
                     <Label
                       htmlFor="agreeTerms"
@@ -273,30 +426,39 @@ export default function RegisterPage() {
                       I agree to the{" "}
                       <Link
                         to="/terms"
-                        className="text-blue-600 hover:text-blue-700"
+                        className="text-blue-600 hover:text-blue-700 transition-colors duration-200"
                       >
                         Terms of Service
                       </Link>{" "}
                       and{" "}
                       <Link
                         to="/privacy"
-                        className="text-blue-600 hover:text-blue-700"
+                        className="text-blue-600 hover:text-blue-700 transition-colors duration-200"
                       >
                         Privacy Policy
                       </Link>
                     </Label>
                   </div>
                   {errors.agreeTerms && (
-                    <p className="text-sm text-red-500">{errors.agreeTerms}</p>
+                    <p className="text-sm text-red-500 animate-in slide-in-from-left duration-300">
+                      {errors.agreeTerms}
+                    </p>
                   )}
                 </div>
 
                 <Button
                   type="submit"
-                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  className="w-full bg-blue-600 hover:bg-blue-700 hover:scale-105 transition-all duration-300 relative"
                   disabled={isLoading}
                 >
-                  {isLoading ? "Creating account..." : "Create Account"}
+                  {isLoading ? (
+                    <div className="flex items-center space-x-2">
+                      <LoadingSpinner size="sm" />
+                      <span>Creating account...</span>
+                    </div>
+                  ) : (
+                    "Create Account"
+                  )}
                 </Button>
 
                 <div className="relative">
@@ -312,7 +474,7 @@ export default function RegisterPage() {
                   <Button
                     variant="outline"
                     type="button"
-                    className="bg-transparent"
+                    className="bg-transparent hover:scale-105 transition-transform duration-200"
                   >
                     <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
                       <path
@@ -337,7 +499,7 @@ export default function RegisterPage() {
                   <Button
                     variant="outline"
                     type="button"
-                    className="bg-transparent"
+                    className="bg-transparent hover:scale-105 transition-transform duration-200"
                   >
                     <svg
                       className="w-4 h-4 mr-2"
@@ -356,7 +518,7 @@ export default function RegisterPage() {
                   </span>
                   <Link
                     to="/auth/login"
-                    className="text-blue-600 hover:text-blue-700 font-medium"
+                    className="text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200"
                   >
                     Log in now
                   </Link>

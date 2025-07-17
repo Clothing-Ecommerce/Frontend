@@ -2,8 +2,8 @@
 
 import type React from "react";
 
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Mail, Lock, ArrowLeft } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { ToastContainer } from "@/components/ui/toast";
+import { useToast } from "@/hooks/useToast";
+import api from "@/utils/axios";
+import axios from "axios";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -27,6 +32,14 @@ export default function LoginPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [isPageLoaded, setIsPageLoaded] = useState(false);
+
+  const navigate = useNavigate();
+  const { toasts, toast, removeToast } = useToast();
+
+  useEffect(() => {
+    setIsPageLoaded(true);
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -67,55 +80,98 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      console.log("Login attempt:", formData);
-      // Handle successful login here
-    } catch (error) {
-      console.error("Login error:", error);
+      const response = await api.post("/auth/login", {
+        email: formData.email,
+        password: formData.password,
+      });
+
+      const { token, user } = response.data;
+
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+
+      toast.success("Login successful!", "Welcome back to FashionStore");
+
+      setTimeout(() => {
+        navigate("/");
+      }, 1500);
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.data?.message) {
+          toast.error("Login failed", error.response.data.message);
+          setErrors({ email: error.response.data.message });
+        } else {
+          toast.error(
+            "Login failed",
+            "Please check your credentials and try again"
+          );
+          setErrors({ email: "Login failed. Please try again." });
+        }
+      } else {
+        console.error("Unexpected error:", error);
+        toast.error("Error", "An unexpected error occurred");
+        setErrors({ email: "An unexpected error occurred." });
+      }
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4">
+    <div
+      className={`min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-4 transition-opacity duration-1000 ${
+        isPageLoaded ? "opacity-100" : "opacity-0"
+      }`}
+    >
+      {/* <ToastContainer toasts={toasts} onClose={removeToast} /> */}
+      <ToastContainer
+        toasts={toasts.map((toastObj) => ({
+          ...toastObj,
+          onClose: removeToast,
+        }))}
+        onClose={removeToast}
+      />
+
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-center">
         {/* Left Side - Branding */}
-        <div className="hidden lg:block">
+        <div className="hidden lg:block animate-in slide-in-from-left duration-1000">
           <div className="text-center space-y-6">
-            <Link to="/" className="inline-flex items-center space-x-2 mb-8">
-              <ArrowLeft className="w-5 h-5 text-blue-600" />
-              <span className="text-blue-600 hover:text-blue-700">
+            <Link
+              to="/"
+              className="inline-flex items-center space-x-2 mb-8 group"
+            >
+              <ArrowLeft className="w-5 h-5 text-blue-600 group-hover:-translate-x-1 transition-transform duration-200" />
+              <span className="text-blue-600 hover:text-blue-700 transition-colors duration-200">
                 Back to homepage
               </span>
             </Link>
 
             <div className="space-y-4">
-              <div className="flex items-center justify-center space-x-2">
-                <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
+              <div className="flex items-center justify-center space-x-2 group">
+                <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                   <span className="text-white font-bold text-2xl">F</span>
                 </div>
-                <span className="text-3xl font-bold text-gray-900">
+                <span className="text-3xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors duration-300">
                   FashionStore
                 </span>
               </div>
-              <h1 className="text-4xl font-bold text-gray-900">
+              <h1 className="text-4xl font-bold text-gray-900 animate-in slide-in-from-bottom duration-1000 delay-200">
                 Welcome back!
               </h1>
-              <p className="text-xl text-gray-600 max-w-md mx-auto">
+              <p className="text-xl text-gray-600 max-w-md mx-auto animate-in slide-in-from-bottom duration-1000 delay-300">
                 Sign in to continue shopping and managing your account
               </p>
             </div>
 
-            <div className="relative">
+            <div className="relative animate-in slide-in-from-bottom duration-1000 delay-500">
               <img
                 src="/placeholder.svg?height=400&width=400"
                 alt="Fashion Shopping"
                 width={400}
                 height={400}
-                className="mx-auto rounded-lg shadow-lg"
+                className="mx-auto rounded-lg shadow-lg hover:scale-105 transition-transform duration-500"
               />
-              <div className="absolute -bottom-4 -right-4 bg-yellow-400 text-black p-3 rounded-lg shadow-lg">
+              <div className="absolute -bottom-4 -right-4 bg-yellow-400 text-black p-3 rounded-lg shadow-lg animate-bounce">
                 <div className="text-lg font-bold">Special</div>
                 <div className="text-sm">Offer</div>
               </div>
@@ -124,8 +180,8 @@ export default function LoginPage() {
         </div>
 
         {/* Right Side - Login Form */}
-        <div className="w-full max-w-md mx-auto">
-          <Card className="shadow-xl border-0">
+        <div className="w-full max-w-md mx-auto animate-in slide-in-from-right duration-1000 delay-300">
+          <Card className="shadow-2xl border-0 hover:shadow-3xl transition-shadow duration-500">
             <CardHeader className="text-center space-y-2">
               <div className="lg:hidden flex items-center justify-center space-x-2 mb-4">
                 <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
@@ -156,13 +212,15 @@ export default function LoginPage() {
                       placeholder="Enter your email"
                       value={formData.email}
                       onChange={handleInputChange}
-                      className={`pl-10 ${
-                        errors.email ? "border-red-500" : ""
+                      className={`pl-10 transition-all duration-300 focus:scale-105 ${
+                        errors.email ? "border-red-500 animate-shake" : ""
                       }`}
                     />
                   </div>
                   {errors.email && (
-                    <p className="text-sm text-red-500">{errors.email}</p>
+                    <p className="text-sm text-red-500 animate-in slide-in-from-left duration-300">
+                      {errors.email}
+                    </p>
                   )}
                 </div>
 
@@ -177,14 +235,14 @@ export default function LoginPage() {
                       placeholder="Enter your password"
                       value={formData.password}
                       onChange={handleInputChange}
-                      className={`pl-10 pr-10 ${
-                        errors.password ? "border-red-500" : ""
+                      className={`pl-10 pr-10 transition-all duration-300 focus:scale-105 ${
+                        errors.password ? "border-red-500 animate-shake" : ""
                       }`}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                      className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 transition-colors duration-200"
                     >
                       {showPassword ? (
                         <EyeOff className="h-4 w-4" />
@@ -194,7 +252,9 @@ export default function LoginPage() {
                     </button>
                   </div>
                   {errors.password && (
-                    <p className="text-sm text-red-500">{errors.password}</p>
+                    <p className="text-sm text-red-500 animate-in slide-in-from-left duration-300">
+                      {errors.password}
+                    </p>
                   )}
                 </div>
 
@@ -219,7 +279,7 @@ export default function LoginPage() {
                   </div>
                   <Link
                     to="/auth/forgot-password"
-                    className="text-sm text-blue-600 hover:text-blue-700"
+                    className="text-sm text-blue-600 hover:text-blue-700 transition-colors duration-200"
                   >
                     Forgot password?
                   </Link>
@@ -227,10 +287,17 @@ export default function LoginPage() {
 
                 <Button
                   type="submit"
-                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  className="w-full bg-blue-600 hover:bg-blue-700 hover:scale-105 transition-all duration-300 relative"
                   disabled={isLoading}
                 >
-                  {isLoading ? "Logging in..." : "Login"}
+                  {isLoading ? (
+                    <div className="flex items-center space-x-2">
+                      <LoadingSpinner size="sm" />
+                      <span>Logging in...</span>
+                    </div>
+                  ) : (
+                    "Login"
+                  )}
                 </Button>
 
                 <div className="relative">
@@ -246,7 +313,7 @@ export default function LoginPage() {
                   <Button
                     variant="outline"
                     type="button"
-                    className="bg-transparent"
+                    className="bg-transparent hover:scale-105 transition-transform duration-200"
                   >
                     <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
                       <path
@@ -271,7 +338,7 @@ export default function LoginPage() {
                   <Button
                     variant="outline"
                     type="button"
-                    className="bg-transparent"
+                    className="bg-transparent hover:scale-105 transition-transform duration-200"
                   >
                     <svg
                       className="w-4 h-4 mr-2"
@@ -288,7 +355,7 @@ export default function LoginPage() {
                   <span className="text-gray-600">Don't have an account? </span>
                   <Link
                     to="/auth/register"
-                    className="text-blue-600 hover:text-blue-700 font-medium"
+                    className="text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200"
                   >
                     Register now
                   </Link>
