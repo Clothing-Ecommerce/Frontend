@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Homepage from "./pages/Homepage";
 import LoginPage from "./pages/auth/LoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
+import ProfilePage from "./pages/user/ProfilePage";
+import AllProducts from "./pages/product/ProductsPage";
 
 // import PrivateRoute from "./utils/PrivateRoute";
 // import PublicRoute from "./utils/PublicRoute";
@@ -13,6 +15,8 @@ function App() {
         <Route path="/" element={<Homepage />} />
         <Route path="/auth/login" element={<LoginPage />} />
         <Route path="/auth/register" element={<RegisterPage />} />
+        <Route path="/user/profile" element={<ProfilePage />}></Route>
+        <Route path="/products/all" element={<AllProducts />} />
 
         {/* Public routes (chưa đăng nhập) */}
         {/* <Route element={<PublicRoute />}> */}

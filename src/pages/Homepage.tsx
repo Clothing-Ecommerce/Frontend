@@ -1,7 +1,3 @@
-"use client";
-
-import type React from "react";
-
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -13,7 +9,6 @@ import {
   Star,
   Truck,
   Shield,
-  Headphones,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -23,6 +18,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ToastContainer } from "@/components/ui/toast";
 import { useToast } from "@/hooks/useToast";
 import { useAuth } from "@/hooks/useAuth";
+import FeaturesSection from "@/components/home/FeaturesSection";
+import Footer from "@/components/home/Footer";
 
 export default function Homepage() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -150,7 +147,6 @@ export default function Homepage() {
       }`}
     >
       {/* <ToastContainer toasts={toasts} onClose={removeToast} /> */}
-
       <ToastContainer
         toasts={toasts.map((toastObj) => ({
           ...toastObj,
@@ -225,9 +221,12 @@ export default function Homepage() {
             <div className="flex items-center space-x-4">
               {isAuthenticated ? (
                 <>
-                  <span className="hidden md:inline text-gray-700 font-medium animate-in fade-in duration-500">
+                  <Link
+                    to="/user/profile"
+                    className="hidden md:inline text-gray-700 font-medium animate-in fade-in duration-500 hover:text-blue-600 transition-colors"
+                  >
                     Hello, {user?.username || user?.email}
-                  </span>
+                  </Link>
                   <Button
                     onClick={handleLogout}
                     variant="ghost"
@@ -317,7 +316,6 @@ export default function Homepage() {
           </div>
         </div>
       </header>
-
       {/* Navigation */}
       <nav className="bg-gray-50 border-b">
         <div className="container mx-auto px-4">
@@ -343,7 +341,6 @@ export default function Homepage() {
           </div>
         </div>
       </nav>
-
       {/* Hero Section */}
       <section className="relative bg-gradient-to-r from-blue-600 to-purple-600 text-white overflow-hidden">
         <div className="absolute inset-0 bg-black/10"></div>
@@ -362,12 +359,14 @@ export default function Homepage() {
                 affordable prices. Shop online easily with fast delivery.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 animate-in slide-in-from-left duration-1000 delay-400">
-                <Button
-                  size="lg"
-                  className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3 hover:scale-105 transition-transform duration-200"
-                >
-                  Shop Now
-                </Button>
+                <Link to="/products/all" className="w-full sm:w-auto">
+                  <Button
+                    size="lg"
+                    className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3 hover:scale-105 transition-transform duration-200"
+                  >
+                    Shop Now
+                  </Button>
+                </Link>
                 <Button
                   size="lg"
                   variant="outline"
@@ -391,7 +390,6 @@ export default function Homepage() {
           </div>
         </div>
       </section>
-
       {/* Categories Section */}
       <section className="py-16 bg-gray-50">
         <div className="container mx-auto px-4">
@@ -430,7 +428,6 @@ export default function Homepage() {
           </div>
         </div>
       </section>
-
       {/* Featured Products */}
       <section className="py-16">
         <div className="container mx-auto px-4">
@@ -498,134 +495,22 @@ export default function Homepage() {
             ))}
           </div>
           <div className="text-center mt-8 animate-in fade-in duration-1000 delay-500">
-            <Button
-              variant="outline"
-              size="lg"
-              className="px-8 hover:scale-105 transition-transform duration-200 bg-transparent"
-            >
-              View All Products
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-16 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                icon: Truck,
-                title: "Free Shipping",
-                desc: "Free shipping on orders over $50",
-                color: "blue",
-              },
-              {
-                icon: Shield,
-                title: "Quality Guarantee",
-                desc: "Committed to the best product quality and service",
-                color: "green",
-              },
-              {
-                icon: Headphones,
-                title: "24/7 Support",
-                desc: "Customer support team always ready to serve",
-                color: "purple",
-              },
-            ].map((feature, index) => {
-              const IconComponent = feature.icon;
-              return (
-                <div
-                  key={index}
-                  className="text-center group animate-in slide-in-from-bottom duration-1000"
-                  style={{ animationDelay: `${index * 200}ms` }}
-                >
-                  <div
-                    className={`w-16 h-16 bg-${feature.color}-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform duration-300`}
-                  >
-                    <IconComponent
-                      className={`w-8 h-8 text-${feature.color}-600`}
-                    />
-                  </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors duration-200">
-                    {feature.title}
-                  </h3>
-                  <p className="text-gray-600">{feature.desc}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="animate-in slide-in-from-left duration-1000">
-              <div className="flex items-center space-x-2 mb-4">
-                <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold">F</span>
-                </div>
-                <span className="text-xl font-bold">FashionStore</span>
-              </div>
-              <p className="text-gray-400 mb-4">
-                Leading online fashion platform, bringing you an amazing
-                shopping experience.
-              </p>
-            </div>
-            {[
-              {
-                title: "Categories",
-                links: ["T-Shirts", "Shirts", "Jeans", "Dresses"],
-              },
-              {
-                title: "Support",
-                links: ["Contact", "Shipping", "Returns", "FAQ"],
-              },
-            ].map((section, index) => (
-              <div
-                key={section.title}
-                className="animate-in slide-in-from-bottom duration-1000"
-                style={{ animationDelay: `${(index + 1) * 200}ms` }}
+            <Link to="/products/all" className="w-full sm:w-auto">
+              <Button
+                variant="outline"
+                size="lg"
+                className="px-8 hover:scale-105 transition-transform duration-200 bg-transparent"
               >
-                <h4 className="text-lg font-semibold mb-4">{section.title}</h4>
-                <ul className="space-y-2 text-gray-400">
-                  {section.links.map((link) => (
-                    <li key={link}>
-                      <Link
-                        to={`/${link.toLowerCase()}`}
-                        className="hover:text-white transition-colors duration-200"
-                      >
-                        {link}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-            <div className="animate-in slide-in-from-right duration-1000 delay-600">
-              <h4 className="text-lg font-semibold mb-4">Follow Us</h4>
-              <p className="text-gray-400 mb-4">
-                Subscribe to get the latest news and offers
-              </p>
-              <div className="flex space-x-2">
-                <Input
-                  type="email"
-                  placeholder="Your email"
-                  className="bg-gray-800 border-gray-700 text-white focus:border-blue-500 transition-colors duration-200"
-                />
-                <Button className="bg-blue-600 hover:bg-blue-700 hover:scale-105 transition-all duration-200">
-                  Subscribe
-                </Button>
-              </div>
-            </div>
-          </div>
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400 animate-in fade-in duration-1000 delay-1000">
-            <p>&copy; 2024 FashionStore. All rights reserved.</p>
+                View All Products
+              </Button>
+            </Link>
           </div>
         </div>
-      </footer>
+      </section>
+      {/* Sử dụng FeaturesSection component */}
+      <FeaturesSection /> {/* */}
+      {/* Sử dụng Footer component */}
+      <Footer /> {/* */}
     </div>
   );
 }

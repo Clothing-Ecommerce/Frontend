@@ -8,6 +8,7 @@ export const useAuth = () => {
     if (!userData) return null;
     try {
       return JSON.parse(userData);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       return null;
     }
@@ -19,7 +20,7 @@ export const useAuth = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     // sử dụng tạm
-    window.location.href = "/auth/login"; // hoặc dùng useNavigate()
+    window.location.href = "/"; // hoặc dùng useNavigate()
 
     // kiểm tra lại
     // const navigate = useNavigate();
