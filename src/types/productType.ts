@@ -3,7 +3,7 @@ export interface Category {
   category_id: number;
   name: string;
   description: string | null;
-  status: 'Pending' | 'Approved' | 'Rejected'; // Sử dụng enum nếu biết trước giá trị
+  status: "Pending" | "Approved" | "Rejected"; // Sử dụng enum nếu biết trước giá trị
 }
 
 export interface Brand {
@@ -18,32 +18,42 @@ export interface Seller {
   email: string;
 }
 
+export interface ColorOption {
+  name: string;
+  value: string;
+}
+
+export interface Specification {
+  [key: string]: string;
+}
+
 // Định nghĩa interface Product chính xác theo dữ liệu từ backend
 export interface Product {
-  product_id: number;
+  productId: number;
   name: string;
-  description: string | null;
+  description: string;
   price: number;
-  stock: number;
-  image_url: string | null;
-  category_id: number;
-  seller_id: number;
-  brand_id: number | null;
-  created_at: string; // ISO 8601 string từ DateTime của Prisma
-  updated_at: string; // ISO 8601 string từ DateTime của Prisma
+  originalPrice: number | null;
+  inStock: boolean;
+  stockCount: number;
+  rating: number;
+  reviewsCount: number;
+  isNew: boolean;
+  isSale: boolean;
 
-  // Các mối quan hệ đã được include trong ProductService
-  category?: Category; // Đặt optional nếu có thể null hoặc không luôn được include
-  brand?: Brand;       // Đặt optional nếu có thể null hoặc không luôn được include
-  seller?: Seller;     // Đặt optional nếu có thể null hoặc không luôn được include
+  images: string[];
+  colors: ColorOption[];
+  sizes: string[];
+  features: string[];
+  
+  specifications: Specification;
+  categoryId: number;
+  brandId: number;
+  sellerId: number;
+  createdAt: string;
+  updatedAt: string;
 
-  // // Các trường cũ từ data/products.ts mà bạn cần giữ lại cho các component frontend hiện tại
-  // // hoặc bạn sẽ phải thay đổi các component để sử dụng trường từ API trực tiếp
-  id: number; // Ánh xạ từ product_id
-  image: string; // Ánh xạ từ image_url
-  rating: number; // Có thể cần tính toán ở backend hoặc frontend
-  reviews: number; // Có thể cần tính toán ở backend hoặc frontend
-  isNew: boolean; // Có thể tính toán ở frontend dựa vào created_at
-  isSale: boolean; // Có thể cần logic riêng
-  originalPrice: number | null; // Cần thêm logic hoặc trường này vào backend nếu muốn hiển thị
+  category?: Category;
+  brand?: Brand;
+  seller?: Seller;
 }

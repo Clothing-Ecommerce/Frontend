@@ -4,6 +4,7 @@ import LoginPage from "./pages/auth/LoginPage";
 import RegisterPage from "./pages/auth/RegisterPage";
 import ProfilePage from "./pages/user/ProfilePage";
 import AllProducts from "./pages/product/ProductsPage";
+import ProductDetailPage from "./pages/product/ProductDetailsPage";
 
 // import PrivateRoute from "./utils/PrivateRoute";
 // import PublicRoute from "./utils/PublicRoute";
@@ -17,6 +18,7 @@ function App() {
         <Route path="/auth/register" element={<RegisterPage />} />
         <Route path="/user/profile" element={<ProfilePage />}></Route>
         <Route path="/products/all" element={<AllProducts />} />
+        <Route path="/products/:id" element={<ProductDetailPage />} />
 
         {/* Public routes (chưa đăng nhập) */}
         {/* <Route element={<PublicRoute />}> */}

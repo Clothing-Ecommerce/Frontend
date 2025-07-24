@@ -25,7 +25,7 @@ export function ProductListItem({ product }: ProductListItemProps) {
           <div className="flex p-6 gap-6">
             <div className="relative flex-shrink-0">
               <img
-                src={product.image_url || "/placeholder.svg"} // Sử dụng image_url
+                src={product.images?.[0] || "/placeholder.svg"}
                 alt={product.name}
                 width={150}
                 height={150}
@@ -46,7 +46,7 @@ export function ProductListItem({ product }: ProductListItemProps) {
             </div>
             <div className="flex-1">
               <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2 hover:text-blue-600 transition-colors">
-                <Link to={`/products/${product.product_id}`}>{product.name}</Link> {/* Sử dụng product_id */}
+                <Link to={`/products/${product.productId}`}>{product.name}</Link> {/* Sử dụng product_id */}
               </h3>
               <p className="text-sm text-gray-600 mb-2">Brand: {product.brand?.name || "Unknown Brand"}</p> {/* Sử dụng product.brand?.name */}
               <p className="text-gray-700 text-sm line-clamp-3 mb-4">
@@ -88,7 +88,7 @@ export function ProductListItem({ product }: ProductListItemProps) {
                     </span>
                   )}
                 </div>
-                <Link to={`/products/${product.product_id}`}> {/* Sử dụng product_id */}
+                <Link to={`/products/${product.productId}`}> {/* Sử dụng product_id */}
                   <Button>View Details</Button>
                 </Link>
               </div>

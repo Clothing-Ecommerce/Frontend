@@ -45,7 +45,7 @@ export function ProductFilters({
   priceRange,
   setPriceRange,
   clearFilters,
-  showFilters,
+  // showFilters,
   availableCategories, // Nhận qua props
   availableBrands,     // Nhận qua props
 }: ProductFiltersProps) {

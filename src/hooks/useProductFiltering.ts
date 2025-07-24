@@ -1,6 +1,5 @@
 // hooks/useProductFiltering.ts
 import { useState, useMemo } from "react";
-// import { products } from "@/data/products"; // Xóa hoặc comment dòng này
 import type { Product } from "@/types/productType"; // Import kiểu Product
 
 // Chỉnh sửa hook để nhận products làm tham số
@@ -55,8 +54,8 @@ export const useProductFiltering = (products: Product[]) => { // Nhận products
         currentProducts.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
         break;
       case "newest":
-        // Sort by created_at (most recent first)
-        currentProducts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        // Sort by createdAt (most recent first)
+        currentProducts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         break;
       case "featured":
       default:

@@ -25,7 +25,7 @@ export function ProductCard({ product }: ProductCardProps) {
         <CardContent className="p-0">
           <div className="relative">
             <img
-              src={product.image_url || "/placeholder.svg"} // Sử dụng image_url
+              src={product.images?.[0] || "/placeholder.svg"}
               alt={product.name}
               width={300}
               height={300}
@@ -95,7 +95,7 @@ export function ProductCard({ product }: ProductCardProps) {
                   </span>
                 )}
               </div>
-              <Link to={`/products/${product.product_id}`}>
+              <Link to={`/products/${product.productId}`}>
                 <Button size="sm">View</Button>
               </Link>
             </div>

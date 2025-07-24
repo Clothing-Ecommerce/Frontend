@@ -27,43 +27,16 @@ export default function ProductsPage() {
         setError(null); // Reset lỗi trước khi fetch mới
 
         // Sử dụng instance Axios
-        const response = await api.get("/products/all"); // Endpoint API
+        const productsResponse = await api.get("/products/all");
 
-        if (response.status < 200 || response.status >= 300) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
+        if (productsResponse.status < 200 || productsResponse.status >= 300) {
+          throw new Error(`HTTP error! Status: ${productsResponse.status}`);
         }
 
         // Dữ liệu từ Axios nằm trong `response.data`
-        const rawProducts: Product[] = response.data;
+        const rawProducts: Product[] = productsResponse.data;
 
-        // Ánh xạ dữ liệu từ API sang định dạng frontend mong đợi
-        const formattedProducts = rawProducts.map((p) => ({
-          ...p,
-          id: p.product_id, // Ánh xạ product_id sang id
-          image: p.image_url || "/placeholder.svg", // Ánh xạ image_url sang image, cung cấp fallback
-
-          // Các trường này không có sẵn từ API Product model của bạn, cần xử lý:
-          // Bạn có thể fetch/tính toán rating/reviews từ Comment model hoặc gán giá trị mặc định
-          rating: 4.5, // Gán tạm giá trị mặc định, cần logic thực tế
-          reviews: 0, // Gán tạm giá trị mặc định, cần logic thực tế
-
-          // Giữ nguyên category và brand là object, thêm categoryName/brandName để hiển thị
-          category: p.category, // giữ nguyên kiểu object
-          brand: p.brand, // giữ nguyên kiểu object
-          categoryName: p.category?.name || "Unknown Category", // tên category để hiển thị
-          brandName: p.brand?.name || "Unknown Brand", // tên brand để hiển thị
-
-          // category: p.category?.name || "Unknown Category", // Lấy tên category
-          // brand: p.brand?.name || "Unknown Brand", // Lấy tên brand
-
-          // Các trường này cũng không có sẵn, cần logic để xác định
-          isNew:
-            new Date().getTime() - new Date(p.created_at).getTime() <
-            30 * 24 * 60 * 60 * 1000, // Mới trong 30 ngày
-          isSale: false, // Giả định không sale, bạn cần thêm logic này
-          originalPrice: null, // Giả định không có originalPrice, bạn cần thêm trường này vào DB/API nếu muốn hiển thị
-        }));
-        setProducts(formattedProducts);
+        setProducts(rawProducts);
 
         // Fetch Categories
         const categoriesResponse = await api.get("/categories/all");
@@ -181,10 +154,10 @@ export default function ProductsPage() {
               >
                 {filteredProducts.map((product) =>
                   viewMode === "grid" ? (
-                    <ProductCard key={product.product_id} product={product} /> // key dùng product_id
+                    <ProductCard key={product.productId} product={product} /> // key dùng product_id
                   ) : (
                     <ProductListItem
-                      key={product.product_id}
+                      key={product.productId}
                       product={product}
                     /> // key dùng product_id
                   )
