@@ -1,172 +1,538 @@
-// pages/ProductsPage.tsx
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
-import { Header } from "@/components/layout/HeaderProductPage";
-import { useProductFiltering } from "@/hooks/useProductFiltering";
-import { ProductFilters } from "@/components/products/ProductFilter";
-import { ProductToolbar } from "@/components/products/ProductToolbar";
-import { ProductCard } from "@/components/products/ProductCard";
-import { ProductListItem } from "@/components/products/ProductListItem";
-import { NoProductsFound } from "@/components/products/NoProductsFound";
-import type { Product, Category, Brand } from "@/types/productType";
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Heart, Filter, Grid, List, Star } from "lucide-react";
 import api from "@/utils/axios";
+import type { BrandOption, CategoryOption, Product } from "@/types/productType";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
+import { formatPrice } from "@/utils/formatPrice";
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedBrand, setSelectedBrand] = useState<string>("all");
+  const [priceRange, setPriceRange] = useState([0, 500]);
+  const [sortBy, setSortBy] = useState("featured");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showFilters, setShowFilters] = useState(false);
+  const [filters, setFilters] = useState({
+    isNew: false,
+    isSale: false,
+    isBestSeller: false,
+  });
+  // State cho dữ liệu từ API
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
+  const [brands, setBrands] = useState<BrandOption[]>([]);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [loading, setLoading] = useState(false);
 
+  // Gọi API categories và brands khi component mount
+  // useEffect(() => {
+  //   const fetchCategoriesAndBrands = async () => {
+  //     try {
+  //       const [categoriesRes, brandsRes] = await Promise.all([
+  //         api.get("/categories"),
+  //         api.get("/brands"),
+  //       ]);
+  //       console.log("Categories data:", categoriesRes.data); // Debug
+  //       console.log("Brands data:", brandsRes.data); // Debug
+  //       setCategories(categoriesRes.data);
+  //       setBrands(brandsRes.data);
+  //     } catch (error) {
+  //       console.error("Error fetching categories or brands:", error);
+  //     }
+  //   };
+  //   fetchCategoriesAndBrands();
+  // }, []);
   useEffect(() => {
-    const fetchAllData = async () => {
+    const fetchCategoriesAndBrands = async () => {
       try {
-        setLoading(true);
-        setError(null); // Reset lỗi trước khi fetch mới
+        const [categoriesRes, brandsRes] = await Promise.all([
+          api.get("/categories/"),
+          api.get("/brands/"),
+        ]);
+        console.log("Categories data:", categoriesRes.data);
+        console.log("Brands data:", brandsRes.data);
 
-        // Sử dụng instance Axios
-        const productsResponse = await api.get("/products/all");
+        // brandsRes.data sẽ là một mảng chuỗi (e.g., ['All Brands', 'Brand A', 'Brand B'])
+        setBrands(brandsRes.data as BrandOption[]);
+        setCategories(categoriesRes.data as CategoryOption[]);
+      } catch (error) {
+        console.error("Error fetching categories or brands:", error);
+      }
+    };
+    fetchCategoriesAndBrands();
+  }, []);
 
-        if (productsResponse.status < 200 || productsResponse.status >= 300) {
-          throw new Error(`HTTP error! Status: ${productsResponse.status}`);
-        }
+  // Gọi API products khi các filter thay đổi
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        // const params = {
+        //   search: searchQuery,
+        //   category: selectedCategory,
+        //   brand: selectedBrand, // Gửi tên thương hiệu, không cần chuyển thành null
+        //   minPrice: priceRange[0] > 0 ? priceRange[0] : null,
+        //   maxPrice: priceRange[1] < 500 ? priceRange[1] : null,
+        //   isNew: filters.isNew ? "true" : "false",
+        //   isSale: filters.isSale ? "true" : "false",
+        //   isBestSeller: filters.isBestSeller ? "true" : "false",
+        //   sortBy,
+        // };
+        // console.log("Fetching products with params:", params);
+        // const productsRes = await api.get("/products/", { params });
 
-        // Dữ liệu từ Axios nằm trong `response.data`
-        const rawProducts: Product[] = productsResponse.data;
+        const params: Record<string, unknown> = {
+          search: searchQuery || undefined,
+          category: selectedCategory !== "all" ? selectedCategory : undefined,
+          brand: selectedBrand !== "all" ? selectedBrand : undefined,
+          sortBy,
+          isNew: filters.isNew ? "true" : undefined,
+          isSale: filters.isSale ? "true" : undefined,
+          isBestSeller: filters.isBestSeller ? "true" : undefined,
+        };
+        if (priceRange[0] > 0) params.minPrice = priceRange[0];
+        if (priceRange[1] < 500) params.maxPrice = priceRange[1];
 
-        setProducts(rawProducts);
+        const productsRes = await api.get("/products/", { params });
+        console.log("Products data:", productsRes.data);
 
-        // Fetch Categories
-        const categoriesResponse = await api.get("/categories/all");
-        if (
-          categoriesResponse.status < 200 ||
-          categoriesResponse.status >= 300
-        ) {
-          throw new Error(
-            `HTTP error fetching categories! Status: ${categoriesResponse.status}`
-          );
-        }
-        setCategories(categoriesResponse.data);
-
-        // Fetch Brands
-        const brandsResponse = await api.get("/brands/all");
-        if (brandsResponse.status < 200 || brandsResponse.status >= 300) {
-          throw new Error(
-            `HTTP error fetching brands! Status: ${brandsResponse.status}`
-          );
-        }
-        setBrands(brandsResponse.data);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } catch (e: any) {
-        console.error("Error fetching products:", e);
-        setError(e.message || "An unexpected error occurred.");
+        setProducts(productsRes.data.products);
+        setTotalProducts(productsRes.data.total);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+        setProducts([]);
+        setTotalProducts(0);
       } finally {
         setLoading(false);
       }
     };
-
-    fetchAllData();
-  }, []); // [] đảm bảo effect chỉ chạy một lần khi component mount
-
-  // Truyền `products` (dữ liệu đã fetch) vào hook useProductFiltering
-  const {
+    fetchProducts();
+  }, [
     searchQuery,
-    setSearchQuery,
     selectedCategory,
-    setSelectedCategory,
     selectedBrand,
-    setSelectedBrand,
     priceRange,
-    setPriceRange,
     sortBy,
-    setSortBy,
-    filteredProducts,
-    clearFilters,
-  } = useProductFiltering(products); // Truyền `products` vào hook
-
-  // const handleClearFilters = () => {
-  //   setSearchQuery("");
-  //   setSelectedCategory("All");
-  //   setSelectedBrand("All");
-  //   setPriceRange([0, 2500000]);
-  //   // Nếu bạn muốn refetch sản phẩm gốc sau khi clear filters, bạn có thể gọi fetchProducts() ở đây.
-  // };
+    filters,
+  ]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       <Header />
 
-      <div className="container mx-auto px-4 py-8">
+      {/* Breadcrumb */}
+      <div className="bg-gray-50 px-4 py-3">
+        <div className="max-w-7xl mx-auto">
+          <nav className="text-sm text-gray-600">
+            <Link to="/" className="hover:text-gray-900">
+              Home
+            </Link>
+            <span className="mx-2">/</span>
+            <span className="text-gray-900">Products</span>
+          </nav>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className={`lg:w-80 ${showFilters ? "block" : "hidden lg:block"}`}
+          {/* Sidebar Filters */}
+          <div
+            className={`lg:w-64 ${showFilters ? "block" : "hidden lg:block"}`}
           >
-            <ProductFilters
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              selectedCategory={selectedCategory}
-              setSelectedCategory={setSelectedCategory}
-              selectedBrand={selectedBrand}
-              setSelectedBrand={setSelectedBrand}
-              priceRange={priceRange}
-              setPriceRange={setPriceRange}
-              clearFilters={clearFilters}
-              showFilters={showFilters}
-              availableCategories={categories}
-              availableBrands={brands}
-            />
-          </motion.div>
+            <div className="bg-white border border-gray-200 rounded-lg p-6 sticky top-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Filters
+              </h3>
 
+              {/* Search */}
+              <div className="mb-6">
+                <Label
+                  htmlFor="search"
+                  className="text-sm font-medium text-gray-700 mb-2 block"
+                >
+                  Search Products
+                </Label>
+                <Input
+                  id="search"
+                  type="text"
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Categories */}
+              <div className="mb-6">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">
+                  Categories
+                </h4>
+                <div className="space-y-2">
+                  {categories.map((category) => (
+                    <div key={category.id} className="flex items-center">
+                      <input
+                        type="radio"
+                        id={category.id}
+                        name="category"
+                        checked={selectedCategory === category.id}
+                        onChange={() => setSelectedCategory(category.id)}
+                        className="w-4 h-4 text-amber-600 border-gray-300 focus:ring-amber-500"
+                      />
+                      <label
+                        htmlFor={category.id}
+                        className="ml-2 text-sm text-gray-600 flex-1 flex justify-between"
+                      >
+                        <span>{category.name}</span>
+                        <span>({category.count})</span>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Brand Filter */}
+              <div className="mb-6">
+                <Label
+                  htmlFor="brand"
+                  className="text-sm font-medium text-gray-700 mb-2 block"
+                >
+                  Brand
+                </Label>
+                <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select brand" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {brands.map((b) => (
+                      <SelectItem
+                        key={String(b.brandId)}
+                        value={String(b.brandId)}
+                      >
+                        {b.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {/* <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem key="all" value="all">
+                      All Brands
+                    </SelectItem>
+                    {brands.map((brand) => (
+                      <SelectItem
+                        key={brand.brandId}
+                        value={brand.brandId.toString()}
+                      >
+                        {brand.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select> */}
+              </div>
+
+              {/* Price Range */}
+              <div className="mb-6">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">
+                  Price Range
+                </h4>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="number"
+                    placeholder="Min"
+                    value={priceRange[0]}
+                    onChange={(e) =>
+                      setPriceRange([
+                        parseInt(e.target.value) || 0,
+                        priceRange[1],
+                      ])
+                    }
+                    className="w-20"
+                  />
+                  <span>-</span>
+                  <Input
+                    type="number"
+                    placeholder="Max"
+                    value={priceRange[1]}
+                    onChange={(e) =>
+                      setPriceRange([
+                        priceRange[0],
+                        parseInt(e.target.value) || 500,
+                      ])
+                    }
+                    className="w-20"
+                  />
+                </div>
+              </div>
+
+              {/* Special Filters */}
+              <div className="mb-6">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">
+                  Special
+                </h4>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="isNew"
+                      checked={filters.isNew}
+                      onCheckedChange={(checked) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          isNew: Boolean(checked),
+                        }))
+                      }
+                    />
+                    <Label htmlFor="isNew" className="text-sm text-gray-600">
+                      New Arrivals
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="isSale"
+                      checked={filters.isSale}
+                      onCheckedChange={(checked) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          isSale: Boolean(checked),
+                        }))
+                      }
+                    />
+                    <Label htmlFor="isSale" className="text-sm text-gray-600">
+                      On Sale
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="isBestSeller"
+                      checked={filters.isBestSeller}
+                      onCheckedChange={(checked) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          isBestSeller: Boolean(checked),
+                        }))
+                      }
+                    />
+                    <Label
+                      htmlFor="isBestSeller"
+                      className="text-sm text-gray-600"
+                    >
+                      Best Sellers
+                    </Label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content */}
           <div className="flex-1">
-            <ProductToolbar
-              filteredProductCount={filteredProducts.length}
-              totalProductCount={products.length}
-              sortBy={sortBy}
-              setSortBy={setSortBy}
-              viewMode={viewMode}
-              setViewMode={setViewMode}
-              setShowFilters={setShowFilters}
-              showFilters={showFilters}
-            />
+            {/* Toolbar */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="lg:hidden"
+                >
+                  <Filter className="w-4 h-4 mr-2" />
+                  Filters
+                </Button>
+                <p className="text-gray-600">
+                  Showing {products.length} of {totalProducts} products
+                </p>
+              </div>
 
-            {loading && (
-              <div className="text-center py-8">Đang tải sản phẩm...</div>
-            )}
-            {error && (
-              <div className="text-center py-8 text-red-500">Lỗi: {error}</div>
-            )}
+              <div className="flex items-center gap-4">
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="featured">Featured</SelectItem>
+                    <SelectItem value="newest">Newest</SelectItem>
+                    <SelectItem value="price-low">
+                      Price: Low to High
+                    </SelectItem>
+                    <SelectItem value="price-high">
+                      Price: High to Low
+                    </SelectItem>
+                    <SelectItem value="rating">Highest Rated</SelectItem>
+                  </SelectContent>
+                </Select>
 
-            {!loading && !error && filteredProducts.length === 0 && (
-              <NoProductsFound onClearFilters={clearFilters} />
-            )}
+                <div className="flex border border-gray-300 rounded-md">
+                  <Button
+                    variant={viewMode === "grid" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("grid")}
+                    className="rounded-r-none"
+                  >
+                    <Grid className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === "list" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setViewMode("list")}
+                    className="rounded-l-none"
+                  >
+                    <List className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
 
-            {!loading && !error && filteredProducts.length > 0 && (
+            {/* Products Grid */}
+            {loading ? (
+              <div className="text-center py-12">
+                <p className="text-gray-600 text-lg">Loading products...</p>
+              </div>
+            ) : (
               <div
-                className={`${
+                className={
                   viewMode === "grid"
-                    ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-6"
-                    : "grid grid-cols-1 gap-6"
-                }`}
+                    ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                    : "space-y-4"
+                }
               >
-                {filteredProducts.map((product) =>
-                  viewMode === "grid" ? (
-                    <ProductCard key={product.productId} product={product} /> // key dùng product_id
-                  ) : (
-                    <ProductListItem
-                      key={product.productId}
-                      product={product}
-                    /> // key dùng product_id
-                  )
-                )}
+                {products.map((product) => (
+                  <div
+                    key={product.productId}
+                    className={
+                      viewMode === "grid"
+                        ? "bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300"
+                        : "bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300 flex"
+                    }
+                  >
+                    <div
+                      className={
+                        viewMode === "grid"
+                          ? "relative"
+                          : "relative w-48 flex-shrink-0"
+                      }
+                    >
+                      <Link to={`/products/${product.productId}`}>
+                        <img
+                          src={product.images[0] || "/placeholder.svg"}
+                          alt={product.name}
+                          width={300}
+                          height={400}
+                          className={
+                            viewMode === "grid"
+                              ? "w-full h-64 object-cover hover:scale-105 transition-transform duration-300"
+                              : "w-full h-48 object-cover hover:scale-105 transition-transform duration-300"
+                          }
+                        />
+                      </Link>
+                      <div className="absolute top-2 left-2 flex flex-col gap-1">
+                        {product.isNew && (
+                          <span className="bg-green-500 text-white text-xs px-2 py-1 rounded">
+                            NEW
+                          </span>
+                        )}
+                        {product.isSale && (
+                          <span className="bg-red-500 text-white text-xs px-2 py-1 rounded">
+                            SALE
+                          </span>
+                        )}
+                        {/* {product.isBestSeller && (
+                          <span className="bg-amber-500 text-white text-xs px-2 py-1 rounded">
+                            BEST SELLER
+                          </span>
+                        )} */}
+                      </div>
+                      <button className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-md hover:bg-gray-50">
+                        <Heart className="w-4 h-4 text-gray-600" />
+                      </button>
+                    </div>
+                    <div className={viewMode === "grid" ? "p-4" : "p-4 flex-1"}>
+                      <Link to={`/products/${product.productId}`}>
+                        <h3 className="font-semibold text-gray-900 mb-2 hover:text-amber-600">
+                          {product.name}
+                        </h3>
+                      </Link>
+                      <p className="text-sm text-gray-600 mb-2">
+                        {product.brand?.name}
+                      </p>
+                      <div className="flex items-center gap-1 mb-2">
+                        <div className="flex">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-4 h-4 ${
+                                i < Math.floor(product.rating)
+                                  ? "text-yellow-400 fill-current"
+                                  : "text-gray-300"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="text-sm text-gray-600">
+                          ({product.reviewsCount})
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-lg font-bold text-gray-900">
+                          {formatPrice(product.price)}
+                        </span>
+                        {product.originalPrice && (
+                          <span className="text-sm text-gray-500 line-through">
+                            {formatPrice(product.originalPrice)}
+                          </span>
+                        )}
+                      </div>
+                      <Button className="w-full bg-black text-white hover:bg-gray-800">
+                        Add to Cart
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {products.length === 0 && !loading && (
+              <div className="text-center py-12">
+                <p className="text-gray-600 text-lg">
+                  No products found matching your criteria.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSelectedCategory("all");
+                    setSelectedBrand("All Brands");
+                    setPriceRange([0, 500]);
+                    setFilters({
+                      isNew: false,
+                      isSale: false,
+                      isBestSeller: false,
+                    });
+                  }}
+                  className="mt-4"
+                >
+                  Clear All Filters
+                </Button>
               </div>
             )}
           </div>
         </div>
       </div>
+      <Footer />
     </div>
   );
 }

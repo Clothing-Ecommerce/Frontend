@@ -4,7 +4,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  ArrowLeft,
   Star,
   ShoppingCart,
   Heart,
@@ -24,6 +23,8 @@ import { Link, useParams } from "react-router-dom";
 import { formatPrice } from "@/utils/formatPrice";
 import type { ColorOption, Product } from "@/types/productType";
 import api from "@/utils/axios";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>(); // Get product ID from URL
@@ -78,7 +79,7 @@ export default function ProductDetailPage() {
       }
       try {
         const response = await api.get<Product[]>(
-          `products/related?categoryId=${product.categoryId}&currentProductId=${id}`
+          `/products/related?categoryId=${product.categoryId}&currentProductId=${id}`
         );
         setRelatedProducts(response.data);
       } catch (err) {
@@ -141,43 +142,26 @@ export default function ProductDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Link
-                to="/products/all"
-                className="inline-flex items-center text-blue-600 hover:text-blue-700"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Products
-              </Link>
-              <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">CF</span>
-                </div>
-                <span className="text-xl font-bold text-gray-900">
-                  ClothingFashion
-                </span>
-              </div>
-            </div>
+      <Header />
 
-            <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="icon" className="relative">
-                <ShoppingCart className="h-5 w-5" />
-                <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
-                  3
-                </Badge>
-              </Button>
-              <Link to="/profile">
-                <Button variant="outline">Profile</Button>
-              </Link>
-            </div>
-          </div>
+      {/* Breadcrumb */}
+      <div className="bg-gray-50 px-4 py-3">
+        <div className="max-w-7xl mx-auto">
+          <nav className="text-sm text-gray-600">
+            <Link to="/" className="hover:text-gray-900">
+              Home
+            </Link>
+            <span className="mx-2">/</span>
+            <Link to="/products/all" className="hover:text-gray-900">
+              Products
+            </Link>
+            <span className="mx-2">/</span>
+            <span className="text-gray-900">{product.name}</span>
+          </nav>
         </div>
-      </header>
+      </div>
 
       <div className="container mx-auto px-4 py-8">
         <div className="grid lg:grid-cols-2 gap-12">
@@ -678,6 +662,7 @@ export default function ProductDetailPage() {
           )}
         </motion.div>
       </div>
+      <Footer />
     </div>
   );
 }

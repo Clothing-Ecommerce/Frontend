@@ -1,19 +1,19 @@
 // Định nghĩa các kiểu dữ liệu cho các mối quan hệ (nếu bạn include chúng trong API)
 export interface Category {
-  category_id: number;
+  categoryId: number;
   name: string;
   description: string | null;
   status: "Pending" | "Approved" | "Rejected"; // Sử dụng enum nếu biết trước giá trị
 }
 
 export interface Brand {
-  brand_id: number;
+  brandId: number;
   name: string;
-  logo_url: string | null;
+  logoUrl: string | null;
 }
 
 export interface Seller {
-  user_id: number;
+  userId: number;
   username: string;
   email: string;
 }
@@ -25,6 +25,17 @@ export interface ColorOption {
 
 export interface Specification {
   [key: string]: string;
+}
+
+export interface CategoryOption {
+  id: string;      // "all" | "<categoryId>"
+  name: string;
+  count: number;
+}
+
+export interface BrandOption {
+  brandId: string | number; // "all" | numeric/string id
+  name: string;
 }
 
 // Định nghĩa interface Product chính xác theo dữ liệu từ backend
@@ -41,11 +52,13 @@ export interface Product {
   isNew: boolean;
   isSale: boolean;
 
+  // isBestSeller: boolean; // sau này triển khai logic sau
+
   images: string[];
   colors: ColorOption[];
   sizes: string[];
   features: string[];
-  
+
   specifications: Specification;
   categoryId: number;
   brandId: number;

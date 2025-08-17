@@ -1,516 +1,385 @@
-import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import {
-  Search,
-  ShoppingCart,
-  User,
-  Menu,
-  X,
-  Star,
-  Truck,
-  Shield,
-} from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { ToastContainer } from "@/components/ui/toast";
-import { useToast } from "@/hooks/useToast";
-import { useAuth } from "@/hooks/useAuth";
-import FeaturesSection from "@/components/home/FeaturesSection";
-import Footer from "@/components/home/Footer";
+import { Heart, Truck, RotateCcw, Shield } from "lucide-react";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
 
-export default function Homepage() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [cartCount, setCartCount] = useState(3);
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const { user, logout, isAuthenticated } = useAuth();
-  const { toasts, toast, removeToast } = useToast();
-
-  useEffect(() => {
-    setIsLoaded(true);
-  }, []);
-
-  const categories = [
-    {
-      name: "T-Shirts",
-      image:
-        "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=200&h=200&fit=crop",
-      count: "120+ products",
-    },
-    {
-      name: "Shirts",
-      image:
-        "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=200&h=200&fit=crop",
-      count: "85+ products",
-    },
-    {
-      name: "Jeans",
-      image:
-        "https://images.unsplash.com/photo-1542272604-787c3835535d?w=200&h=200&fit=crop",
-      count: "95+ products",
-    },
-    {
-      name: "Dresses",
-      image:
-        "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=200&h=200&fit=crop",
-      count: "110+ products",
-    },
-    {
-      name: "Jackets",
-      image:
-        "https://images.unsplash.com/photo-1551028719-00167b16eac5?w=200&h=200&fit=crop",
-      count: "75+ products",
-    },
-    {
-      name: "Accessories",
-      image:
-        "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=200&h=200&fit=crop",
-      count: "150+ products",
-    },
-  ];
-
-  const featuredProducts = [
-    {
-      id: 1,
-      name: "Premium Cotton T-Shirt",
-      price: "$29.90",
-      originalPrice: "$39.90",
-      image:
-        "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=300&fit=crop",
-      rating: 4.8,
-      reviews: 124,
-      badge: "Best Seller",
-    },
-    {
-      id: 2,
-      name: "Slim Fit Jeans",
-      price: "$59.90",
-      originalPrice: "$79.90",
-      image:
-        "https://images.unsplash.com/photo-1542272604-787c3835535d?w=300&h=300&fit=crop",
-      rating: 4.9,
-      reviews: 89,
-      badge: "25% OFF",
-    },
-    {
-      id: 3,
-      name: "Floral Maxi Dress",
-      price: "$44.90",
-      originalPrice: "$59.90",
-      image:
-        "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=300&h=300&fit=crop",
-      rating: 4.7,
-      reviews: 156,
-      badge: "New",
-    },
-    {
-      id: 4,
-      name: "Business Shirt",
-      price: "$35.90",
-      originalPrice: "$45.90",
-      image:
-        "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=300&h=300&fit=crop",
-      rating: 4.6,
-      reviews: 78,
-      badge: "22% OFF",
-    },
-  ];
-
-  const handleAddToCart = (productName: string) => {
-    setCartCount((prev) => prev + 1);
-    toast.success(
-      "Added to cart!",
-      `${productName} has been added to your cart`
-    );
-  };
-
-  const handleLogout = () => {
-    logout();
-    toast.success("Logged out", "You have been successfully logged out");
-  };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      toast.info("Search", `Searching for "${searchQuery}"...`);
-    }
-  };
-
+export default function HomePage() {
   return (
-    <div
-      className={`min-h-screen bg-white transition-opacity duration-1000 ${
-        isLoaded ? "opacity-100" : "opacity-0"
-      }`}
-    >
-      {/* <ToastContainer toasts={toasts} onClose={removeToast} /> */}
-      <ToastContainer
-        toasts={toasts.map((toastObj) => ({
-          ...toastObj,
-          onClose: removeToast,
-        }))}
-        onClose={removeToast}
-      />
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-sm border-b shadow-sm transition-all duration-300">
-        <div className="container mx-auto px-4">
-          {/* Top Bar */}
-          <div className="hidden md:flex justify-between items-center py-2 text-sm text-gray-600 border-b">
-            <div className="flex items-center space-x-4">
-              <span className="flex items-center hover:text-blue-600 transition-colors duration-200">
-                <Truck className="w-4 h-4 mr-1" />
-                Free shipping on orders over $50
-              </span>
-              <span className="flex items-center hover:text-green-600 transition-colors duration-200">
-                <Shield className="w-4 h-4 mr-1" />
-                Quality guaranteed
-              </span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link
-                to="/track-order"
-                className="hover:text-blue-600 transition-colors duration-200"
-              >
-                Track Order
-              </Link>
-              <Link
-                to="/support"
-                className="hover:text-blue-600 transition-colors duration-200"
-              >
-                Support
-              </Link>
-            </div>
-          </div>
+    <div className="min-h-screen bg-white">
+      <Header />
 
-          {/* Main Header */}
-          <div className="flex items-center justify-between py-4">
-            {/* Logo */}
-            <Link to="/" className="flex items-center space-x-2 group">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                <span className="text-white font-bold text-xl">F</span>
-              </div>
-              <span className="text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors duration-300">
-                FashionStore
-              </span>
-            </Link>
-
-            {/* Search Bar */}
-            <div className="hidden md:flex flex-1 max-w-2xl mx-8">
-              <form onSubmit={handleSearch} className="relative w-full">
-                <Input
-                  type="search"
-                  placeholder="Search products, brands..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-4 pr-12 py-3 border-2 border-gray-200 rounded-full focus:border-blue-500 transition-all duration-300 focus:shadow-lg"
-                />
-                <Button
-                  type="submit"
-                  size="sm"
-                  className="absolute right-1 top-1 rounded-full px-4 hover:scale-105 transition-transform duration-200"
-                >
-                  <Search className="w-4 h-4" />
-                </Button>
-              </form>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center space-x-4">
-              {isAuthenticated ? (
-                <>
-                  <Link
-                    to="/user/profile"
-                    className="hidden md:inline text-gray-700 font-medium animate-in fade-in duration-500 hover:text-blue-600 transition-colors"
-                  >
-                    Hello, {user?.username || user?.email}
-                  </Link>
-                  <Button
-                    onClick={handleLogout}
-                    variant="ghost"
-                    size="sm"
-                    className="text-red-500 hover:text-red-600 hover:bg-red-50 transition-all duration-200"
-                  >
-                    Logout
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Link to="/auth/login">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="hidden md:flex hover:scale-105 transition-transform duration-200"
-                    >
-                      <User className="w-5 h-5 mr-2" />
-                      Sign In
-                    </Button>
-                  </Link>
-                  <Link to="/auth/register">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="hidden md:flex bg-transparent hover:scale-105 transition-transform duration-200"
-                    >
-                      Sign Up
-                    </Button>
-                  </Link>
-                </>
-              )}
-
-              <Button variant="ghost" size="sm" className="relative group">
-                <ShoppingCart className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
-                {cartCount > 0 && (
-                  <Badge className="absolute -top-2 -right-2 w-5 h-5 rounded-full p-0 flex items-center justify-center text-xs animate-pulse">
-                    {cartCount}
-                  </Badge>
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="md:hidden"
-                onClick={() => setIsMenuOpen(!isMenuOpen)}
-              >
-                {isMenuOpen ? (
-                  <X className="w-5 h-5 rotate-90 transition-transform duration-300" />
-                ) : (
-                  <Menu className="w-5 h-5 transition-transform duration-300" />
-                )}
-              </Button>
-            </div>
-          </div>
-
-          {/* Mobile Menu */}
-          <div
-            className={`md:hidden overflow-hidden transition-all duration-300 ${
-              isMenuOpen ? "max-h-96 py-4 border-t" : "max-h-0"
-            }`}
-          >
-            <div className="space-y-4">
-              <form onSubmit={handleSearch} className="relative">
-                <Input
-                  type="search"
-                  placeholder="Search products..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-4 pr-12 py-3"
-                />
-                <Search className="absolute right-3 top-3 w-5 h-5 text-gray-400" />
-              </form>
-              <div className="flex space-x-2">
-                <Link to="/auth/login" className="flex-1">
-                  <Button variant="ghost" className="w-full">
-                    Sign In
-                  </Button>
-                </Link>
-                <Link to="/auth/register" className="flex-1">
-                  <Button variant="outline" className="w-full bg-transparent">
-                    Sign Up
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-      {/* Navigation */}
-      <nav className="bg-gray-50 border-b">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-center space-x-8 py-3 overflow-x-auto">
-            {[
-              "T-Shirts",
-              "Shirts",
-              "Jeans",
-              "Dresses",
-              "Jackets",
-              "Accessories",
-            ].map((category, index) => (
-              <Link
-                key={category}
-                to={`/category/${category.toLowerCase()}`}
-                className="whitespace-nowrap text-gray-700 hover:text-blue-600 font-medium relative group transition-colors duration-200"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                {category}
-                <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-blue-600 group-hover:w-full transition-all duration-300"></span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </nav>
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-r from-blue-600 to-purple-600 text-white overflow-hidden">
-        <div className="absolute inset-0 bg-black/10"></div>
-        <div className="container mx-auto px-4 py-20 relative">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className="space-y-6 animate-in slide-in-from-left duration-1000">
-              <h1 className="text-4xl md:text-6xl font-bold leading-tight">
-                Modern
+      <section className="bg-gradient-to-r from-amber-50 to-amber-100 px-4 py-16">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+          <div className="space-y-6">
+            <div>
+              <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 leading-tight">
+                {/* men's
                 <br />
-                <span className="text-yellow-300 animate-pulse">Fashion</span>
-                <br />
-                For You
+                collection */}
+                EXPLORE
               </h1>
-              <p className="text-xl text-blue-100 max-w-lg animate-in slide-in-from-left duration-1000 delay-200">
-                Discover the latest fashion collection with high quality and
-                affordable prices. Shop online easily with fast delivery.
+              <p className="text-gray-600 mt-4 text-lg">
+                From t-shirts, jeans, jacket shirt, watches long, sunglasses
               </p>
-              <div className="flex flex-col sm:flex-row gap-4 animate-in slide-in-from-left duration-1000 delay-400">
-                <Link to="/products/all" className="w-full sm:w-auto">
-                  <Button
-                    size="lg"
-                    className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3 hover:scale-105 transition-transform duration-200"
-                  >
-                    Shop Now
-                  </Button>
-                </Link>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="border-white text-white hover:bg-white hover:text-blue-600 px-8 py-3 bg-transparent hover:scale-105 transition-all duration-200"
-                >
-                  View Collection
-                </Button>
-              </div>
             </div>
-            <div className="relative animate-in slide-in-from-right duration-1000 delay-300">
-              <img
-                src="https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&h=500&fit=crop"
-                alt="Fashion Model"
-                className="w-full h-96 object-cover rounded-lg shadow-2xl hover:scale-105 transition-transform duration-500"
-              />
-              <div className="absolute -bottom-4 -left-4 bg-yellow-400 text-black p-4 rounded-lg shadow-lg animate-bounce">
-                <div className="text-2xl font-bold">25%</div>
-                <div className="text-sm">OFF</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-      {/* Categories Section */}
-      <section className="py-16 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12 animate-in fade-in duration-1000">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Product Categories
-            </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Explore diverse fashion categories with hundreds of high-quality
-              products
-            </p>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-            {categories.map((category, index) => (
-              <Card
-                key={index}
-                className="group cursor-pointer hover:shadow-xl transition-all duration-500 hover:-translate-y-2 animate-in slide-in-from-bottom"
-                style={{ animationDelay: `${index * 100}ms` }}
-              >
-                <CardContent className="p-4 text-center">
-                  <div className="relative mb-4 overflow-hidden rounded-lg">
-                    <img
-                      src={category.image || "/placeholder.svg"}
-                      alt={category.name}
-                      className="w-full h-32 object-cover group-hover:scale-125 transition-transform duration-500"
-                    />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300"></div>
-                  </div>
-                  <h3 className="font-semibold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors duration-200">
-                    {category.name}
-                  </h3>
-                  <p className="text-sm text-gray-500">{category.count}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-      {/* Featured Products */}
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12 animate-in fade-in duration-1000">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Featured Products
-            </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Most loved products with excellent quality and attractive prices
-            </p>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featuredProducts.map((product, index) => (
-              <Card
-                key={product.id}
-                className="group cursor-pointer hover:shadow-2xl transition-all duration-500 hover:-translate-y-3 animate-in slide-in-from-bottom"
-                style={{ animationDelay: `${index * 150}ms` }}
-              >
-                <CardContent className="p-0">
-                  <div className="relative overflow-hidden rounded-t-lg">
-                    <img
-                      src={product.image || "/placeholder.svg"}
-                      alt={product.name}
-                      className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
-                    <Badge className="absolute top-3 left-3 bg-red-500 hover:bg-red-600 animate-pulse">
-                      {product.badge}
-                    </Badge>
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300"></div>
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors duration-200">
-                      {product.name}
-                    </h3>
-                    <div className="flex items-center mb-2">
-                      <div className="flex items-center">
-                        <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm text-gray-600 ml-1">
-                          {product.rating}
-                        </span>
-                      </div>
-                      <span className="text-sm text-gray-500 ml-2">
-                        ({product.reviews} reviews)
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-lg font-bold text-red-600">
-                          {product.price}
-                        </span>
-                        <span className="text-sm text-gray-500 line-through">
-                          {product.originalPrice}
-                        </span>
-                      </div>
-                    </div>
-                    <Button
-                      className="w-full bg-blue-600 hover:bg-blue-700 hover:scale-105 transition-all duration-200"
-                      onClick={() => handleAddToCart(product.name)}
-                    >
-                      Add to Cart
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <div className="text-center mt-8 animate-in fade-in duration-1000 delay-500">
             <Link to="/products/all" className="w-full sm:w-auto">
+              <Button className="bg-black text-white px-8 py-3 text-sm font-medium hover:bg-gray-800">
+                SHOP NOW
+              </Button>
+            </Link>
+          </div>
+          <div className="relative">
+            <img
+              src="/image.png?height=500&width=400"
+              alt="Man in gray blazer"
+              width={400}
+              height={500}
+              className="w-full h-auto object-cover"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="bg-white py-12 px-4">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="flex items-center gap-4 p-6 bg-gray-50 rounded-lg">
+            <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
+              <Truck className="w-6 h-6 text-amber-600" />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900">FREE SHIPPING</h3>
+              <p className="text-sm text-gray-600">
+                Free shipping on all US order or order above $200
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 p-6 bg-gray-50 rounded-lg">
+            <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
+              <RotateCcw className="w-6 h-6 text-amber-600" />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900">30 Days Return</h3>
+              <p className="text-sm text-gray-600">
+                Simply return it within 30 days for an exchange
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 p-6 bg-gray-50 rounded-lg">
+            <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
+              <Shield className="w-6 h-6 text-amber-600" />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900">100% Payment Secure</h3>
+              <p className="text-sm text-gray-600">
+                Simply return it within 30 days for an exchange
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Product Categories Grid */}
+      <section className="bg-white py-16 px-4">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+          {/* Men's Sunglasses */}
+          <div className="relative group overflow-hidden rounded-lg">
+            <img
+              src="/placeholder.svg?height=300&width=400"
+              alt="Men's Sunglasses"
+              width={400}
+              height={300}
+              className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+            <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-end p-6">
+              <p className="text-white text-sm mb-1">FOR MEN ONLINE</p>
+              <h3 className="text-white text-xl font-bold mb-3">
+                MEN'S SUNGLASSES
+              </h3>
               <Button
                 variant="outline"
-                size="lg"
-                className="px-8 hover:scale-105 transition-transform duration-200 bg-transparent"
+                className="bg-transparent border-white text-white hover:bg-white hover:text-black w-fit"
               >
-                View All Products
+                SHOP NOW
               </Button>
-            </Link>
+            </div>
+          </div>
+
+          {/* Men's Sneaker */}
+          <div className="relative group overflow-hidden rounded-lg">
+            <img
+              src="/placeholder.svg?height=300&width=400"
+              alt="Men's Sneaker"
+              width={400}
+              height={300}
+              className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+            <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-end p-6">
+              <p className="text-white text-sm mb-1">MEN'S SNEAKER</p>
+              <h3 className="text-white text-xl font-bold mb-3">
+                MEN'S SNEAKER
+              </h3>
+              <Button
+                variant="outline"
+                className="bg-transparent border-white text-white hover:bg-white hover:text-black w-fit"
+              >
+                SHOP NOW
+              </Button>
+            </div>
+          </div>
+
+          {/* Men's T-Shirt */}
+          <div className="relative group overflow-hidden rounded-lg">
+            <img
+              src="/placeholder.svg?height=300&width=400"
+              alt="Men's T-Shirt"
+              width={400}
+              height={300}
+              className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+            <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-end p-6">
+              <p className="text-white text-sm mb-1">COLLECTION OF 2019</p>
+              <h3 className="text-white text-xl font-bold mb-3">
+                MEN'S T-SHIRT
+              </h3>
+              <Button
+                variant="outline"
+                className="bg-transparent border-white text-white hover:bg-white hover:text-black w-fit"
+              >
+                SHOP NOW
+              </Button>
+            </div>
+          </div>
+
+          {/* Men's Shoes Collection */}
+          <div className="relative group overflow-hidden rounded-lg">
+            <img
+              src="/placeholder.svg?height=300&width=400"
+              alt="Men's Shoes Collection"
+              width={400}
+              height={300}
+              className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+            <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-end p-6">
+              <p className="text-white text-sm mb-1">MEN'S SHOES</p>
+              <h3 className="text-white text-xl font-bold mb-3">COLLECTION</h3>
+              <Button
+                variant="outline"
+                className="bg-transparent border-white text-white hover:bg-white hover:text-black w-fit"
+              >
+                SHOP NOW
+              </Button>
+            </div>
           </div>
         </div>
       </section>
-      {/* Sử dụng FeaturesSection component */}
-      <FeaturesSection /> {/* */}
-      {/* Sử dụng Footer component */}
-      <Footer /> {/* */}
+
+      {/* Featured Products Section */}
+      <section className="bg-gray-50 py-16 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              Best Selling Products
+            </h2>
+            <p className="text-gray-600">Discover our most popular items</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[
+              {
+                name: "Classic Blazer",
+                price: "$299",
+                originalPrice: "$399",
+                image: "/placeholder.svg?height=300&width=250",
+              },
+              {
+                name: "Premium Watch",
+                price: "$199",
+                originalPrice: "$249",
+                image: "/placeholder.svg?height=300&width=250",
+              },
+              {
+                name: "Leather Shoes",
+                price: "$159",
+                originalPrice: "$199",
+                image: "/placeholder.svg?height=300&width=250",
+              },
+              {
+                name: "Cotton Shirt",
+                price: "$79",
+                originalPrice: "$99",
+                image: "/placeholder.svg?height=300&width=250",
+              },
+            ].map((product, index) => (
+              <div
+                key={index}
+                className="bg-white rounded-lg shadow-sm overflow-hidden group hover:shadow-lg transition-shadow duration-300"
+              >
+                <div className="relative overflow-hidden">
+                  <img
+                    src={product.image || "/placeholder.svg"}
+                    alt={product.name}
+                    width={250}
+                    height={300}
+                    className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute top-4 right-4">
+                    <Heart className="w-5 h-5 text-gray-400 hover:text-red-500 cursor-pointer" />
+                  </div>
+                </div>
+                <div className="p-4">
+                  <h3 className="font-semibold text-gray-900 mb-2">
+                    {product.name}
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-bold text-gray-900">
+                      {product.price}
+                    </span>
+                    <span className="text-sm text-gray-500 line-through">
+                      {product.originalPrice}
+                    </span>
+                  </div>
+                  <Button className="w-full mt-3 bg-black text-white hover:bg-gray-800">
+                    Add to Cart
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* About Section */}
+      <section className="bg-white py-16 px-4">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-6">
+              About Gentleman Jones
+            </h2>
+            <p className="text-gray-600 mb-4">
+              For over a decade, Gentleman Jones has been the premier
+              destination for sophisticated men's fashion. We curate the finest
+              collection of clothing, accessories, and lifestyle products that
+              embody timeless elegance and modern style.
+            </p>
+            <p className="text-gray-600 mb-6">
+              From boardroom to weekend, our carefully selected pieces ensure
+              you look your absolute best for every occasion. Quality
+              craftsmanship and attention to detail are at the heart of
+              everything we do.
+            </p>
+            <Button
+              variant="outline"
+              className="border-black text-black hover:bg-black hover:text-white"
+            >
+              Learn More
+            </Button>
+          </div>
+          <div className="relative">
+            <img
+              src="/placeholder.svg?height=400&width=500"
+              alt="About Gentleman Jones"
+              width={500}
+              height={400}
+              className="w-full h-auto object-cover rounded-lg"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="bg-gradient-to-r from-amber-50 to-amber-100 py-16 px-4">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              What Our Customers Say
+            </h2>
+            <p className="text-gray-600">
+              Trusted by thousands of satisfied customers
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[
+              {
+                name: "Michael Chen",
+                role: "Business Executive",
+                content:
+                  "Exceptional quality and service. The blazer I purchased fits perfectly and the attention to detail is remarkable.",
+                rating: 5,
+              },
+              {
+                name: "David Rodriguez",
+                role: "Entrepreneur",
+                content:
+                  "Gentleman Jones has become my go-to for professional attire. Their style advice is invaluable.",
+                rating: 5,
+              },
+              {
+                name: "James Wilson",
+                role: "Creative Director",
+                content:
+                  "From casual to formal, they have everything I need. The quality is consistently outstanding.",
+                rating: 5,
+              },
+            ].map((testimonial, index) => (
+              <div key={index} className="bg-white p-6 rounded-lg shadow-sm">
+                <div className="flex items-center mb-4">
+                  {/* {[...Array(testimonial.rating)].map((_, i) => (
+                    <span key={i} className="text-amber-400 text-lg">
+                      ★
+                    </span>
+                  ))} */}
+                  {Array.from({ length: testimonial.rating }).map((_, i) => (
+                    <span key={i} className="text-amber-400 text-lg">
+                      ★
+                    </span>
+                  ))}
+                </div>
+                <p className="text-gray-600 mb-4 italic">
+                  "{testimonial.content}"
+                </p>
+                <div>
+                  <p className="font-semibold text-gray-900">
+                    {testimonial.name}
+                  </p>
+                  <p className="text-sm text-gray-500">{testimonial.role}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Newsletter Section */}
+      <section className="bg-black py-16 px-4">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-3xl font-bold text-white mb-4">Stay in Style</h2>
+          <p className="text-gray-300 mb-8">
+            Subscribe to our newsletter and be the first to know about new
+            arrivals, exclusive offers, and style tips.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+            <Input
+              type="email"
+              placeholder="Enter your email address"
+              className="flex-1 bg-white border-white"
+            />
+            <Button className="bg-amber-600 text-white hover:bg-amber-700 px-8">
+              Subscribe
+            </Button>
+          </div>
+          <p className="text-gray-400 text-sm mt-4">
+            We respect your privacy. Unsubscribe at any time.
+          </p>
+        </div>
+      </section>
+      <Footer />
     </div>
   );
 }
