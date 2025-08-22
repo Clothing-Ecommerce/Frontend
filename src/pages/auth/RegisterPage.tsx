@@ -133,14 +133,14 @@ export default function RegisterPage() {
     }
   };
 
-  const isFormValid =
-    formData.fullName &&
-    formData.email &&
-    formData.password &&
-    formData.confirmPassword &&
-    isPasswordMatch &&
-    formData.agreeTerms &&
-    isPasswordStrong;
+  // const isFormValid =
+  //   formData.fullName &&
+  //   formData.email &&
+  //   formData.password &&
+  //   formData.confirmPassword &&
+  //   isPasswordMatch &&
+  //   formData.agreeTerms &&
+  //   isPasswordStrong;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-amber-100 flex items-center justify-center p-4 font-sans">
@@ -184,7 +184,7 @@ export default function RegisterPage() {
                 Full Name
               </Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                 <Input
                   id="fullName"
                   name="fullName"

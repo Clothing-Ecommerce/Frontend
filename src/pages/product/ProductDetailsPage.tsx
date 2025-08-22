@@ -26,7 +26,7 @@ import api from "@/utils/axios";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 
-export default function ProductDetailPage() {
+export default function ProductDetailsPage() {
   const { id } = useParams<{ id: string }>(); // Get product ID from URL
   //   const productId = parseInt(id || "0") // Convert to number
 

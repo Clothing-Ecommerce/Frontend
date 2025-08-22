@@ -51,20 +51,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
 import api from "@/utils/axios";
 import type { UserProfile } from "@/types/userType";
-
-// Mock user data
-// const userData = {
-//   id: 1,
-//   fullName: "John Doe",
-//   email: "john.doe@example.com",
-//   phone: "+1 (555) 123-4567",
-//   dateOfBirth: "1990-05-15",
-//   gender: "male",
-//   avatar: "/placeholder.svg?height=100&width=100",
-//   joinDate: "2023-01-15",
-//   totalOrders: 12,
-//   totalSpent: 2847,
-// };
+import { AddressFormDialog } from "@/components/address/addressFormDialog";
+import { DeleteAddressDialog } from "@/components/address/deleteAddressDialog";
+import type { Address } from "@/types/addressType";
 
 const emptyUser: UserProfile = {
   userId: 0,
@@ -76,37 +65,6 @@ const emptyUser: UserProfile = {
   avatar: "/placeholder.svg?height=100&width=100",
   createdAt: "",
 };
-
-const addresses = [
-  {
-    id: 1,
-    type: "home",
-    isDefault: true,
-    fullName: "John Doe",
-    company: "",
-    address1: "123 Main Street",
-    address2: "Apt 4B",
-    city: "New York",
-    state: "NY",
-    zipCode: "10001",
-    country: "United States",
-    phone: "+1 (555) 123-4567",
-  },
-  {
-    id: 2,
-    type: "work",
-    isDefault: false,
-    fullName: "John Doe",
-    company: "Tech Corp Inc.",
-    address1: "456 Business Ave",
-    address2: "Suite 200",
-    city: "New York",
-    state: "NY",
-    zipCode: "10002",
-    country: "United States",
-    phone: "+1 (555) 987-6543",
-  },
-];
 
 const orders = [
   {
@@ -213,16 +171,37 @@ const getStatusIcon = (status: string) => {
   }
 };
 
+const getLabelText = (label: string) => {
+  switch (label) {
+    case "Home":
+      return "Nhà riêng"
+    case "Work":
+      return "Văn phòng"
+    case "Other":
+      return "Khác"
+    default:
+      return label
+  }
+}
+
 export default function ProfilePage() {
   const [activeSection, setActiveSection] = useState("profile");
   const [isEditing, setIsEditing] = useState(false);
-  const [editingAddress, setEditingAddress] = useState<number | null>(null);
+  // const [editingAddress, setEditingAddress] = useState<number | null>(null);
   const [formData, setFormData] = useState<UserProfile>(emptyUser); // dữ liệu hiển thị đã “lưu”
   const [draft, setDraft] = useState<UserProfile>(emptyUser); // dữ liệu đang chỉnh sửa
   const [loading, setLoading] = useState(true);
   const [showAvatarDialog, setShowAvatarDialog] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  // Address management states
+  const [addresses, setAddresses] = useState<Address[]>([])
+  const [showAddressDialog, setShowAddressDialog] = useState(false)
+  const [editingAddress, setEditingAddress] = useState<Address | null>(null)
+  const [addressDialogMode, setAddressDialogMode] = useState<"add" | "edit">("add")
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [deletingAddress, setDeletingAddress] = useState<Address | null>(null)
 
   // const handleInputChange = (
   //   e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -297,27 +276,6 @@ export default function ProfilePage() {
       mounted = false;
     };
   }, []);
-
-  // const handleSaveProfile = async () => {
-  //   try {
-  //     const payload = {
-  //       username: formData.username,
-  //       email: formData.email,
-  //       phone: formData.phone ?? null,
-  //       gender: formData.gender || null,
-  //       dateOfBirth: formData.dateOfBirth || null,
-  //     };
-  //     const { data } = await api.patch<UserProfile>("/user/profile", payload);
-  //     setFormData({
-  //       ...data,
-  //       dateOfBirth: data.dateOfBirth ?? "",
-  //       avatar: data.avatar ?? "/placeholder.svg?height=100&width=100",
-  //     });
-  //     setIsEditing(false);
-  //   } catch (e) {
-  //     console.error("Failed to update profile", e);
-  //   }
-  // };
 
   // So sánh thay đổi để disable Save khi không đổi gì
   const hasChanges = useMemo(() => {
@@ -403,6 +361,124 @@ export default function ProfilePage() {
     toast.success("Logged out", "You have been successfully logged out");
     setIsDropdownOpen(false);
   };
+
+ // nạp danh sách địa chỉ
+ useEffect(() => {
+   (async () => {
+     try {
+       const { data } = await api.get<Address[]>("/user/addresses");
+       setAddresses(data);
+     } catch (e) {
+       console.error(e);
+       toast.error("Lỗi", "Không tải được danh sách địa chỉ");
+     }
+   })();
+ }, []);
+
+
+  // Address management functions
+  const handleAddAddress = () => {
+    setAddressDialogMode("add")
+    setEditingAddress(null)
+    setShowAddressDialog(true)
+  }
+
+  const handleEditAddress = (address: Address) => {
+    setAddressDialogMode("edit")
+    setEditingAddress(address)
+    setShowAddressDialog(true)
+  }
+
+  const handleDeleteAddress = (address: Address) => {
+    setDeletingAddress(address)
+    setShowDeleteDialog(true)
+  }
+
+  const handleSaveAddress = async (addressData: Address) => {
+   try {
+     if (addressDialogMode === "add") {
+       const { addressId, isDefault, ...payload } = addressData;
+       const { data } = await api.post<Address>("/user/addresses", {
+         ...payload,
+         setDefault: !!addressData.isDefault
+       });
+       setAddresses((prev) => {
+         const next = data.isDefault ? prev.map(a => ({ ...a, isDefault: false })) : prev.slice();
+         return [...next, data];
+       });
+       toast.success("Thành công", "Đã thêm địa chỉ");
+     } else if (editingAddress?.addressId) {
+       const { addressId: _ignore, isDefault, ...payload } = addressData;
+       const { data } = await api.patch<Address>(`/user/addresses/${editingAddress.addressId}`, {
+         ...payload,
+         setDefault: !!addressData.isDefault
+       });
+       setAddresses((prev) => {
+         const next = data.isDefault ? prev.map(a => ({ ...a, isDefault: false })) : prev.slice();
+         return next.map(a => a.addressId === data.addressId ? data : a);
+       });
+       toast.success("Thành công", "Đã cập nhật địa chỉ");
+     }
+   } catch (e) {
+     console.error(e);
+     toast.error("Lỗi", "Không lưu được địa chỉ");
+   }
+ }
+
+  const handleConfirmDelete = async () => {
+   if (!deletingAddress?.addressId) return;
+   try {
+     const { data } = await api.delete(`/user/addresses/${deletingAddress.addressId}`);
+     setAddresses((prev) => {
+       const filtered = prev.filter(a => a.addressId !== deletingAddress.addressId);
+       if (data.wasDefault && data.newDefaultAddressId) {
+         return filtered.map(a => ({ ...a, isDefault: a.addressId === data.newDefaultAddressId }));
+       }
+       return filtered;
+     });
+     toast.success("Thành công", "Đã xoá địa chỉ");
+   } catch (e) {
+     console.error(e);
+     toast.error("Lỗi", "Không xoá được địa chỉ");
+   } finally {
+     setDeletingAddress(null);
+   }
+ }
+
+  const handleSetDefault = async (addressId: number) => {
+   try {
+     await api.post(`/user/addresses/${addressId}/default`);
+     setAddresses((prev) => prev.map(a => ({ ...a, isDefault: a.addressId === addressId })));
+     toast.success("Thành công", "Đã đặt địa chỉ mặc định");
+   } catch {
+     toast.error("Lỗi", "Không đặt được địa chỉ mặc định");
+   }
+ }
+ 
+ const formatAddress = (address: Address) => {
+    const parts = []
+
+    if (address.houseNumber) parts.push(address.houseNumber)
+    if (address.street) parts.push(address.street)
+    if (address.wardName) parts.push(address.wardName)
+    if (address.districtName) parts.push(address.districtName)
+    if (address.provinceName) parts.push(address.provinceName)
+
+    let formatted = parts.join(", ")
+
+    // Add building details if available
+    const buildingDetails = []
+    if (address.building) buildingDetails.push(address.building)
+    if (address.block) buildingDetails.push(address.block)
+    if (address.floor) buildingDetails.push(address.floor)
+    if (address.room) buildingDetails.push(address.room)
+
+    if (buildingDetails.length > 0) {
+      formatted = `${buildingDetails.join(", ")}, ${formatted}`
+    }
+
+    return formatted
+  }
 
   const sidebarItems = [
     { id: "profile", label: "Profile", icon: User },
@@ -628,7 +704,7 @@ export default function ProfilePage() {
                         id="firstName"
                         name="firstName"
                         value={formData.firstName}
-                        onChange={handleInputChange}
+                        onChange={handleChange}
                         disabled={!isEditing}
                       />
                     </div>
@@ -716,10 +792,10 @@ export default function ProfilePage() {
                           <SelectValue placeholder="Select gender" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="male">Male</SelectItem>
-                          <SelectItem value="female">Female</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                          <SelectItem value="prefer-not-to-say">
+                          <SelectItem value="Male">Male</SelectItem>
+                          <SelectItem value="Female">Female</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                          <SelectItem value="Prefer-not-to-say">
                             Prefer not to say
                           </SelectItem>
                         </SelectContent>
@@ -785,63 +861,105 @@ export default function ProfilePage() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
-                    <CardTitle>Shipping Addresses</CardTitle>
-                    <CardDescription>
-                      Manage your shipping addresses
-                    </CardDescription>
+                    <CardTitle>Địa chỉ giao hàng</CardTitle>
+                    <CardDescription>Quản lý địa chỉ giao hàng của bạn</CardDescription>
                   </div>
-                  <Button className="bg-black text-white hover:bg-gray-800">
+                  <Button onClick={handleAddAddress} className="bg-black text-white hover:bg-gray-800">
                     <Plus className="w-4 h-4 mr-2" />
-                    Add Address
+                    Thêm địa chỉ
                   </Button>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
                     {addresses.map((address) => (
-                      <div
-                        key={address.id}
-                        className="border border-gray-200 rounded-lg p-4"
-                      >
+                      <div key={address.addressId} className="border border-gray-200 rounded-lg p-6">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <h3 className="font-semibold text-gray-900 capitalize">
-                                {address.type} Address
-                              </h3>
-                              {address.isDefault && (
-                                <Badge className="bg-amber-100 text-amber-800">
-                                  Default
-                                </Badge>
+                            <div className="flex items-center gap-2 mb-3">
+                              <h3 className="font-semibold text-gray-900">{getLabelText(address.label)}</h3>
+                              {address.isDefault && <Badge className="bg-amber-100 text-amber-800">Mặc định</Badge>}
+                            </div>
+
+                            <div className="space-y-2 text-gray-600">
+                              <div className="flex items-start gap-2">
+                                <span className="font-medium text-gray-900 min-w-[100px]">Người nhận:</span>
+                                <span>{address.recipient}</span>
+                              </div>
+
+                              {address.phone && (
+                                <div className="flex items-start gap-2">
+                                  <span className="font-medium text-gray-900 min-w-[100px]">Điện thoại:</span>
+                                  <span>{address.phone}</span>
+                                </div>
+                              )}
+
+                              {address.company && (
+                                <div className="flex items-start gap-2">
+                                  <span className="font-medium text-gray-900 min-w-[100px]">Công ty:</span>
+                                  <span>{address.company}</span>
+                                </div>
+                              )}
+
+                              <div className="flex items-start gap-2">
+                                <span className="font-medium text-gray-900 min-w-[100px]">Địa chỉ:</span>
+                                <span>{formatAddress(address)}</span>
+                              </div>
+
+                              {address.postalCode && (
+                                <div className="flex items-start gap-2">
+                                  <span className="font-medium text-gray-900 min-w-[100px]">Mã bưu điện:</span>
+                                  <span>{address.postalCode}</span>
+                                </div>
+                              )}
+
+                              {address.notes && (
+                                <div className="flex items-start gap-2">
+                                  <span className="font-medium text-gray-900 min-w-[100px]">Ghi chú:</span>
+                                  <span className="italic">{address.notes}</span>
+                                </div>
                               )}
                             </div>
-                            <div className="text-gray-600 space-y-1">
-                              <p>{address.fullName}</p>
-                              {address.company && <p>{address.company}</p>}
-                              <p>{address.address1}</p>
-                              {address.address2 && <p>{address.address2}</p>}
-                              <p>
-                                {address.city}, {address.state}{" "}
-                                {address.zipCode}
-                              </p>
-                              <p>{address.country}</p>
-                              <p>{address.phone}</p>
-                            </div>
                           </div>
-                          <div className="flex gap-2">
-                            <Button variant="outline" size="sm">
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-red-600 hover:text-red-700 bg-transparent"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+
+                          <div className="flex flex-col gap-2 ml-4">
+                            <div className="flex gap-2">
+                              <Button variant="outline" size="sm" onClick={() => handleEditAddress(address)}>
+                                <Edit className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteAddress(address)}
+                                className="text-red-600 hover:text-red-700 bg-transparent"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                            {!address.isDefault && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleSetDefault(address.addressId!)}
+                                className="text-amber-600 hover:text-amber-700 border-amber-200 hover:bg-amber-50 bg-transparent w-full"
+                              >
+                                Mặc Định
+                              </Button>
+                            )}
                           </div>
                         </div>
                       </div>
                     ))}
+
+                    {addresses.length === 0 && (
+                      <div className="text-center py-12">
+                        <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-600 text-lg mb-4">Chưa có địa chỉ giao hàng nào</p>
+                        <Button onClick={handleAddAddress} className="bg-black text-white hover:bg-gray-800">
+                          <Plus className="w-4 h-4 mr-2" />
+                          Thêm địa chỉ đầu tiên
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -1062,6 +1180,24 @@ export default function ProfilePage() {
         </div>
       </div>
       <Footer />
+
+      {/* Address Form Dialog */}
+      <AddressFormDialog
+        open={showAddressDialog}
+        onOpenChange={setShowAddressDialog}
+        address={editingAddress}
+        onSave={handleSaveAddress}
+        mode={addressDialogMode}
+      />
+
+      {/* Delete Address Dialog */}
+      <DeleteAddressDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        addressLabel={deletingAddress ? getLabelText(deletingAddress.label) : ""}
+        onConfirm={handleConfirmDelete}
+      />
+      
     </div>
   );
 }
