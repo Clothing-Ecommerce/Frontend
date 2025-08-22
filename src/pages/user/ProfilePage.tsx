@@ -190,7 +190,7 @@ export default function ProfilePage() {
   // const [editingAddress, setEditingAddress] = useState<number | null>(null);
   const [formData, setFormData] = useState<UserProfile>(emptyUser); // dữ liệu hiển thị đã “lưu”
   const [draft, setDraft] = useState<UserProfile>(emptyUser); // dữ liệu đang chỉnh sửa
-  const [loading, setLoading] = useState(true);
+  // const [loading, setLoading] = useState(true);
   const [showAvatarDialog, setShowAvatarDialog] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -269,7 +269,9 @@ export default function ProfilePage() {
       } catch (e) {
         console.error("Failed to fetch profile", e);
       } finally {
-        if (mounted) setLoading(false);
+        // if (mounted) setLoading(false);
+
+        /* loading state removed */
       }
     })();
     return () => {
@@ -354,12 +356,12 @@ export default function ProfilePage() {
 
   const { logout } = useAuth();
   const { toast } = useToast();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  // const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
     toast.success("Logged out", "You have been successfully logged out");
-    setIsDropdownOpen(false);
+    // setIsDropdownOpen(false);
   };
 
  // nạp danh sách địa chỉ
@@ -373,7 +375,7 @@ export default function ProfilePage() {
        toast.error("Lỗi", "Không tải được danh sách địa chỉ");
      }
    })();
- }, []);
+ }, [toast]);
 
 
   // Address management functions
@@ -397,7 +399,11 @@ export default function ProfilePage() {
   const handleSaveAddress = async (addressData: Address) => {
    try {
      if (addressDialogMode === "add") {
-       const { addressId, isDefault, ...payload } = addressData;
+      //  const { addressId, isDefault, ...payload } = addressData;
+       const { addressId: _addressId, isDefault: _isDefault, ...payload } = addressData;
+       void _addressId;
+       void _isDefault;
+
        const { data } = await api.post<Address>("/user/addresses", {
          ...payload,
          setDefault: !!addressData.isDefault
@@ -408,7 +414,11 @@ export default function ProfilePage() {
        });
        toast.success("Thành công", "Đã thêm địa chỉ");
      } else if (editingAddress?.addressId) {
-       const { addressId: _ignore, isDefault, ...payload } = addressData;
+      //  const { addressId: _ignore, isDefault, ...payload } = addressData;
+       const { addressId: _ignore, isDefault: _isDefault, ...payload } = addressData;
+       void _ignore;
+       void _isDefault;
+       
        const { data } = await api.patch<Address>(`/user/addresses/${editingAddress.addressId}`, {
          ...payload,
          setDefault: !!addressData.isDefault

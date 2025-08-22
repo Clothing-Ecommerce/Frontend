@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useMemo } from "react"
 
 export interface ToastProps {
   id: string
@@ -20,12 +20,12 @@ export function useToast() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id))
   }, [])
 
-  const toast = {
+  const toast = useMemo(() => ({
     success: (title: string, description?: string) => addToast({ title, description, type: "success" }),
     error: (title: string, description?: string) => addToast({ title, description, type: "error" }),
     warning: (title: string, description?: string) => addToast({ title, description, type: "warning" }),
     info: (title: string, description?: string) => addToast({ title, description, type: "info" }),
-  }
+  }), [addToast])
 
   return { toasts, toast, removeToast }
 }
