@@ -11,9 +11,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Heart, Filter, Grid, List, Star } from "lucide-react";
+// import { Heart, Filter, Grid, List, Star } from "lucide-react";
+import { Heart, Filter, Grid, List } from "lucide-react";
 import api from "@/utils/axios";
 import type { BrandOption, CategoryOption, Product } from "@/types/productType";
+import type { ProductListResponse } from "@/types/productType";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { formatPrice } from "@/utils/formatPrice";
@@ -38,24 +40,6 @@ export default function ProductsPage() {
   const [totalProducts, setTotalProducts] = useState(0);
   const [loading, setLoading] = useState(false);
 
-  // Gọi API categories và brands khi component mount
-  // useEffect(() => {
-  //   const fetchCategoriesAndBrands = async () => {
-  //     try {
-  //       const [categoriesRes, brandsRes] = await Promise.all([
-  //         api.get("/categories"),
-  //         api.get("/brands"),
-  //       ]);
-  //       console.log("Categories data:", categoriesRes.data); // Debug
-  //       console.log("Brands data:", brandsRes.data); // Debug
-  //       setCategories(categoriesRes.data);
-  //       setBrands(brandsRes.data);
-  //     } catch (error) {
-  //       console.error("Error fetching categories or brands:", error);
-  //     }
-  //   };
-  //   fetchCategoriesAndBrands();
-  // }, []);
   useEffect(() => {
     const fetchCategoriesAndBrands = async () => {
       try {
@@ -90,7 +74,7 @@ export default function ProductsPage() {
         //   isNew: filters.isNew ? "true" : "false",
         //   isSale: filters.isSale ? "true" : "false",
         //   isBestSeller: filters.isBestSeller ? "true" : "false",
-        //   sortBy,
+        //   sortBy: (sortBy === "price-low" ? "priceAsc" : sortBy === "price-high" ? "priceDesc" : "newest"),
         // };
         // console.log("Fetching products with params:", params);
         // const productsRes = await api.get("/products/", { params });
@@ -99,7 +83,7 @@ export default function ProductsPage() {
           search: searchQuery || undefined,
           category: selectedCategory !== "all" ? selectedCategory : undefined,
           brand: selectedBrand !== "all" ? selectedBrand : undefined,
-          sortBy,
+          sortBy: (sortBy === "price-low" ? "priceAsc" : sortBy === "price-high" ? "priceDesc" : "newest"),
           isNew: filters.isNew ? "true" : undefined,
           isSale: filters.isSale ? "true" : undefined,
           isBestSeller: filters.isBestSeller ? "true" : undefined,
@@ -107,11 +91,34 @@ export default function ProductsPage() {
         if (priceRange[0] > 0) params.minPrice = priceRange[0];
         if (priceRange[1] < 500) params.maxPrice = priceRange[1];
 
-        const productsRes = await api.get("/products/", { params });
-        console.log("Products data:", productsRes.data);
-
-        setProducts(productsRes.data.products);
-        setTotalProducts(productsRes.data.total);
+        const res = await api.get<ProductListResponse>("/products/", { params });
+        console.log("Products data:", res.data);
+        const productsData: Product[] = res.data.products.map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          slug: p.slug,
+          description: "",
+          basePrice: Number(p.effectivePrice),
+          categoryId: p.category?.id ?? 0,
+          brandId: p.brand?.id ?? null,
+          createdAt: "",
+          updatedAt: "",
+          category: p.category ? { id: p.category.id, name: p.category.name } : undefined,
+          brand: p.brand ? { id: p.brand.id, name: p.brand.name } : undefined,
+          images: p.image
+            ? [{
+                id: p.image.id,
+                productId: p.id,
+                url: p.image.url,
+                alt: p.image.alt ?? null,
+                isPrimary: true,
+                sortOrder: 0
+              }]
+            : [],
+          variants: [],
+        }));
+        setProducts(productsData);
+        setTotalProducts(res.data.total);
       } catch (error) {
         console.error("Error fetching products:", error);
         setProducts([]);
@@ -219,32 +226,14 @@ export default function ProductsPage() {
                   <SelectContent>
                     {brands.map((b) => (
                       <SelectItem
-                        key={String(b.brandId)}
-                        value={String(b.brandId)}
+                        key={String(b.id)}
+                        value={String(b.id)}
                       >
                         {b.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {/* <Select value={selectedBrand} onValueChange={setSelectedBrand}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem key="all" value="all">
-                      All Brands
-                    </SelectItem>
-                    {brands.map((brand) => (
-                      <SelectItem
-                        key={brand.brandId}
-                        value={brand.brandId.toString()}
-                      >
-                        {brand.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select> */}
               </div>
 
               {/* Price Range */}
@@ -412,7 +401,7 @@ export default function ProductsPage() {
               >
                 {products.map((product) => (
                   <div
-                    key={product.productId}
+                    key={product.id}
                     className={
                       viewMode === "grid"
                         ? "bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300"
@@ -426,9 +415,9 @@ export default function ProductsPage() {
                           : "relative w-48 flex-shrink-0"
                       }
                     >
-                      <Link to={`/products/${product.productId}`}>
+                      <Link to={`/products/${product.id}`}>
                         <img
-                          src={product.images[0] || "/placeholder.svg"}
+                          src={product.images[0]?.url || "/placeholder.svg"}
                           alt={product.name}
                           width={300}
                           height={400}
@@ -440,7 +429,7 @@ export default function ProductsPage() {
                         />
                       </Link>
                       <div className="absolute top-2 left-2 flex flex-col gap-1">
-                        {product.isNew && (
+                        {/* {product.isNew && (
                           <span className="bg-green-500 text-white text-xs px-2 py-1 rounded">
                             NEW
                           </span>
@@ -449,7 +438,7 @@ export default function ProductsPage() {
                           <span className="bg-red-500 text-white text-xs px-2 py-1 rounded">
                             SALE
                           </span>
-                        )}
+                        )} */}
                         {/* {product.isBestSeller && (
                           <span className="bg-amber-500 text-white text-xs px-2 py-1 rounded">
                             BEST SELLER
@@ -461,7 +450,7 @@ export default function ProductsPage() {
                       </button>
                     </div>
                     <div className={viewMode === "grid" ? "p-4" : "p-4 flex-1"}>
-                      <Link to={`/products/${product.productId}`}>
+                      <Link to={`/products/${product.id}`}>
                         <h3 className="font-semibold text-gray-900 mb-2 hover:text-amber-600">
                           {product.name}
                         </h3>
@@ -469,7 +458,7 @@ export default function ProductsPage() {
                       <p className="text-sm text-gray-600 mb-2">
                         {product.brand?.name}
                       </p>
-                      <div className="flex items-center gap-1 mb-2">
+                      {/* <div className="flex items-center gap-1 mb-2">
                         <div className="flex">
                           {[...Array(5)].map((_, i) => (
                             <Star
@@ -485,16 +474,16 @@ export default function ProductsPage() {
                         <span className="text-sm text-gray-600">
                           ({product.reviewsCount})
                         </span>
-                      </div>
+                      </div> */}
                       <div className="flex items-center gap-2 mb-3">
                         <span className="text-lg font-bold text-gray-900">
-                          {formatPrice(product.price)}
+                          {formatPrice(product.basePrice)}
                         </span>
-                        {product.originalPrice && (
+                        {/* {product.originalPrice && (
                           <span className="text-sm text-gray-500 line-through">
                             {formatPrice(product.originalPrice)}
                           </span>
-                        )}
+                        )} */}
                       </div>
                       <Button className="w-full bg-black text-white hover:bg-gray-800">
                         Add to Cart

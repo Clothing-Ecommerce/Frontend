@@ -1,4 +1,7 @@
 import { useState, useEffect } from "react";
+import { Link, useParams } from "react-router-dom";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,22 +17,21 @@ import {
   Plus,
   Minus,
   Check,
-  Loader2, // Added for loading indicator
-  Frown, // Added for error indicator
+  Loader2,
+  Frown,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import { Link, useParams } from "react-router-dom";
-
-import { formatPrice } from "@/utils/formatPrice";
-import type { ColorOption, Product } from "@/types/productType";
 import api from "@/utils/axios";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
+import { formatPrice } from "@/utils/formatPrice";
+import type {
+  Product,
+  ProductVariant,
+  ColorOption,
+} from "@/types/productType";
+import type { ProductListResponse } from "@/types/productType";
 
 export default function ProductDetailsPage() {
-  const { id } = useParams<{ id: string }>(); // Get product ID from URL
-  //   const productId = parseInt(id || "0") // Convert to number
-
+  const { id } = useParams<{ id: string }>();
   const [product, setProduct] = useState<Product | null>(null);
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [isLoadingProduct, setIsLoadingProduct] = useState(true);
@@ -38,6 +40,8 @@ export default function ProductDetailsPage() {
   const [errorRelated, setErrorRelated] = useState<string | null>(null);
 
   const [selectedImage, setSelectedImage] = useState(0);
+  const [colorOptions, setColorOptions] = useState<ColorOption[]>([]);
+  const [sizeOptions, setSizeOptions] = useState<string[]>([]);
   const [selectedColor, setSelectedColor] = useState<ColorOption | null>(null);
   const [selectedSize, setSelectedSize] = useState("");
   const [quantity, setQuantity] = useState(1);
@@ -49,12 +53,39 @@ export default function ProductDetailsPage() {
       setIsLoadingProduct(true);
       setErrorProduct(null);
       try {
-        const response = await api.get<Product>(`/products/${id}`); // Adjust API endpoint
-        setProduct(response.data);
-        // Set initial selected color if product data is available
-        if (response.data.colors && response.data.colors.length > 0) {
-          setSelectedColor(response.data.colors[0]);
-        }
+        const res = await api.get(`/products/${id}`);
+        const data: Product = {
+          ...res.data,
+          basePrice: Number(res.data.basePrice),
+          images: res.data.images || [],
+          variants: res.data.variants?.map(
+            (v: Omit<ProductVariant, "price"> & { price: string | null }) => ({
+              ...v,
+              price: v.price ? Number(v.price) : null,
+            })
+          ),
+        };
+        setProduct(data);
+        // build color and size options from variants
+        const colorsMap = new Map<number, ColorOption>();
+        const sizesSet = new Set<string>();
+        data.variants?.forEach((variant) => {
+          if (variant.color) {
+            colorsMap.set(variant.color.id, {
+              name: variant.color.name,
+              value: variant.color.hex || "#000000",
+            });
+          }
+          if (variant.size?.name) {
+            sizesSet.add(variant.size.name);
+          }
+        });
+        const colors = Array.from(colorsMap.values());
+        const sizes = Array.from(sizesSet.values());
+        setColorOptions(colors);
+        setSizeOptions(sizes);
+        if (colors.length > 0) setSelectedColor(colors[0]);
+        if (sizes.length > 0) setSelectedSize(sizes[0]);
       } catch (err) {
         setErrorProduct("Failed to load product details.");
         console.error("Error fetching product:", err);
@@ -62,7 +93,6 @@ export default function ProductDetailsPage() {
         setIsLoadingProduct(false);
       }
     };
-
     if (id) {
       fetchProduct();
     }
@@ -78,10 +108,34 @@ export default function ProductDetailsPage() {
         return;
       }
       try {
-        const response = await api.get<Product[]>(
-          `/products/related?categoryId=${product.categoryId}&currentProductId=${id}`
-        );
-        setRelatedProducts(response.data);
+        const res = await api.get<ProductListResponse>(`/products`, { params: { category: String(product.categoryId), pageSize: 4 } });
+        const productsData: Product[] = res.data.products
+          .filter((p: any) => p.id !== product.id)
+          .map((p: any) => ({
+            id: p.id,
+            name: p.name,
+            slug: p.slug,
+            description: "",
+            basePrice: Number(p.effectivePrice),
+            categoryId: p.category?.id ?? 0,
+            brandId: p.brand?.id ?? null,
+            createdAt: "",
+            updatedAt: "",
+            category: p.category ? { id: p.category.id, name: p.category.name } : undefined,
+            brand: p.brand ? { id: p.brand.id, name: p.brand.name } : undefined,
+            images: p.image
+              ? [{
+                  id: p.image.id,
+                  productId: p.id,
+                  url: p.image.url,
+                  alt: p.image.alt ?? null,
+                  isPrimary: true,
+                  sortOrder: 0
+                }]
+              : [],
+            variants: [],
+          }));
+        setRelatedProducts(productsData);
       } catch (err) {
         setErrorRelated("Failed to load related products.");
         console.error("Error fetching related products:", err);
@@ -89,26 +143,44 @@ export default function ProductDetailsPage() {
         setIsLoadingRelated(false);
       }
     };
-
     if (product) {
       fetchRelatedProducts();
     }
-  }, [product, id]);
+  }, [product]);
+
+  // helpers for active SALE & effective price
+  const nowActive = (startAt?: string | null, endAt?: string | null) => {
+    const now = Date.now();
+    const sOk = !startAt || new Date(startAt).getTime() <= now;
+    const eOk = !endAt || new Date(endAt).getTime() >= now;
+    return sOk && eOk;
+  };
+  const getVariantEffectivePrice = (prodBase: number, v?: ProductVariant | null) => {
+    if (!v) return prodBase;
+    const sale = v.prices?.find((p) => p.type === "SALE" && nowActive(p.startAt, p.endAt));
+    if (sale) return Number(sale.amount);
+    if (v.price != null) return v.price;
+    return prodBase;
+  };
+
+  const selectedVariant = product?.variants?.find(
+    (v) =>
+      (!selectedSize || v.size?.name === selectedSize) &&
+      (!selectedColor || v.color?.name === selectedColor.name)
+  );
+  const displayPrice = getVariantEffectivePrice(product?.basePrice ?? 0, selectedVariant);
+  const stockCount = selectedVariant?.stock ?? 0;
 
   const handleAddToCart = () => {
-    if (!product) return; // Ensure product data is loaded
     if (!selectedSize) {
       alert("Please select a size");
       return;
     }
-    // Add to cart logic here
-    console.log("Added to cart:", {
-      product: product.productId,
-      color: selectedColor,
-      size: selectedSize,
+    console.log("Add to cart", {
+      product: product?.id,
+      variant: selectedVariant?.id,
       quantity,
     });
-    // In a real app, you'd dispatch an action to a cart context/store
   };
 
   if (isLoadingProduct) {
@@ -120,26 +192,19 @@ export default function ProductDetailsPage() {
     );
   }
 
-  if (errorProduct) {
+  if (errorProduct || !product) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center text-red-600">
         <Frown className="h-12 w-12 mb-4" />
-        <p className="text-xl">{errorProduct}</p>
-        <p className="text-sm text-gray-500">
-          Please try again later or contact support.
-        </p>
+        <p className="text-xl">{errorProduct || "Product not found."}</p>
       </div>
     );
   }
 
-  if (!product) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center text-gray-600">
-        <Frown className="h-12 w-12 mb-4" />
-        <p className="text-xl">Product not found.</p>
-      </div>
-    );
-  }
+  const features = Array.isArray(product.features)
+    ? (product.features as string[])
+    : [];
+  const specifications = product.specifications || {};
 
   return (
     <div className="min-h-screen bg-white">
@@ -173,28 +238,18 @@ export default function ProductDetailsPage() {
           >
             <div className="relative">
               <img
-                src={product.images?.[selectedImage] || "/placeholder.svg"}
+                src={
+                  product.images?.[selectedImage]?.url || "/placeholder.svg"
+                }
                 alt={product.name}
-                width={600}
-                height={600}
                 className="w-full h-96 lg:h-[500px] object-cover rounded-lg shadow-lg"
               />
-              {product.isSale && (
-                <Badge className="absolute top-4 left-4 bg-red-500 text-white">
-                  Sale
-                </Badge>
-              )}
-              {product.isNew && (
-                <Badge className="absolute top-4 right-4 bg-green-500 text-white">
-                  New
-                </Badge>
-              )}
             </div>
 
             <div className="grid grid-cols-4 gap-2">
               {product.images?.map((image, index) => (
                 <motion.button
-                  key={index}
+                  key={image.id}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => setSelectedImage(index)}
@@ -203,10 +258,8 @@ export default function ProductDetailsPage() {
                   }`}
                 >
                   <img
-                    src={image || "/placeholder.svg"}
-                    alt={`${product.name} ${index + 1}`}
-                    width={150}
-                    height={150}
+                    src={image.url}
+                    alt={image.alt || `${product.name} ${index + 1}`}
                     className="w-full h-20 object-cover"
                   />
                 </motion.button>
@@ -222,105 +275,89 @@ export default function ProductDetailsPage() {
           >
             <div>
               <Badge variant="secondary" className="mb-2">
-                {product.category?.name || product.categoryId}{" "}
                 {/* Display category name if available */}
+                {product.category?.name || product.categoryId}
               </Badge>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
                 {product.name}
               </h1>
               <p className="text-lg text-gray-600 mb-4">
+                {/* Display brand name if available */}
                 {product.brand?.name || product.brandId}
-              </p>{" "}
-              {/* Display brand name if available */}
+              </p>
               <div className="flex items-center mb-4">
                 <div className="flex items-center">
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
                       className={`h-5 w-5 ${
-                        i < Math.floor(product.rating || 0)
-                          ? "text-yellow-400 fill-current"
-                          : "text-gray-300"
+                        i < Math.floor(0) ? "text-yellow-400 fill-current" : "text-gray-300"
                       }`}
                     />
                   ))}
                 </div>
-                <span className="text-sm text-gray-600 ml-2">
-                  {product.rating || 0} ({product.reviewsCount || 0} reviews)
-                </span>
+                <span className="text-sm text-gray-600 ml-2">0 reviews</span>
               </div>
               <div className="flex items-center space-x-4 mb-6">
                 <span className="text-3xl font-bold text-gray-900">
-                  {formatPrice(product.price)}
+                  {formatPrice(displayPrice)}
                 </span>
-                {product.originalPrice && (
-                  <span className="text-xl text-gray-500 line-through">
-                    {formatPrice(product.originalPrice)}
-                  </span>
-                )}
-                {product.originalPrice && (
-                  <Badge className="bg-red-500">
-                    Save{" "}
-                    {Math.round(
-                      ((product.originalPrice - product.price) /
-                        product.originalPrice) *
-                        100
-                    )}
-                    %
-                  </Badge>
-                )}
               </div>
             </div>
-            {/* Color Selection */}
-            <div>
-              <h3 className="text-lg font-semibold mb-3">
-                Color: {selectedColor?.name || "Select a color"}
-              </h3>
-              <div className="flex space-x-3">
-                {product.colors?.map((color: ColorOption) => (
-                  <motion.button
-                    key={color.name}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
-                    onClick={() => setSelectedColor(color)}
-                    className={`w-10 h-10 rounded-full border-2 ${
-                      selectedColor?.name === color.name
-                        ? "border-blue-600 ring-2 ring-blue-200"
-                        : "border-gray-300"
-                    }`}
-                    style={{ backgroundColor: color.value }}
-                    title={color.name}
-                  >
-                    {selectedColor?.name === color.name && (
-                      <Check className="h-4 w-4 text-white mx-auto" />
-                    )}
-                  </motion.button>
-                ))}
+            {/* color selection */}
+            {colorOptions.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-3">
+                  Color: {selectedColor?.name || "Select a color"}
+                </h3>
+                <div className="flex space-x-3">
+                  {colorOptions.map((color) => (
+                    <motion.button
+                      key={color.name}
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => setSelectedColor(color)}
+                      className={`w-10 h-10 rounded-full border-2 ${
+                        selectedColor?.name === color.name
+                          ? "border-blue-600 ring-2 ring-blue-200"
+                          : "border-gray-300"
+                      }`}
+                      style={{ backgroundColor: color.value }}
+                      title={color.name}
+                    >
+                      {selectedColor?.name === color.name && (
+                        <Check className="h-4 w-4 text-white mx-auto" />
+                      )}
+                    </motion.button>
+                  ))}
+                </div>
               </div>
-            </div>
-            {/* Size Selection */}
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Size</h3>
-              <div className="grid grid-cols-6 gap-2">
-                {product.sizes?.map((size: string) => (
-                  <Button
-                    key={size}
-                    variant={selectedSize === size ? "default" : "outline"}
-                    onClick={() => setSelectedSize(size)}
-                    className="h-12"
-                  >
-                    {size}
-                  </Button>
-                ))}
+            )}
+            {/* size selection */}
+            {sizeOptions.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Size</h3>
+                <div className="grid grid-cols-6 gap-2">
+                  {sizeOptions.map((size) => (
+                    <Button
+                      key={size}
+                      variant={selectedSize === size ? "default" : "outline"}
+                      onClick={() => setSelectedSize(size)}
+                      className="h-12"
+                    >
+                      {size}
+                    </Button>
+                  ))}
+                </div>
+                <Link
+                  to="/size-guide"
+                  className="text-sm text-blue-600 hover:underline mt-2 inline-block"
+                >
+                  Size Guide
+                </Link>
               </div>
-              <Link
-                to="/size-guide"
-                className="text-sm text-blue-600 hover:underline mt-2 inline-block"
-              >
-                Size Guide
-              </Link>
-            </div>
-            {/* Quantity */}
+            )}
+            {/* quantity */}
             <div>
               <h3 className="text-lg font-semibold mb-3">Quantity</h3>
               <div className="flex items-center space-x-3">
@@ -339,14 +376,14 @@ export default function ProductDetailsPage() {
                   variant="outline"
                   size="icon"
                   onClick={() =>
-                    setQuantity(Math.min(product.stockCount, quantity + 1))
+                    setQuantity(Math.min(stockCount, quantity + 1))
                   }
-                  disabled={quantity >= product.stockCount}
+                  disabled={quantity >= stockCount}
                 >
                   <Plus className="h-4 w-4" />
                 </Button>
                 <span className="text-sm text-gray-600 ml-4">
-                  {product.stockCount} items in stock
+                  {stockCount} items in stock
                 </span>
               </div>
             </div>
@@ -355,8 +392,8 @@ export default function ProductDetailsPage() {
               <div className="flex space-x-4">
                 <Button
                   onClick={handleAddToCart}
-                  className="flex-1 h-12 text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                  disabled={!product.inStock}
+                  className="flex-1 h-12 text-lg font-semibold w-full bg-black text-white hover:bg-gray-800"
+                  disabled={stockCount <= 0}
                 >
                   <ShoppingCart className="h-5 w-5 mr-2" />
                   Add to Cart
@@ -373,11 +410,7 @@ export default function ProductDetailsPage() {
                     }`}
                   />
                 </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-12 w-12 bg-transparent"
-                >
+                <Button variant="outline" size="icon" className="h-12 w-12 bg-transparent">
                   <Share2 className="h-5 w-5" />
                 </Button>
               </div>
@@ -419,50 +452,43 @@ export default function ProductDetailsPage() {
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="description">Description</TabsTrigger>
               <TabsTrigger value="specifications">Specifications</TabsTrigger>
-              <TabsTrigger value="reviews">
-                Reviews ({product.reviewsCount || 0})
-              </TabsTrigger>
+              <TabsTrigger value="reviews">Reviews</TabsTrigger>
               <TabsTrigger value="shipping">Shipping</TabsTrigger>
             </TabsList>
             <TabsContent value="description" className="mt-6">
               <Card>
                 <CardContent className="p-6">
                   <p className="text-gray-700 mb-6">{product.description}</p>
-                  {product.features && product.features.length > 0 && (
+                  {features.length > 0 && (
                     <>
                       <h4 className="font-semibold mb-4">Key Features:</h4>
                       <ul className="grid grid-cols-2 gap-2">
-                        {product.features.map(
-                          (feature: string, index: number) => (
-                            <li key={index} className="flex items-center">
-                              <Check className="h-4 w-4 text-green-500 mr-2" />
-                              {feature}
-                            </li>
-                          )
-                        )}
+                        {features.map((feature, index) => (
+                          <li key={index} className="flex items-center">
+                            <Check className="h-4 w-4 text-green-500 mr-2" />
+                            {feature}
+                          </li>
+                        ))}
                       </ul>
                     </>
                   )}
                 </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="specifications" className="mt-6">
+               </Card>
+           </TabsContent>
+           <TabsContent value="specifications" className="mt-6">
               <Card>
                 <CardContent className="p-6">
-                  {product.specifications &&
-                  Object.keys(product.specifications).length > 0 ? (
+                  {Object.keys(specifications).length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {Object.entries(product.specifications).map(
-                        ([key, value]) => (
-                          <div
-                            key={key}
-                            className="flex justify-between py-2 border-b"
-                          >
-                            <span className="font-medium">{key}:</span>
-                            <span className="text-gray-600">{value}</span>
-                          </div>
-                        )
-                      )}
+                      {Object.entries(specifications).map(([key, value]) => (
+                        <div
+                          key={key}
+                          className="flex justify-between py-2 border-b"
+                        >
+                          <span className="font-medium">{key}:</span>
+                          <span className="text-gray-600">{String(value)}</span>
+                        </div>
+                      ))}
                     </div>
                   ) : (
                     <p className="text-gray-600">
@@ -475,74 +501,7 @@ export default function ProductDetailsPage() {
             <TabsContent value="reviews" className="mt-6">
               <Card>
                 <CardContent className="p-6">
-                  <div className="space-y-6">
-                    {/* {product.reviewsCount.map((review) => (
-                      <div key={review.id} className="border-b pb-6 last:border-b-0">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center space-x-2">
-                            <span className="font-semibold">{review.name}</span>
-                            {review.verified && (
-                              <Badge variant="secondary" className="text-xs">
-                                Verified Purchase
-                              </Badge>
-                            )}
-                          </div>
-                          <span className="text-sm text-gray-600">{review.date}</span>
-                        </div>
-                        <div className="flex items-center mb-2">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`h-4 w-4 ${
-                                i < review.rating ? "text-yellow-400 fill-current" : "text-gray-300"
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        <p className="text-gray-700">{review.comment}</p>
-                      </div>
-                    ))} */}
-                    {Array.isArray(product.reviewsCount) &&
-                    product.reviewsCount.length > 0 ? (
-                      product.reviewsCount.map((review) => (
-                        <div
-                          key={review.id}
-                          className="border-b pb-6 last:border-b-0"
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center space-x-2">
-                              <span className="font-semibold">
-                                {review.name}
-                              </span>
-                              {review.verified && (
-                                <Badge variant="secondary" className="text-xs">
-                                  Verified Purchase
-                                </Badge>
-                              )}
-                            </div>
-                            <span className="text-sm text-gray-600">
-                              {review.date}
-                            </span>
-                          </div>
-                          <div className="flex items-center mb-2">
-                            {[...Array(5)].map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`h-4 w-4 ${
-                                  i < review.rating
-                                    ? "text-yellow-400 fill-current"
-                                    : "text-gray-300"
-                                }`}
-                              />
-                            ))}
-                          </div>
-                          <p className="text-gray-700">{review.comment}</p>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-gray-600">No reviews yet.</p>
-                    )}
-                  </div>
+                  <p className="text-gray-600">No reviews yet.</p>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -605,7 +564,7 @@ export default function ProductDetailsPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {relatedProducts.map((relatedProduct, index) => (
                 <motion.div
-                  key={relatedProduct.productId}
+                  key={relatedProduct.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 * index }}
@@ -614,10 +573,10 @@ export default function ProductDetailsPage() {
                   <Card className="overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300">
                     <CardContent className="p-0">
                       <img
-                        src={relatedProduct.images[0] || "/placeholder.svg"} // Use the first image from the array
+                        src={
+                          relatedProduct.images[0]?.url || "/placeholder.svg"
+                        }
                         alt={relatedProduct.name}
-                        width={200}
-                        height={200}
                         className="w-full h-48 object-cover"
                       />
                       <div className="p-4">
@@ -630,22 +589,19 @@ export default function ProductDetailsPage() {
                               <Star
                                 key={i}
                                 className={`h-3 w-3 ${
-                                  i < Math.floor(relatedProduct.rating || 0)
+                                  i < Math.floor(0)
                                     ? "text-yellow-400 fill-current"
                                     : "text-gray-300"
                                 }`}
                               />
                             ))}
                           </div>
-                          <span className="text-xs text-gray-600 ml-1">
-                            {relatedProduct.rating || 0}
-                          </span>
                         </div>
                         <div className="flex items-center justify-between">
                           <span className="font-bold text-gray-900">
-                            {formatPrice(relatedProduct.price)}
+                            {formatPrice(relatedProduct.basePrice)}
                           </span>
-                          <Link to={`/products/${relatedProduct.productId}`}>
+                          <Link to={`/products/${relatedProduct.id}`}>
                             <Button size="sm">View</Button>
                           </Link>
                         </div>
