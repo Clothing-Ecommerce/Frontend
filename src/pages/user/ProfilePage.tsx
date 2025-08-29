@@ -173,11 +173,11 @@ const getStatusIcon = (status: string) => {
 
 const getLabelText = (label: string) => {
   switch (label) {
-    case "Home":
-      return "Nhà riêng"
-    case "Work":
-      return "Văn phòng"
-    case "Other":
+    case "HOME":
+      return "Nhà"
+    case "WORK":
+      return "Chỗ Làm"
+    case "OTHER":
       return "Khác"
     default:
       return label
@@ -296,7 +296,8 @@ export default function ProfilePage() {
       const payload = {
         username: draft.username,
         email: draft.email,
-        phone: draft.phone ?? null,
+        // phone: draft.phone ?? null,
+        phone: (draft.phone ?? "").trim() || null,
         gender: draft.gender || null,
         dateOfBirth: draft.dateOfBirth || null,
       };
@@ -708,34 +709,12 @@ export default function ProfilePage() {
                         placeholder="Enter your username"
                       />
                     </div>
-                    {/* <div className="space-y-2">
-                      <Label htmlFor="firstName">First Name</Label>
-                      <Input
-                        id="firstName"
-                        name="firstName"
-                        value={formData.firstName}
-                        onChange={handleChange}
-                        disabled={!isEditing}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName">Last Name</Label>
-                      <Input
-                        id="lastName"
-                        name="lastName"
-                        value={formData.lastName}
-                        onChange={handleInputChange}
-                        disabled={!isEditing}
-                      />
-                    </div> */}
                     <div className="space-y-2">
                       <Label htmlFor="email">Email Address</Label>
                       <Input
                         id="email"
                         name="email"
                         type="email"
-                        // value={formData.email}
-                        // onChange={handleInputChange}
                         value={(isEditing ? draft.email : formData.email) ?? ""}
                         onChange={handleDraftInputChange}
                         disabled={!isEditing}
@@ -746,8 +725,6 @@ export default function ProfilePage() {
                       <Input
                         id="phone"
                         name="phone"
-                        // value={formData.phone ?? ""}
-                        // onChange={handleInputChange}
                         value={(isEditing ? draft.phone : formData.phone) ?? ""}
                         onChange={handleDraftInputChange}
                         disabled={!isEditing}
@@ -760,8 +737,6 @@ export default function ProfilePage() {
                           id="dateOfBirth"
                           name="dateOfBirth"
                           type="date"
-                          // value={toYMD(formData.dateOfBirth)}
-                          // onChange={handleInputChange}
                           value={toYMD(draft.dateOfBirth)}
                           onChange={handleDraftInputChange}
                           disabled={!isEditing}

@@ -41,7 +41,7 @@ export function AddressFormDialog({
   mode,
 }: AddressFormDialogProps) {
   const DEFAULT_FORM: Address = useMemo(() => ({
-    label: "Home",
+    label: "HOME",
     recipient: "",
     phone: "",
     company: "",
@@ -234,7 +234,7 @@ export function AddressFormDialog({
             <Label htmlFor="label">Nhãn địa chỉ *</Label>
             <Select
               value={formData.label}
-              onValueChange={(value: "Home" | "Work" | "Other") =>
+              onValueChange={(value: "HOME" | "WORK" | "OTHER") =>
                 handleInputChange("label", value)
               }
             >
@@ -242,9 +242,9 @@ export function AddressFormDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Home">Nhà riêng</SelectItem>
-                <SelectItem value="Work">Văn phòng</SelectItem>
-                <SelectItem value="Other">Khác</SelectItem>
+                <SelectItem value="HOME">Nhà</SelectItem>
+                <SelectItem value="WORK">Chỗ Làm</SelectItem>
+                <SelectItem value="OTHER">Khác</SelectItem>
               </SelectContent>
             </Select>
           </div>

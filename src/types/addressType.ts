@@ -1,6 +1,6 @@
 export interface Address {
   addressId?: number;
-  label: "Home" | "Work" | "Other";
+  label: "HOME" | "WORK" | "OTHER";
   recipient: string;
   phone?: string;
   company?: string;
