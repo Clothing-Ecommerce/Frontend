@@ -5,6 +5,7 @@ import RegisterPage from "./pages/auth/RegisterPage";
 import ProfilePage from "./pages/user/ProfilePage";
 import AllProducts from "./pages/product/ProductsPage";
 import ProductDetailsPage from "./pages/product/ProductDetailsPage";
+import CartPage from "./pages/cart/CartPage";
 
 // import PrivateRoute from "./utils/PrivateRoute";
 // import PublicRoute from "./utils/PublicRoute";
@@ -19,6 +20,7 @@ function App() {
         <Route path="/user/profile" element={<ProfilePage />} />
         <Route path="/products/all" element={<AllProducts />} />
         <Route path="/products/:id" element={<ProductDetailsPage />} />
+        <Route path="/cart" element={<CartPage />} />
 
         {/* Public routes (chưa đăng nhập) */}
         {/* <Route element={<PublicRoute />}> */}

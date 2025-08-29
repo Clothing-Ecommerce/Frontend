@@ -137,7 +137,9 @@ export default function Header({
               </span>
             </div>
             <div className="relative">
-              <ShoppingBag className="w-5 h-5 text-gray-600 hover:text-amber-600 cursor-pointer transition-colors" />
+              <Link to="/cart">
+                <ShoppingBag className="w-5 h-5 text-gray-600 hover:text-amber-600 cursor-pointer transition-colors" />
+              </Link>
               <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
                 {cartCount}
               </span>
