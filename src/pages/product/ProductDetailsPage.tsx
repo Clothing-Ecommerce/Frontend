@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -22,12 +22,11 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import api from "@/utils/axios";
+import { ToastContainer } from "@/components/ui/toast";
+import { useToast } from "@/hooks/useToast";
+import axios from "axios";
 import { formatPrice } from "@/utils/formatPrice";
-import type {
-  Product,
-  ProductVariant,
-  ColorOption,
-} from "@/types/productType";
+import type { Product, ProductVariant, ColorOption } from "@/types/productType";
 import type { ProductListResponse } from "@/types/productType";
 
 export default function ProductDetailsPage() {
@@ -46,6 +45,7 @@ export default function ProductDetailsPage() {
   const [selectedSize, setSelectedSize] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const { toasts, toast, removeToast } = useToast();
 
   // Fetch product data
   useEffect(() => {
@@ -108,7 +108,9 @@ export default function ProductDetailsPage() {
         return;
       }
       try {
-        const res = await api.get<ProductListResponse>(`/products`, { params: { category: String(product.categoryId), pageSize: 4 } });
+        const res = await api.get<ProductListResponse>(`/products`, {
+          params: { category: String(product.categoryId), pageSize: 4 },
+        });
         const productsData: Product[] = res.data.products
           .filter((p: any) => p.id !== product.id)
           .map((p: any) => ({
@@ -121,17 +123,21 @@ export default function ProductDetailsPage() {
             brandId: p.brand?.id ?? null,
             createdAt: "",
             updatedAt: "",
-            category: p.category ? { id: p.category.id, name: p.category.name } : undefined,
+            category: p.category
+              ? { id: p.category.id, name: p.category.name }
+              : undefined,
             brand: p.brand ? { id: p.brand.id, name: p.brand.name } : undefined,
             images: p.image
-              ? [{
-                  id: p.image.id,
-                  productId: p.id,
-                  url: p.image.url,
-                  alt: p.image.alt ?? null,
-                  isPrimary: true,
-                  sortOrder: 0
-                }]
+              ? [
+                  {
+                    id: p.image.id,
+                    productId: p.id,
+                    url: p.image.url,
+                    alt: p.image.alt ?? null,
+                    isPrimary: true,
+                    sortOrder: 0,
+                  },
+                ]
               : [],
             variants: [],
           }));
@@ -155,9 +161,14 @@ export default function ProductDetailsPage() {
     const eOk = !endAt || new Date(endAt).getTime() >= now;
     return sOk && eOk;
   };
-  const getVariantEffectivePrice = (prodBase: number, v?: ProductVariant | null) => {
+  const getVariantEffectivePrice = (
+    prodBase: number,
+    v?: ProductVariant | null
+  ) => {
     if (!v) return prodBase;
-    const sale = v.prices?.find((p) => p.type === "SALE" && nowActive(p.startAt, p.endAt));
+    const sale = v.prices?.find(
+      (p) => p.type === "SALE" && nowActive(p.startAt, p.endAt)
+    );
     if (sale) return Number(sale.amount);
     if (v.price != null) return v.price;
     return prodBase;
@@ -168,19 +179,34 @@ export default function ProductDetailsPage() {
       (!selectedSize || v.size?.name === selectedSize) &&
       (!selectedColor || v.color?.name === selectedColor.name)
   );
-  const displayPrice = getVariantEffectivePrice(product?.basePrice ?? 0, selectedVariant);
+  const displayPrice = getVariantEffectivePrice(
+    product?.basePrice ?? 0,
+    selectedVariant
+  );
   const stockCount = selectedVariant?.stock ?? 0;
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!selectedSize) {
-      alert("Please select a size");
+      toast.error("Selection required", "Please select a size");
       return;
     }
-    console.log("Add to cart", {
-      product: product?.id,
-      variant: selectedVariant?.id,
-      quantity,
-    });
+    if (!selectedVariant) {
+      toast.error("Unavailable", "Selected variant is unavailable");
+      return;
+    }
+    try {
+      await api.post("/cart/", {
+        variantId: selectedVariant.id,
+        quantity,
+      });
+      toast.success("Added to Cart", "Product added to your cart");
+    } catch (error: unknown) {
+      if (axios.isAxiosError(error) && error.response?.data?.message) {
+        toast.error("Error", error.response.data.message);
+      } else {
+        toast.error("Error", "Failed to add to cart");
+      }
+    }
   };
 
   if (isLoadingProduct) {
@@ -208,6 +234,14 @@ export default function ProductDetailsPage() {
 
   return (
     <div className="min-h-screen bg-white">
+      <ToastContainer
+        toasts={toasts.map((toastObj) => ({
+          ...toastObj,
+          onClose: removeToast,
+        }))}
+        onClose={removeToast}
+      />
+
       {/* Header */}
       <Header />
 
@@ -238,9 +272,7 @@ export default function ProductDetailsPage() {
           >
             <div className="relative">
               <img
-                src={
-                  product.images?.[selectedImage]?.url || "/placeholder.svg"
-                }
+                src={product.images?.[selectedImage]?.url || "/placeholder.svg"}
                 alt={product.name}
                 className="w-full h-96 lg:h-[500px] object-cover rounded-lg shadow-lg"
               />
@@ -291,7 +323,9 @@ export default function ProductDetailsPage() {
                     <Star
                       key={i}
                       className={`h-5 w-5 ${
-                        i < Math.floor(0) ? "text-yellow-400 fill-current" : "text-gray-300"
+                        i < Math.floor(0)
+                          ? "text-yellow-400 fill-current"
+                          : "text-gray-300"
                       }`}
                     />
                   ))}
@@ -410,7 +444,11 @@ export default function ProductDetailsPage() {
                     }`}
                   />
                 </Button>
-                <Button variant="outline" size="icon" className="h-12 w-12 bg-transparent">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-12 w-12 bg-transparent"
+                >
                   <Share2 className="h-5 w-5" />
                 </Button>
               </div>
@@ -473,9 +511,9 @@ export default function ProductDetailsPage() {
                     </>
                   )}
                 </CardContent>
-               </Card>
-           </TabsContent>
-           <TabsContent value="specifications" className="mt-6">
+              </Card>
+            </TabsContent>
+            <TabsContent value="specifications" className="mt-6">
               <Card>
                 <CardContent className="p-6">
                   {Object.keys(specifications).length > 0 ? (
