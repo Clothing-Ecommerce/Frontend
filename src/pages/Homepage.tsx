@@ -4,6 +4,58 @@ import { Input } from "@/components/ui/input";
 import { Heart, Truck, RotateCcw, Shield } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
+
+const bestSellingProducts = [
+    {
+      name: "Classic Blazer",
+      price: "$299",
+      originalPrice: "$399",
+      image: "/placeholder.svg?height=300&width=250&text=Classic+Blazer",
+    },
+    {
+      name: "Premium Watch",
+      price: "$199",
+      originalPrice: "$249",
+      image: "/placeholder.svg?height=300&width=250&text=Premium+Watch",
+    },
+    {
+      name: "Leather Shoes",
+      price: "$159",
+      originalPrice: "$199",
+      image: "/placeholder.svg?height=300&width=250&text=Leather+Shoes",
+    },
+    {
+      name: "Cotton Shirt",
+      price: "$79",
+      originalPrice: "$99",
+      image: "/placeholder.svg?height=300&width=250&text=Cotton+Shirt",
+    },
+    {
+      name: "Denim Jeans",
+      price: "$129",
+      originalPrice: "$159",
+      image: "/placeholder.svg?height=300&width=250&text=Denim+Jeans",
+    },
+    {
+      name: "Wool Sweater",
+      price: "$89",
+      originalPrice: "$119",
+      image: "/placeholder.svg?height=300&width=250&text=Wool+Sweater",
+    },
+    {
+      name: "Casual Sneakers",
+      price: "$149",
+      originalPrice: "$179",
+      image: "/placeholder.svg?height=300&width=250&text=Casual+Sneakers",
+    },
+    {
+      name: "Leather Belt",
+      price: "$59",
+      originalPrice: "$79",
+      image: "/placeholder.svg?height=300&width=250&text=Leather+Belt",
+    },
+  ];
 
 export default function HomePage() {
   return (
@@ -189,67 +241,45 @@ export default function HomePage() {
             <p className="text-gray-600">Discover our most popular items</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              {
-                name: "Classic Blazer",
-                price: "$299",
-                originalPrice: "$399",
-                image: "/placeholder.svg?height=300&width=250",
-              },
-              {
-                name: "Premium Watch",
-                price: "$199",
-                originalPrice: "$249",
-                image: "/placeholder.svg?height=300&width=250",
-              },
-              {
-                name: "Leather Shoes",
-                price: "$159",
-                originalPrice: "$199",
-                image: "/placeholder.svg?height=300&width=250",
-              },
-              {
-                name: "Cotton Shirt",
-                price: "$79",
-                originalPrice: "$99",
-                image: "/placeholder.svg?height=300&width=250",
-              },
-            ].map((product, index) => (
-              <div
-                key={index}
-                className="bg-white rounded-lg shadow-sm overflow-hidden group hover:shadow-lg transition-shadow duration-300"
-              >
-                <div className="relative overflow-hidden">
-                  <img
-                    src={product.image || "/placeholder.svg"}
-                    alt={product.name}
-                    width={250}
-                    height={300}
-                    className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute top-4 right-4">
-                    <Heart className="w-5 h-5 text-gray-400 hover:text-red-500 cursor-pointer" />
-                  </div>
-                </div>
-                <div className="p-4">
-                  <h3 className="font-semibold text-gray-900 mb-2">
-                    {product.name}
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold text-gray-900">
-                      {product.price}
-                    </span>
-                    <span className="text-sm text-gray-500 line-through">
-                      {product.originalPrice}
-                    </span>
-                  </div>
-                  <Button className="w-full mt-3 bg-black text-white hover:bg-gray-800">
-                    Add to Cart
-                  </Button>
-                </div>
-              </div>
-            ))}
+          <div className="relative px-12">
+            <Carousel
+              opts={{
+                align: "start",
+                loop: true,
+              }}
+              className="w-full"
+            >
+              <CarouselContent className="-ml-2 md:-ml-4">
+                {bestSellingProducts.map((product, index) => (
+                  <CarouselItem key={index} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3 xl:basis-1/4">
+                    <div className="bg-white rounded-lg shadow-sm overflow-hidden group hover:shadow-lg transition-shadow duration-300">
+                      <div className="relative overflow-hidden">
+                        <img
+                          src={product.image || "/placeholder.svg"}
+                          alt={product.name}
+                          width={250}
+                          height={300}
+                          className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute top-4 right-4">
+                          <Heart className="w-5 h-5 text-gray-400 hover:text-red-500 cursor-pointer" />
+                        </div>
+                      </div>
+                      <div className="p-4">
+                        <h3 className="font-semibold text-gray-900 mb-2">{product.name}</h3>
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg font-bold text-gray-900">{product.price}</span>
+                          <span className="text-sm text-gray-500 line-through">{product.originalPrice}</span>
+                        </div>
+                        <Button className="w-full mt-3 bg-black text-white hover:bg-gray-800">Add to Cart</Button>
+                      </div>
+                    </div>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="bg-white border-gray-300 hover:bg-gray-50" />
+              <CarouselNext className="bg-white border-gray-300 hover:bg-gray-50" />
+            </Carousel>
           </div>
         </div>
       </section>
