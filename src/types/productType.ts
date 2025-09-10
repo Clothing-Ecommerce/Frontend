@@ -129,8 +129,13 @@ export interface ColorOption {
   value: string; // hex color
 }
 
+// export interface CategoryOption {
+//   id: string;
+//   name: string;
+//   count: number;
+// }
 export interface CategoryOption {
-  id: string;
+  slug: string;          // dùng slug để lọc
   name: string;
   count: number;
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,8 +21,14 @@ import Footer from "@/components/layout/Footer";
 import { formatPrice } from "@/utils/formatPrice";
 
 export default function ProductsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const initialCategory = searchParams.get("category") ?? "all";
+  const [selectedCategory, setSelectedCategory] =
+    useState<string>(initialCategory);
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  // const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedBrand, setSelectedBrand] = useState<string>("all");
   const [priceRange, setPriceRange] = useState([0, 500]);
   const [sortBy, setSortBy] = useState("featured");
@@ -39,6 +45,14 @@ export default function ProductsPage() {
   const [brands, setBrands] = useState<BrandOption[]>([]);
   const [totalProducts, setTotalProducts] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // NEW: keep selectedCategory in sync with URL changes (e.g., user clicks a Header link)
+  useEffect(() => {
+    const cat = searchParams.get("category") ?? "all";
+    if (cat !== selectedCategory) setSelectedCategory(cat);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   useEffect(() => {
     const fetchCategoriesAndBrands = async () => {
@@ -47,12 +61,22 @@ export default function ProductsPage() {
           api.get("/categories/"),
           api.get("/brands/"),
         ]);
-        console.log("Categories data:", categoriesRes.data);
-        console.log("Brands data:", brandsRes.data);
 
+        console.log("Categories data:", categoriesRes.data);
+        // CHANGED: API /categories/ now returns { slug, name, count }
+        const cats: CategoryOption[] = (categoriesRes.data as any[]).map(
+          (c) => ({
+            slug: c.slug, // CHANGED
+            name: c.name,
+            count: c.count ?? 0,
+          })
+        );
+        setCategories(cats);
+
+        console.log("Brands data:", brandsRes.data);
         // brandsRes.data sẽ là một mảng chuỗi (e.g., ['All Brands', 'Brand A', 'Brand B'])
         setBrands(brandsRes.data as BrandOption[]);
-        setCategories(categoriesRes.data as CategoryOption[]);
+        // setCategories(categoriesRes.data as CategoryOption[]);
       } catch (error) {
         console.error("Error fetching categories or brands:", error);
       }
@@ -65,25 +89,17 @@ export default function ProductsPage() {
     const fetchProducts = async () => {
       setLoading(true);
       try {
-        // const params = {
-        //   search: searchQuery,
-        //   category: selectedCategory,
-        //   brand: selectedBrand, // Gửi tên thương hiệu, không cần chuyển thành null
-        //   minPrice: priceRange[0] > 0 ? priceRange[0] : null,
-        //   maxPrice: priceRange[1] < 500 ? priceRange[1] : null,
-        //   isNew: filters.isNew ? "true" : "false",
-        //   isSale: filters.isSale ? "true" : "false",
-        //   isBestSeller: filters.isBestSeller ? "true" : "false",
-        //   sortBy: (sortBy === "price-low" ? "priceAsc" : sortBy === "price-high" ? "priceDesc" : "newest"),
-        // };
-        // console.log("Fetching products with params:", params);
-        // const productsRes = await api.get("/products/", { params });
-
         const params: Record<string, unknown> = {
           search: searchQuery || undefined,
-          category: selectedCategory !== "all" ? selectedCategory : undefined,
+          // category: selectedCategory !== "all" ? selectedCategory : undefined,
+          category: selectedCategory !== "all" ? selectedCategory : undefined, // CHANGED: pass slug
           brand: selectedBrand !== "all" ? selectedBrand : undefined,
-          sortBy: (sortBy === "price-low" ? "priceAsc" : sortBy === "price-high" ? "priceDesc" : "newest"),
+          sortBy:
+            sortBy === "price-low"
+              ? "priceAsc"
+              : sortBy === "price-high"
+              ? "priceDesc"
+              : "newest",
           isNew: filters.isNew ? "true" : undefined,
           isSale: filters.isSale ? "true" : undefined,
           isBestSeller: filters.isBestSeller ? "true" : undefined,
@@ -91,7 +107,9 @@ export default function ProductsPage() {
         if (priceRange[0] > 0) params.minPrice = priceRange[0];
         if (priceRange[1] < 500) params.maxPrice = priceRange[1];
 
-        const res = await api.get<ProductListResponse>("/products/", { params });
+        const res = await api.get<ProductListResponse>("/products/", {
+          params,
+        });
         console.log("Products data:", res.data);
         const productsData: Product[] = res.data.products.map((p: any) => ({
           id: p.id,
@@ -103,17 +121,21 @@ export default function ProductsPage() {
           brandId: p.brand?.id ?? null,
           createdAt: "",
           updatedAt: "",
-          category: p.category ? { id: p.category.id, name: p.category.name } : undefined,
+          category: p.category
+            ? { id: p.category.id, name: p.category.name }
+            : undefined,
           brand: p.brand ? { id: p.brand.id, name: p.brand.name } : undefined,
           images: p.image
-            ? [{
-                id: p.image.id,
-                productId: p.id,
-                url: p.image.url,
-                alt: p.image.alt ?? null,
-                isPrimary: true,
-                sortOrder: 0
-              }]
+            ? [
+                {
+                  id: p.image.id,
+                  productId: p.id,
+                  url: p.image.url,
+                  alt: p.image.alt ?? null,
+                  isPrimary: true,
+                  sortOrder: 0,
+                },
+              ]
             : [],
           variants: [],
         }));
@@ -189,18 +211,39 @@ export default function ProductsPage() {
                   Categories
                 </h4>
                 <div className="space-y-2">
+                  <div className="flex items-center">
+                    <input
+                      type="radio"
+                      id="cat-all"
+                      name="category"
+                      checked={selectedCategory === "all"}
+                      onChange={() => {
+                        setSelectedCategory("all");
+                        const params = new URLSearchParams(searchParams);
+                        params.delete("category"); // NEW: remove from URL
+                        setSearchParams(params);
+                      }}
+                      className="w-4 h-4 text-amber-600 border-gray-300 focus:ring-amber-500"
+                    />
+                    <label
+                      htmlFor="cat-all"
+                      className="ml-2 text-sm text-gray-600 flex-1 flex justify-between"
+                    >
+                      <span>All</span>
+                    </label>
+                  </div>
                   {categories.map((category) => (
-                    <div key={category.id} className="flex items-center">
+                    <div key={category.slug} className="flex items-center">
                       <input
                         type="radio"
-                        id={category.id}
+                        id={category.slug}
                         name="category"
-                        checked={selectedCategory === category.id}
-                        onChange={() => setSelectedCategory(category.id)}
+                        checked={selectedCategory === category.slug}
+                        onChange={() => setSelectedCategory(category.slug)}
                         className="w-4 h-4 text-amber-600 border-gray-300 focus:ring-amber-500"
                       />
                       <label
-                        htmlFor={category.id}
+                        htmlFor={category.slug}
                         className="ml-2 text-sm text-gray-600 flex-1 flex justify-between"
                       >
                         <span>{category.name}</span>
@@ -225,10 +268,7 @@ export default function ProductsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {brands.map((b) => (
-                      <SelectItem
-                        key={String(b.id)}
-                        value={String(b.id)}
-                      >
+                      <SelectItem key={String(b.id)} value={String(b.id)}>
                         {b.name}
                       </SelectItem>
                     ))}
@@ -386,7 +426,7 @@ export default function ProductsPage() {
               </div>
             </div>
 
-            {/* Products Grid */}
+            {/* Products List */}
             {loading ? (
               <div className="text-center py-12">
                 <p className="text-gray-600 text-lg">Loading products...</p>
@@ -504,13 +544,17 @@ export default function ProductsPage() {
                   onClick={() => {
                     setSearchQuery("");
                     setSelectedCategory("all");
-                    setSelectedBrand("All Brands");
+                    // setSelectedBrand("All Brands");
+                    setSelectedBrand("all");
                     setPriceRange([0, 500]);
                     setFilters({
                       isNew: false,
                       isSale: false,
                       isBestSeller: false,
                     });
+                    const params = new URLSearchParams(searchParams);
+                    params.delete("category"); // NEW: clear URL
+                    setSearchParams(params);
                   }}
                   className="mt-4"
                 >
