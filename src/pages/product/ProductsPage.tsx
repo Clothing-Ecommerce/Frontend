@@ -519,15 +519,10 @@ export default function ProductsPage() {
                         <span className="text-lg font-bold text-gray-900">
                           {formatPrice(product.basePrice)}
                         </span>
-                        {/* {product.originalPrice && (
-                          <span className="text-sm text-gray-500 line-through">
-                            {formatPrice(product.originalPrice)}
-                          </span>
-                        )} */}
                       </div>
-                      <Button className="w-full bg-black text-white hover:bg-gray-800">
+                      {/* <Button className="w-full bg-black text-white hover:bg-gray-800">
                         Add to Cart
-                      </Button>
+                      </Button> */}
                     </div>
                   </div>
                 ))}

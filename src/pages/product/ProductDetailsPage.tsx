@@ -28,6 +28,7 @@ import axios from "axios";
 import { formatPrice } from "@/utils/formatPrice";
 import type { Product, ProductVariant, ColorOption } from "@/types/productType";
 import type { ProductListResponse } from "@/types/productType";
+import { MediaGallery } from "@/components/products/MediaGallery";
 
 export default function ProductDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -38,7 +39,7 @@ export default function ProductDetailsPage() {
   const [errorProduct, setErrorProduct] = useState<string | null>(null);
   const [errorRelated, setErrorRelated] = useState<string | null>(null);
 
-  const [selectedImage, setSelectedImage] = useState(0);
+  // const [selectedImage, setSelectedImage] = useState(0);
   const [colorOptions, setColorOptions] = useState<ColorOption[]>([]);
   const [sizeOptions, setSizeOptions] = useState<string[]>([]);
   const [selectedColor, setSelectedColor] = useState<ColorOption | null>(null);
@@ -265,39 +266,7 @@ export default function ProductDetailsPage() {
       <div className="container mx-auto px-4 py-8">
         <div className="grid lg:grid-cols-2 gap-12">
           {/* Product Images */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="space-y-4"
-          >
-            <div className="relative">
-              <img
-                src={product.images?.[selectedImage]?.url || "/placeholder.svg"}
-                alt={product.name}
-                className="w-full h-96 lg:h-[500px] object-cover rounded-lg shadow-lg"
-              />
-            </div>
-
-            <div className="grid grid-cols-4 gap-2">
-              {product.images?.map((image, index) => (
-                <motion.button
-                  key={image.id}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setSelectedImage(index)}
-                  className={`relative rounded-lg overflow-hidden ${
-                    selectedImage === index ? "ring-2 ring-blue-600" : ""
-                  }`}
-                >
-                  <img
-                    src={image.url}
-                    alt={image.alt || `${product.name} ${index + 1}`}
-                    className="w-full h-20 object-cover"
-                  />
-                </motion.button>
-              ))}
-            </div>
-          </motion.div>
+          <MediaGallery images={product.images} initialIndex={0} />
 
           {/* Product Info */}
           <motion.div
