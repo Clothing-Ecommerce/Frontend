@@ -96,7 +96,7 @@ export default function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section className="bg-white py-12 px-4">
+      <section className="bg-gray-100 py-12 px-4">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="flex items-center gap-4 p-6 bg-gray-50 rounded-lg">
             <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center">
@@ -136,22 +136,28 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Product Categories Grid */}
+      {/* Product Brands */}
       <section className="bg-white py-16 px-4">
+        <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              Famous Brands
+            </h2>
+            <p className="text-gray-600">Discover our most popular items</p>
+        </div>
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-          {/* Men's Sunglasses */}
+          {/* CHANEL */}
           <div className="relative group overflow-hidden rounded-lg">
             <img
               src="/placeholder.svg?height=300&width=400"
-              alt="Men's Sunglasses"
+              alt="CHANEL"
               width={400}
               height={300}
               className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
             />
             <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-end p-6">
-              <p className="text-white text-sm mb-1">FOR MEN ONLINE</p>
+              {/* <p className="text-white text-sm mb-1">FOR MEN ONLINE</p> */}
               <h3 className="text-white text-xl font-bold mb-3">
-                MEN'S SUNGLASSES
+                CHANEL
               </h3>
               <Button
                 variant="outline"
@@ -162,19 +168,19 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Men's Sneaker */}
+          {/* GUCCI */}
           <div className="relative group overflow-hidden rounded-lg">
             <img
               src="/placeholder.svg?height=300&width=400"
-              alt="Men's Sneaker"
+              alt="GUCCI"
               width={400}
               height={300}
               className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
             />
             <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-end p-6">
-              <p className="text-white text-sm mb-1">MEN'S SNEAKER</p>
+              {/* <p className="text-white text-sm mb-1">MEN'S SNEAKER</p> */}
               <h3 className="text-white text-xl font-bold mb-3">
-                MEN'S SNEAKER
+                GUCCI
               </h3>
               <Button
                 variant="outline"
@@ -185,19 +191,19 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Men's T-Shirt */}
+          {/* H&M */}
           <div className="relative group overflow-hidden rounded-lg">
             <img
               src="/placeholder.svg?height=300&width=400"
-              alt="Men's T-Shirt"
+              alt="H&M"
               width={400}
               height={300}
               className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
             />
             <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-end p-6">
-              <p className="text-white text-sm mb-1">COLLECTION OF 2019</p>
+              {/* <p className="text-white text-sm mb-1">COLLECTION OF 2019</p> */}
               <h3 className="text-white text-xl font-bold mb-3">
-                MEN'S T-SHIRT
+                H&M
               </h3>
               <Button
                 variant="outline"
@@ -208,18 +214,18 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Men's Shoes Collection */}
+          {/* YODY */}
           <div className="relative group overflow-hidden rounded-lg">
             <img
               src="/placeholder.svg?height=300&width=400"
-              alt="Men's Shoes Collection"
+              alt="YODY"
               width={400}
               height={300}
               className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
             />
             <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-end p-6">
-              <p className="text-white text-sm mb-1">MEN'S SHOES</p>
-              <h3 className="text-white text-xl font-bold mb-3">COLLECTION</h3>
+              {/* <p className="text-white text-sm mb-1">MEN'S SHOES</p> */}
+              <h3 className="text-white text-xl font-bold mb-3">YODY</h3>
               <Button
                 variant="outline"
                 className="bg-transparent border-white text-white hover:bg-white hover:text-black w-fit"
