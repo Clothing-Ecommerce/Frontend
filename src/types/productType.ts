@@ -144,3 +144,11 @@ export interface BrandOption {
   id: string | number;
   name: string;
 }
+
+export interface CategoryNode {
+  id: number;
+  name: string;
+  slug: string;
+  // productCount: number;
+  children: CategoryNode[];
+}

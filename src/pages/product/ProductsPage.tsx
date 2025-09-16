@@ -19,6 +19,7 @@ import type { ProductListResponse } from "@/types/productType";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { formatPrice } from "@/utils/formatPrice";
+import CategoryTreeFilter from "@/components/products/CategoryTreeFilter";
 
 export default function ProductsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -64,19 +65,27 @@ export default function ProductsPage() {
 
         console.log("Categories data:", categoriesRes.data);
         // CHANGED: API /categories/ now returns { slug, name, count }
-        const cats: CategoryOption[] = (categoriesRes.data as any[]).map(
-          (c) => ({
+        const cats: CategoryOption[] = (categoriesRes.data as any[])
+          .map((c) => ({
             slug: c.slug, // CHANGED
             name: c.name,
             count: c.count ?? 0,
-          })
-        );
+          }))
+          .filter((c) => c.slug !== "all"); // loại bỏ 'all'
         setCategories(cats);
 
         console.log("Brands data:", brandsRes.data);
         // brandsRes.data sẽ là một mảng chuỗi (e.g., ['All Brands', 'Brand A', 'Brand B'])
-        setBrands(brandsRes.data as BrandOption[]);
-        // setCategories(categoriesRes.data as CategoryOption[]);
+        const raw = brandsRes.data as any[];
+        const mapped: BrandOption[] = raw.map((b: any) =>
+          typeof b === "string"
+            ? { id: b, name: b }
+            : { id: String(b.id), name: b.name }
+        );
+
+        // chèn option "All Brands" lên đầu
+        setBrands([{ id: "all", name: "All Brands" }, ...mapped]);
+        // setBrands(brandsRes.data as BrandOption[]);
       } catch (error) {
         console.error("Error fetching categories or brands:", error);
       }
@@ -159,6 +168,18 @@ export default function ProductsPage() {
     filters,
   ]);
 
+  // ── Category Men/Women tree filter (single-select)
+  const currentCategory = searchParams.get("category") ?? "all";
+  const onPickCategory = (slug: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (slug === currentCategory) {
+      params.delete("category");
+    } else {
+      params.set("category", slug);
+    }
+    setSearchParams(params, { replace: true });
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <Header />
@@ -214,8 +235,9 @@ export default function ProductsPage() {
                   <div className="flex items-center">
                     <input
                       type="radio"
-                      id="cat-all"
+                      // id="cat-all"
                       name="category"
+                      value="all"
                       checked={selectedCategory === "all"}
                       onChange={() => {
                         setSelectedCategory("all");
@@ -229,28 +251,30 @@ export default function ProductsPage() {
                       htmlFor="cat-all"
                       className="ml-2 text-sm text-gray-600 flex-1 flex justify-between"
                     >
-                      <span>All</span>
+                      <span>All Categories</span>
                     </label>
                   </div>
-                  {categories.map((category) => (
-                    <div key={category.slug} className="flex items-center">
-                      <input
-                        type="radio"
-                        id={category.slug}
-                        name="category"
-                        checked={selectedCategory === category.slug}
-                        onChange={() => setSelectedCategory(category.slug)}
-                        className="w-4 h-4 text-amber-600 border-gray-300 focus:ring-amber-500"
-                      />
-                      <label
-                        htmlFor={category.slug}
-                        className="ml-2 text-sm text-gray-600 flex-1 flex justify-between"
-                      >
-                        <span>{category.name}</span>
-                        <span>({category.count})</span>
-                      </label>
-                    </div>
-                  ))}
+                  {/* Men/Women category trees */}
+                  <div className="rounded-2xl border p-2">
+                    <CategoryTreeFilter
+                      root="men"
+                      selectedSlug={currentCategory}
+                      onPick={onPickCategory}
+                      depth={3}
+                      showCount={true}
+                      initialOpenLevels={1}
+                    />
+                  </div>
+                  <div className="rounded-2xl border p-2">
+                    <CategoryTreeFilter
+                      root="women"
+                      selectedSlug={currentCategory}
+                      onPick={onPickCategory}
+                      depth={3}
+                      showCount={true}
+                      initialOpenLevels={1}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -262,16 +286,22 @@ export default function ProductsPage() {
                 >
                   Brand
                 </Label>
-                <Select value={selectedBrand} onValueChange={setSelectedBrand}>
+                <Select
+                  onValueChange={(val) => setSelectedBrand(val)}
+                  value={selectedBrand ?? "all"}
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select brand" />
                   </SelectTrigger>
                   <SelectContent>
-                    {brands.map((b) => (
-                      <SelectItem key={String(b.id)} value={String(b.id)}>
-                        {b.name}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="all">All Brands</SelectItem>
+                    {brands
+                      .filter((b) => b.id !== "all")
+                      .map((b) => (
+                        <SelectItem key={b.id} value={String(b.id)}>
+                          {b.name}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
