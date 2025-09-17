@@ -11,7 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-// import { Heart, Filter, Grid, List, Star } from "lucide-react";
 import { Heart, Filter, Grid, List } from "lucide-react";
 import api from "@/utils/axios";
 import type { BrandOption, CategoryOption, Product } from "@/types/productType";
@@ -21,15 +20,32 @@ import Footer from "@/components/layout/Footer";
 import { formatPrice } from "@/utils/formatPrice";
 import CategoryTreeFilter from "@/components/products/CategoryTreeFilter";
 
+// ---------- helpers (URL <-> array) ----------
+function readInitialCategories(sp: URLSearchParams): string[] {
+  // Ưu tiên categories (mảng), fallback category (đơn)
+  const multi = sp.getAll("categories").filter(Boolean);
+  if (multi.length) return multi.filter((c) => c !== "all");
+  const single = sp.get("category");
+  return single && single !== "all" ? [single] : [];
+}
+function writeCategoriesToParams(sp: URLSearchParams, slugs: string[]) {
+  sp.delete("category");
+  sp.delete("categories");
+  for (const s of slugs) sp.append("categories", s);
+}
+
 export default function ProductsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const initialCategory = searchParams.get("category") ?? "all";
-  const [selectedCategory, setSelectedCategory] =
-    useState<string>(initialCategory);
+  // ========== Category (MULTI-SELECT) ==========
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(
+    readInitialCategories(searchParams)
+  );
 
+  const isAllCategories = selectedCategories.length === 0;
+
+  // ========== Others ==========
   const [searchQuery, setSearchQuery] = useState("");
-  // const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedBrand, setSelectedBrand] = useState<string>("all");
   const [priceRange, setPriceRange] = useState([0, 500]);
   const [sortBy, setSortBy] = useState("featured");
@@ -40,21 +56,50 @@ export default function ProductsPage() {
     isSale: false,
     isBestSeller: false,
   });
-  // State cho dữ liệu từ API
+
+  // Data
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [brands, setBrands] = useState<BrandOption[]>([]);
   const [totalProducts, setTotalProducts] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  // NEW: keep selectedCategory in sync with URL changes (e.g., user clicks a Header link)
+  const applyNextCategories = (next: string[]) => {
+    setSelectedCategories(next);
+    const p = new URLSearchParams(searchParams);
+    if (next.length === 0) {
+      p.delete("category");
+      p.delete("categories");
+    } else {
+      p.delete("category");
+      p.delete("categories");
+      next.forEach((s) => p.append("categories", s));
+    }
+    setSearchParams(p, { replace: true });
+  };
+
+  // Clear toàn bộ category filters
+  const clearCategories = () => {
+    setSelectedCategories([]);
+    const p = new URLSearchParams(searchParams);
+    p.delete("category");
+    p.delete("categories");
+    setSearchParams(p, { replace: true });
+  };
+
+  // Sync state khi URL đổi (ví dụ user click link ở Header)
   useEffect(() => {
-    const cat = searchParams.get("category") ?? "all";
-    if (cat !== selectedCategory) setSelectedCategory(cat);
+    const next = readInitialCategories(searchParams);
+    if (
+      next.length !== selectedCategories.length ||
+      next.some((x, i) => x !== selectedCategories[i])
+    ) {
+      setSelectedCategories(next);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
+  // Fetch categories + brands
   useEffect(() => {
     const fetchCategoriesAndBrands = async () => {
       try {
@@ -63,29 +108,22 @@ export default function ProductsPage() {
           api.get("/brands/"),
         ]);
 
-        console.log("Categories data:", categoriesRes.data);
-        // CHANGED: API /categories/ now returns { slug, name, count }
         const cats: CategoryOption[] = (categoriesRes.data as any[])
           .map((c) => ({
-            slug: c.slug, // CHANGED
+            slug: c.slug,
             name: c.name,
             count: c.count ?? 0,
           }))
-          .filter((c) => c.slug !== "all"); // loại bỏ 'all'
+          .filter((c) => c.slug !== "all");
         setCategories(cats);
 
-        console.log("Brands data:", brandsRes.data);
-        // brandsRes.data sẽ là một mảng chuỗi (e.g., ['All Brands', 'Brand A', 'Brand B'])
         const raw = brandsRes.data as any[];
         const mapped: BrandOption[] = raw.map((b: any) =>
           typeof b === "string"
             ? { id: b, name: b }
             : { id: String(b.id), name: b.name }
         );
-
-        // chèn option "All Brands" lên đầu
         setBrands([{ id: "all", name: "All Brands" }, ...mapped]);
-        // setBrands(brandsRes.data as BrandOption[]);
       } catch (error) {
         console.error("Error fetching categories or brands:", error);
       }
@@ -93,15 +131,13 @@ export default function ProductsPage() {
     fetchCategoriesAndBrands();
   }, []);
 
-  // Gọi API products khi các filter thay đổi
+  // Fetch products khi filters đổi
   useEffect(() => {
     const fetchProducts = async () => {
       setLoading(true);
       try {
         const params: Record<string, unknown> = {
           search: searchQuery || undefined,
-          // category: selectedCategory !== "all" ? selectedCategory : undefined,
-          category: selectedCategory !== "all" ? selectedCategory : undefined, // CHANGED: pass slug
           brand: selectedBrand !== "all" ? selectedBrand : undefined,
           sortBy:
             sortBy === "price-low"
@@ -113,13 +149,19 @@ export default function ProductsPage() {
           isSale: filters.isSale ? "true" : undefined,
           isBestSeller: filters.isBestSeller ? "true" : undefined,
         };
+
         if (priceRange[0] > 0) params.minPrice = priceRange[0];
         if (priceRange[1] < 500) params.maxPrice = priceRange[1];
+
+        // Multi-select: gửi mảng categories nếu có chọn
+        if (selectedCategories.length > 0) {
+          params.categories = selectedCategories; // axios -> categories[]=a&categories[]=b
+        }
 
         const res = await api.get<ProductListResponse>("/products/", {
           params,
         });
-        console.log("Products data:", res.data);
+
         const productsData: Product[] = res.data.products.map((p: any) => ({
           id: p.id,
           name: p.name,
@@ -161,24 +203,12 @@ export default function ProductsPage() {
     fetchProducts();
   }, [
     searchQuery,
-    selectedCategory,
+    selectedCategories,
     selectedBrand,
     priceRange,
     sortBy,
     filters,
   ]);
-
-  // ── Category Men/Women tree filter (single-select)
-  const currentCategory = searchParams.get("category") ?? "all";
-  const onPickCategory = (slug: string) => {
-    const params = new URLSearchParams(searchParams);
-    if (slug === currentCategory) {
-      params.delete("category");
-    } else {
-      params.set("category", slug);
-    }
-    setSearchParams(params, { replace: true });
-  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -226,7 +256,7 @@ export default function ProductsPage() {
                 />
               </div>
 
-              {/* Categories */}
+              {/* Categories — giữ giao diện cũ (radio All + 2 tree Men/Women) */}
               <div className="mb-6">
                 <h4 className="text-sm font-medium text-gray-700 mb-3">
                   Categories
@@ -235,41 +265,35 @@ export default function ProductsPage() {
                   <div className="flex items-center">
                     <input
                       type="radio"
-                      // id="cat-all"
                       name="category"
                       value="all"
-                      checked={selectedCategory === "all"}
-                      onChange={() => {
-                        setSelectedCategory("all");
-                        const params = new URLSearchParams(searchParams);
-                        params.delete("category"); // NEW: remove from URL
-                        setSearchParams(params);
-                      }}
+                      checked={isAllCategories}
+                      onChange={() => clearCategories()}
                       className="w-4 h-4 text-amber-600 border-gray-300 focus:ring-amber-500"
                     />
-                    <label
-                      htmlFor="cat-all"
-                      className="ml-2 text-sm text-gray-600 flex-1 flex justify-between"
-                    >
+                    <label className="ml-2 text-sm text-gray-600 flex-1 flex justify-between">
                       <span>All Categories</span>
                     </label>
                   </div>
-                  {/* Men/Women category trees */}
+
+                  {/* Men tree */}
                   <div className="rounded-2xl border p-2">
                     <CategoryTreeFilter
                       root="men"
-                      selectedSlug={currentCategory}
-                      onPick={onPickCategory}
+                      selectedSlugs={selectedCategories}
+                      onChange={applyNextCategories}
                       depth={3}
                       showCount={true}
                       initialOpenLevels={1}
                     />
                   </div>
+
+                  {/* Women tree */}
                   <div className="rounded-2xl border p-2">
                     <CategoryTreeFilter
                       root="women"
-                      selectedSlug={currentCategory}
-                      onPick={onPickCategory}
+                      selectedSlugs={selectedCategories}
+                      onChange={applyNextCategories}
                       depth={3}
                       showCount={true}
                       initialOpenLevels={1}
@@ -498,23 +522,6 @@ export default function ProductsPage() {
                           }
                         />
                       </Link>
-                      <div className="absolute top-2 left-2 flex flex-col gap-1">
-                        {/* {product.isNew && (
-                          <span className="bg-green-500 text-white text-xs px-2 py-1 rounded">
-                            NEW
-                          </span>
-                        )}
-                        {product.isSale && (
-                          <span className="bg-red-500 text-white text-xs px-2 py-1 rounded">
-                            SALE
-                          </span>
-                        )} */}
-                        {/* {product.isBestSeller && (
-                          <span className="bg-amber-500 text-white text-xs px-2 py-1 rounded">
-                            BEST SELLER
-                          </span>
-                        )} */}
-                      </div>
                       <button className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-md hover:bg-gray-50">
                         <Heart className="w-4 h-4 text-gray-600" />
                       </button>
@@ -528,31 +535,11 @@ export default function ProductsPage() {
                       <p className="text-sm text-gray-600 mb-2">
                         {product.brand?.name}
                       </p>
-                      {/* <div className="flex items-center gap-1 mb-2">
-                        <div className="flex">
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`w-4 h-4 ${
-                                i < Math.floor(product.rating)
-                                  ? "text-yellow-400 fill-current"
-                                  : "text-gray-300"
-                              }`}
-                            />
-                          ))}
-                        </div>
-                        <span className="text-sm text-gray-600">
-                          ({product.reviewsCount})
-                        </span>
-                      </div> */}
                       <div className="flex items-center gap-2 mb-3">
                         <span className="text-lg font-bold text-gray-900">
                           {formatPrice(product.basePrice)}
                         </span>
                       </div>
-                      {/* <Button className="w-full bg-black text-white hover:bg-gray-800">
-                        Add to Cart
-                      </Button> */}
                     </div>
                   </div>
                 ))}
@@ -568,8 +555,7 @@ export default function ProductsPage() {
                   variant="outline"
                   onClick={() => {
                     setSearchQuery("");
-                    setSelectedCategory("all");
-                    // setSelectedBrand("All Brands");
+                    clearCategories(); // xoá toàn bộ lựa chọn danh mục + URL
                     setSelectedBrand("all");
                     setPriceRange([0, 500]);
                     setFilters({
@@ -577,9 +563,6 @@ export default function ProductsPage() {
                       isSale: false,
                       isBestSeller: false,
                     });
-                    const params = new URLSearchParams(searchParams);
-                    params.delete("category"); // NEW: clear URL
-                    setSearchParams(params);
                   }}
                   className="mt-4"
                 >
