@@ -62,12 +62,15 @@ export default function CartPage() {
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
 
+  const sortCartItems = (items: CartItem[]) =>
+    [...items].sort((a, b) => a.id - b.id);
+
   // Initial cart
   useEffect(() => {
     const fetchCart = async () => {
       try {
         const res = await api.get<CartResponse>("/cart");
-        setCartItems(res.data.items);
+        setCartItems(sortCartItems(res.data.items));
         setSummary(res.data.summary);
         setAppliedPromo(res.data.appliedPromo);
       } catch (error) {
@@ -86,7 +89,7 @@ export default function CartPage() {
 
   // ==== Helpers ====
   const refreshCartFromResponse = (res: { data: CartResponse }) => {
-    setCartItems(res.data.items);
+    setCartItems(sortCartItems(res.data.items));
     setSummary(res.data.summary);
     setAppliedPromo(res.data.appliedPromo);
   };
