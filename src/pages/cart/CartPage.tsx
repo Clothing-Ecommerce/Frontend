@@ -185,15 +185,50 @@ export default function CartPage() {
     }
 
     try {
-      const res = await api.patch<CartResponse>(
-        `/cart/items/${editingItem.id}`,
-        { variantId: target.id, quantity: editFormData.quantity }
-      );
-      refreshCartFromResponse(res);
+      const desiredQuantity = Math.max(1, editFormData.quantity);
+      const variantChanged = target.id !== editingItem.variantId;
+
+      let currentItemId = editingItem.id;
+      let currentQuantity = editingItem.quantity;
+
+      if (variantChanged) {
+        const res = await api.patch<CartResponse>(
+          `/cart/items/${editingItem.id}`,
+          { variantId: target.id }
+        );
+        refreshCartFromResponse(res);
+
+        const updatedItem = res.data.items.find(
+          (it) => it.variantId === target.id
+        );
+
+        if (!updatedItem) {
+          throw new Error("Không tìm thấy sản phẩm sau khi cập nhật biến thể");
+        }
+
+        currentItemId = updatedItem.id;
+        currentQuantity = updatedItem.quantity;
+      }
+
+      if (desiredQuantity !== currentQuantity) {
+        const res = await api.patch<CartResponse>(
+          `/cart/items/${currentItemId}`,
+          { quantity: desiredQuantity }
+        );
+        refreshCartFromResponse(res);
+
+        currentQuantity =
+          res.data.items.find((it) => it.id === currentItemId)?.quantity ??
+          currentQuantity;
+      }
+
       setShowEditDialog(false);
       setEditingItem(null);
     } catch (error: any) {
-      const msg = error?.response?.data?.message || "Không thể lưu thay đổi";
+      const msg =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Không thể lưu thay đổi";
       alert(msg);
     }
   };
@@ -501,7 +536,7 @@ export default function CartPage() {
 
                   <Button className="w-full bg-black text-white hover:bg-gray-800 py-3">
                     <Lock className="w-4 h-4 mr-2" />
-                    Thanh toán
+                    Đặt Hàng
                   </Button>
 
                   {/* Security / Policy */}
