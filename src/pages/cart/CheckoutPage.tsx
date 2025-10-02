@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -7,34 +7,47 @@ import { SelectAddressDialog } from "@/components/checkout/selectAddressDialog";
 import { SelectPaymentDialog } from "@/components/checkout/selectPaymentDialog";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import api from "@/utils/axios";
+import type { Address } from "@/types/addressType";
 
-// Mock data
-const addresses = [
-  {
-    id: 1,
-    name: "Nguyen Hoai Phong",
-    phone: "0123456789",
-    address: "123 Nguyen Hue Street, District 1, Ho Chi Minh City",
-    isDefault: true,
-    type: "Home" as const,
-  },
-  {
-    id: 2,
-    name: "Nguyen Hoai Phong",
-    phone: "0123456789",
-    address: "456 Le Loi Street, District 3, Ho Chi Minh City",
-    isDefault: false,
-    type: "Work" as const,
-  },
-  {
-    id: 3,
-    name: "Nguyen Hoai Phong",
-    phone: "0987654321",
-    address: "789 Tran Hung Dao Street, District 5, Ho Chi Minh City",
-    isDefault: false,
-    type: "Home" as const,
-  },
-];
+type CheckoutAddress = Address & { addressId: number };
+
+const getLabelText = (label: CheckoutAddress["label"] | null | undefined) => {
+  switch (label) {
+    case "HOME":
+      return "Nhà";
+    case "WORK":
+      return "Chỗ Làm";
+    case "OTHER":
+      return "Khác";
+    default:
+      return "Other";
+  }
+};
+
+const formatAddress = (address: CheckoutAddress) => {
+  const segments = [
+    address.houseNumber,
+    address.street,
+    address.wardName,
+    address.districtName,
+    address.provinceName,
+    address.postalCode,
+  ].filter(Boolean);
+
+  const buildingSegments = [address.building, address.block, address.floor, address.room].filter(Boolean);
+
+  let formatted = segments.join(", ");
+  if (buildingSegments.length) {
+    formatted = formatted ? `${buildingSegments.join(", ")}, ${formatted}` : buildingSegments.join(", ");
+  }
+
+  if (address.country) {
+    formatted = formatted ? `${formatted}, ${address.country}` : address.country;
+  }
+
+  return formatted;
+};
 
 const paymentMethods = [
   {
@@ -78,13 +91,61 @@ const checkoutData = {
 };
 
 export default function CheckoutPage() {
-  const [selectedAddressId, setSelectedAddressId] = useState(1);
+  const [addresses, setAddresses] = useState<CheckoutAddress[]>([]);
+  const [isLoadingAddresses, setIsLoadingAddresses] = useState(true);
+  const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
   const [selectedPaymentId, setSelectedPaymentId] = useState("cod");
   const [showAddressDialog, setShowAddressDialog] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
-  const selectedAddress = addresses.find(
-    (addr) => addr.id === selectedAddressId
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchAddresses = async () => {
+      try {
+        setIsLoadingAddresses(true);
+        const { data } = await api.get<Address[]>("/user/addresses");
+        if (!isMounted) return;
+
+        const sanitized = (data ?? []).filter((item): item is CheckoutAddress =>
+          typeof item.addressId === "number"
+        );
+
+        setAddresses(sanitized);
+        setSelectedAddressId((prev) => {
+          if (prev && sanitized.some((addr) => addr.addressId === prev)) {
+            return prev;
+          }
+          const defaultAddress = sanitized.find((addr) => addr.isDefault);
+          const fallback = defaultAddress ?? sanitized[0];
+          return fallback ? fallback.addressId : null;
+        });
+      } catch (error) {
+        console.error("Failed to fetch user addresses", error);
+        if (isMounted) {
+          setAddresses([]);
+          setSelectedAddressId(null);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingAddresses(false);
+        }
+      }
+    };
+
+    fetchAddresses();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const selectedAddress = useMemo(
+    () =>
+      selectedAddressId !== null
+        ? addresses.find((addr) => addr.addressId === selectedAddressId) ?? null
+        : null,
+    [addresses, selectedAddressId]
   );
   const selectedPayment = paymentMethods.find(
     (method) => method.id === selectedPaymentId
@@ -155,41 +216,52 @@ export default function CheckoutPage() {
               <div className="flex items-center gap-2 mb-4">
                 <MapPin className="w-5 h-5 text-gray-900" />
                 <h2 className="text-lg font-semibold text-gray-900">
-                  Shipping Address
+                  Địa chỉ giao hàng
                 </h2>
                 <Button
                   variant="ghost"
                   size="sm"
                   className="ml-auto text-gray-600 hover:text-gray-900"
                   onClick={() => setShowAddressDialog(true)}
+                  disabled={isLoadingAddresses}
                 >
                   <Edit className="w-4 h-4 mr-1" />
-                  Edit
+                  Thay đổi địa chỉ
                 </Button>
               </div>
 
-              {selectedAddress && (
+              {isLoadingAddresses ? (
+                <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-600">
+                  Đang tải địa chỉ giao hàng...
+                </div>
+              ) : selectedAddress ? (
                 <div className="p-4 border-2 border-gray-900 rounded-lg bg-white">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="font-semibold text-gray-900">
-                      {selectedAddress.name}
+                      {selectedAddress.recipient}
                     </span>
                     {selectedAddress.isDefault && (
                       <span className="px-2 py-0.5 bg-gray-900 text-white text-xs rounded font-medium">
-                        Default
+                        Mặc định
                       </span>
                     )}
                     <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded font-medium">
                       <MapPin className="w-3 h-3 inline mr-1" />
-                      {selectedAddress.type}
+                      {getLabelText(selectedAddress.label)}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-700 mb-1">
-                    {selectedAddress.phone}
-                  </p>
+                  {selectedAddress.phone && (
+                    <p className="text-sm text-gray-700 mb-1">
+                      {selectedAddress.phone}
+                    </p>
+                  )}
                   <p className="text-sm text-gray-600">
-                    {selectedAddress.address}
+                    {formatAddress(selectedAddress)}
                   </p>
+                </div>
+              ) : (
+                <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-600">
+                  Bạn chưa lưu địa chỉ nào. Vui lòng thêm địa chỉ vào hồ sơ trước khi đặt hàng.
                 </div>
               )}
             </div>
