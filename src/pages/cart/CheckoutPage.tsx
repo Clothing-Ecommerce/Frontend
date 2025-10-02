@@ -2,6 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { MapPin, Edit, Package, ChevronRight, Tag, Wallet } from "lucide-react";
 import { SelectAddressDialog } from "@/components/checkout/selectAddressDialog";
 import { SelectPaymentDialog } from "@/components/checkout/selectPaymentDialog";
@@ -10,7 +19,7 @@ import Footer from "@/components/layout/Footer";
 import api from "@/utils/axios";
 import type { Address } from "@/types/addressType";
 import { formatPrice } from "@/utils/formatPrice";
-import type { CartItem, CartResponse, CartSummary } from "@/types/cartType";
+import type { AvailableCoupon, CartItem, CartResponse, CartSummary } from "@/types/cartType";
 
 type CheckoutAddress = Address & { addressId: number };
 
@@ -66,32 +75,6 @@ const paymentMethods = [
   },
 ];
 
-const checkoutData = {
-  cartItems: [
-    {
-      id: 1,
-      name: "Essential Cotton Tee",
-      price: 299000,
-      quantity: 2,
-      size: "M",
-      color: "White",
-      image: "/placeholder.svg?height=100&width=100",
-    },
-    {
-      id: 2,
-      name: "Minimalist Denim Jacket",
-      price: 899000,
-      quantity: 1,
-      size: "L",
-      color: "Indigo",
-      image: "/placeholder.svg?height=100&width=100",
-    },
-  ],
-  subtotal: 1497000,
-  discount: 0,
-  shipping: 0,
-};
-
 export default function CheckoutPage() {
   const [addresses, setAddresses] = useState<CheckoutAddress[]>([]);
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(true);
@@ -103,6 +86,10 @@ export default function CheckoutPage() {
   const [summary, setSummary] = useState<CartSummary | null>(null);
   const [appliedPromo, setAppliedPromo] = useState<CartResponse["appliedPromo"]>();
   const [isLoadingCart, setIsLoadingCart] = useState(true);
+  const [availableCoupons, setAvailableCoupons] = useState<AvailableCoupon[]>([]);
+  const [promoCode, setPromoCode] = useState("");
+  const [isPromoLoading, setIsPromoLoading] = useState(false);
+  const [showPromoDialog, setShowPromoDialog] = useState(false);
 
   const sortCartItems = (items: CartItem[]) => [...items].sort((a, b) => a.id - b.id);
 
@@ -148,6 +135,12 @@ export default function CheckoutPage() {
     };
   }, []);
 
+  const refreshCartFromResponse = (res: { data: CartResponse }) => {
+    setCartItems(sortCartItems(res.data.items));
+    setSummary(res.data.summary);
+    setAppliedPromo(res.data.appliedPromo);
+  };
+
   useEffect(() => {
     let isMounted = true;
 
@@ -156,9 +149,7 @@ export default function CheckoutPage() {
         setIsLoadingCart(true);
         const res = await api.get<CartResponse>("/cart");
         if (!isMounted) return;
-        setCartItems(sortCartItems(res.data.items));
-        setSummary(res.data.summary);
-        setAppliedPromo(res.data.appliedPromo);
+        refreshCartFromResponse(res);
       } catch (error) {
         console.error("Failed to fetch cart for checkout", error);
         if (isMounted) {
@@ -199,6 +190,72 @@ export default function CheckoutPage() {
 
   const handlePlaceOrder = () => {
     window.location.href = "/cart/checkout/success";
+  };
+
+  const openPromoDialog = async () => {
+    setShowPromoDialog(true);
+    try {
+      const res = await api.get<{ coupons: AvailableCoupon[] }>("/cart/promos/available");
+      setAvailableCoupons(res.data.coupons);
+    } catch (error) {
+      console.error("Failed to load available promos", error);
+    }
+  };
+
+  const handleApplyPromo = async (selectedCode?: string) => {
+    const codeToApply = (selectedCode || promoCode || "").trim();
+    if (!codeToApply) return;
+
+    setIsPromoLoading(true);
+    try {
+      const res = await api.post<CartResponse>("/cart/promos/apply", { code: codeToApply });
+      refreshCartFromResponse(res);
+      setShowPromoDialog(false);
+      setPromoCode("");
+    } catch (error: any) {
+      const code = error?.response?.data?.code;
+      const missing = error?.response?.data?.data?.missingAmount;
+      switch (code) {
+        case "MIN_ORDER_NOT_MET":
+          alert(`Cần mua thêm ${formatPrice(Number(missing) || 0)} để áp dụng mã`);
+          break;
+        case "INVALID_COUPON":
+          alert("Mã khuyến mãi không hợp lệ");
+          break;
+        case "COUPON_INACTIVE":
+          alert("Mã khuyến mãi đang tạm ngưng");
+          break;
+        case "COUPON_NOT_STARTED":
+          alert("Mã khuyến mãi chưa bắt đầu");
+          break;
+        case "COUPON_EXPIRED":
+          alert("Mã khuyến mãi đã hết hạn");
+          break;
+        case "USAGE_LIMIT_REACHED":
+          alert("Mã khuyến mãi đã đạt giới hạn sử dụng");
+          break;
+        case "CART_EMPTY":
+          alert("Giỏ hàng đang trống");
+          break;
+        default:
+          alert(error?.response?.data?.message || "Không thể áp dụng mã");
+      }
+    } finally {
+      setIsPromoLoading(false);
+    }
+  };
+
+  const handleRemovePromo = async () => {
+    setIsPromoLoading(true);
+    try {
+      const res = await api.delete<CartResponse>("/cart/promos/apply");
+      refreshCartFromResponse(res);
+      setPromoCode("");
+    } catch (error: any) {
+      alert(error?.response?.data?.message || "Không thể gỡ mã");
+    } finally {
+      setIsPromoLoading(false);
+    }
   };
 
   return (
@@ -369,11 +426,20 @@ export default function CheckoutPage() {
               {/* Promotion */}
               <button
                 className="w-full flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors bg-white"
-                onClick={() => {}}
+                onClick={openPromoDialog}
               >
                 <div className="flex items-center gap-3">
                   <Tag className="w-5 h-5 text-amber-600" />
-                  <span className="text-sm text-gray-700">Chọn khuyến mãi</span>
+                  <div className="flex flex-col items-start text-sm text-gray-700">
+                    <span>Chọn khuyến mãi</span>
+                    {(appliedPromo || (summary?.promoDiscount ?? 0) > 0) && (
+                      <Badge className="mt-1 bg-green-100 text-green-800">
+                        {appliedPromo
+                          ? `${appliedPromo.code} (−${formatPrice(summary?.promoDiscount ?? 0)})`
+                          : `Đã áp dụng (−${formatPrice(summary?.promoDiscount ?? 0)})`}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-400" />
               </button>
@@ -472,6 +538,113 @@ export default function CheckoutPage() {
         selectedPaymentId={selectedPaymentId}
         onSelectPayment={setSelectedPaymentId}
       />
+
+      <Dialog open={showPromoDialog} onOpenChange={setShowPromoDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Tag className="w-5 h-5" />
+              Chọn mã khuyến mãi
+            </DialogTitle>
+            <DialogDescription>Chọn từ danh sách hoặc nhập mã của bạn</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm text-gray-700">Mã đang hoạt động</h4>
+              <div className="max-h-[240px] overflow-y-auto space-y-2 pr-2">
+                {availableCoupons.map((promo) => {
+                  const disabled = !promo.isEligible;
+                  return (
+                    <div
+                      key={promo.code}
+                      className={`border rounded-lg p-3 cursor-pointer transition-colors ${
+                        !disabled
+                          ? "border-gray-200 hover:border-amber-300 hover:bg-amber-50"
+                          : "border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed"
+                      }`}
+                      onClick={() => !disabled && handleApplyPromo(promo.code)}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="font-bold text-amber-600">{promo.code}</span>
+                        <span className="text-sm font-medium text-gray-900">
+                          {promo.freeShipping
+                            ? "Miễn phí vận chuyển"
+                            : promo.type === "PERCENTAGE"
+                            ? `-${promo.value}%`
+                            : `-${formatPrice(promo.value)}`}
+                        </span>
+                      </div>
+                      {promo.description && (
+                        <p className="text-sm text-gray-600 mb-1">{promo.description}</p>
+                      )}
+                      <div className="flex items-center justify-between text-xs text-gray-500">
+                        <span>ĐH tối thiểu: {formatPrice(promo.minOrderValue)}</span>
+                        {promo.endsAt && (
+                          <span>
+                            Hết hạn: {new Date(promo.endsAt).toLocaleDateString("vi-VN")}
+                          </span>
+                        )}
+                      </div>
+                      {disabled && promo.missingAmount > 0 && (
+                        <p className="text-xs text-red-600 mt-1">
+                          Cần thêm {formatPrice(promo.missingAmount)} để đủ điều kiện
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+                {availableCoupons.length === 0 && (
+                  <p className="text-sm text-gray-500">Hiện chưa có mã nào.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="font-medium text-sm text-gray-700">Nhập mã thủ công</h4>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Nhập mã khuyến mãi"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value)}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={() => handleApplyPromo()}
+                  disabled={!promoCode || isPromoLoading}
+                  className="bg-black text-white hover:bg-gray-800"
+                >
+                  {isPromoLoading ? "Đang áp dụng..." : "Áp dụng"}
+                </Button>
+              </div>
+            </div>
+
+            {(appliedPromo || (summary?.promoDiscount ?? 0) > 0) && (
+              <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-medium text-green-800">
+                      {appliedPromo ? appliedPromo.code : "Đã áp dụng mã"}
+                    </span>
+                    <p className="text-sm text-green-600">
+                      {`Giảm: -${formatPrice(summary?.promoDiscount ?? 0)}`}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleRemovePromo}
+                    className="text-green-600 hover:text-green-800 hover:bg-green-100"
+                    disabled={isPromoLoading}
+                  >
+                    Gỡ mã
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
