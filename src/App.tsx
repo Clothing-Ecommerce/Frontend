@@ -6,6 +6,8 @@ import ProfilePage from "./pages/user/ProfilePage";
 import AllProducts from "./pages/product/ProductsPage";
 import ProductDetailsPage from "./pages/product/ProductDetailsPage";
 import CartPage from "./pages/cart/CartPage";
+import CheckoutPage from "./pages/cart/CheckoutPage";
+import PaymentSuccessPage from "./pages/cart/PaymentSuccessPage";
 
 // import PrivateRoute from "./utils/PrivateRoute";
 // import PublicRoute from "./utils/PublicRoute";
@@ -22,6 +24,8 @@ function App() {
         <Route path="/products/all" element={<AllProducts />} />
         <Route path="/products/:id" element={<ProductDetailsPage />} />
         <Route path="/cart" element={<CartPage />} />
+        <Route path="/cart/checkout" element={<CheckoutPage />} />
+        <Route path="/cart/checkout/success" element={<PaymentSuccessPage />} />
 
         {/* Public routes (chưa đăng nhập) */}
         {/* <Route element={<PublicRoute />}> */}
