@@ -9,6 +9,8 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import api from "@/utils/axios";
 import type { Address } from "@/types/addressType";
+import { formatPrice } from "@/utils/formatPrice";
+import type { CartItem, CartResponse, CartSummary } from "@/types/cartType";
 
 type CheckoutAddress = Address & { addressId: number };
 
@@ -97,6 +99,12 @@ export default function CheckoutPage() {
   const [selectedPaymentId, setSelectedPaymentId] = useState("cod");
   const [showAddressDialog, setShowAddressDialog] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [summary, setSummary] = useState<CartSummary | null>(null);
+  const [appliedPromo, setAppliedPromo] = useState<CartResponse["appliedPromo"]>();
+  const [isLoadingCart, setIsLoadingCart] = useState(true);
+
+  const sortCartItems = (items: CartItem[]) => [...items].sort((a, b) => a.id - b.id);
 
   useEffect(() => {
     let isMounted = true;
@@ -140,6 +148,38 @@ export default function CheckoutPage() {
     };
   }, []);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchCart = async () => {
+      try {
+        setIsLoadingCart(true);
+        const res = await api.get<CartResponse>("/cart");
+        if (!isMounted) return;
+        setCartItems(sortCartItems(res.data.items));
+        setSummary(res.data.summary);
+        setAppliedPromo(res.data.appliedPromo);
+      } catch (error) {
+        console.error("Failed to fetch cart for checkout", error);
+        if (isMounted) {
+          setCartItems([]);
+          setSummary(null);
+          setAppliedPromo(undefined);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingCart(false);
+        }
+      }
+    };
+
+    fetchCart();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const selectedAddress = useMemo(
     () =>
       selectedAddressId !== null
@@ -151,8 +191,11 @@ export default function CheckoutPage() {
     (method) => method.id === selectedPaymentId
   );
 
-  const total =
-    checkoutData.subtotal - checkoutData.discount + checkoutData.shipping;
+  const subtotal = summary?.subtotal ?? 0;
+  const discount = summary?.promoDiscount ?? 0;
+  const shipping = summary?.shipping ?? 0;
+  const tax = summary?.tax ?? 0;
+  const total = summary?.total ?? 0;
 
   const handlePlaceOrder = () => {
     window.location.href = "/cart/checkout/success";
@@ -276,36 +319,46 @@ export default function CheckoutPage() {
               </div>
 
               <div className="space-y-4">
-                {checkoutData.cartItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex gap-4 p-4 bg-gray-50 rounded-lg"
-                  >
-                    <img
-                      src={item.image || "/placeholder.svg"}
-                      alt={item.name}
-                      width={80}
-                      height={80}
-                      className="w-20 h-20 object-cover rounded-md bg-gray-200"
-                    />
-                    <div className="flex-1">
-                      <h3 className="font-medium text-gray-900 mb-1">
-                        {item.name}
-                      </h3>
-                      <p className="text-sm text-gray-600 mb-2">
-                        {item.size} • {item.color}
-                      </p>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm text-gray-600">
-                          Qty: {item.quantity}
-                        </span>
-                        <span className="font-semibold text-gray-900">
-                          {item.price.toLocaleString("vi-VN")} ₫
-                        </span>
+                {isLoadingCart ? (
+                  <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-600">
+                    Đang tải sản phẩm trong giỏ hàng...
+                  </div>
+                ) : cartItems.length > 0 ? (
+                  cartItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex gap-4 p-4 bg-gray-50 rounded-lg"
+                    >
+                      <img
+                        src={item.product.imageUrl || "/placeholder.svg"}
+                        alt={item.product.name}
+                        width={80}
+                        height={80}
+                        className="w-20 h-20 object-cover rounded-md bg-gray-200"
+                      />
+                      <div className="flex-1">
+                        <h3 className="font-medium text-gray-900 mb-1">
+                          {item.product.name}
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-2">
+                          {item.size || "Không có kích thước"} • {item.color || "Không có màu"}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">
+                            Qty: {item.quantity}
+                          </span>
+                          <span className="font-semibold text-gray-900">
+                            {formatPrice(item.unitPrice)}
+                          </span>
+                        </div>
                       </div>
                     </div>
+                  ))
+                ) : (
+                  <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-600">
+                    Giỏ hàng của bạn đang trống. Vui lòng thêm sản phẩm trước khi thanh toán.
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </div>
@@ -349,21 +402,21 @@ export default function CheckoutPage() {
                   <div className="space-y-3 mb-4">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Tổng tiền</span>
-                      <span className="text-gray-900">
-                        {checkoutData.subtotal.toLocaleString("vi-VN")} ₫
-                      </span>
+                      <span className="text-gray-900">{formatPrice(subtotal)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Giảm giá</span>
-                      <span className="text-gray-900">
-                        {checkoutData.discount.toLocaleString("vi-VN")} ₫
-                      </span>
+                      <span className="text-gray-900">{formatPrice(discount)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Phí vận chuyển</span>
-                      <span className="text-green-600 font-medium">
-                        miễn phí
+                      <span className={shipping === 0 ? "text-green-600 font-medium" : "text-gray-900"}>
+                        {shipping === 0 ? "miễn phí" : formatPrice(shipping)}
                       </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Thuế</span>
+                      <span className="text-gray-900">{formatPrice(tax)}</span>
                     </div>
                   </div>
 
@@ -375,10 +428,13 @@ export default function CheckoutPage() {
                     </span>
                     <div className="text-right">
                       <div className="text-xl font-bold text-gray-900">
-                        {total.toLocaleString("vi-VN")} ₫
+                        {formatPrice(total)}
                       </div>
-                      <div className="text-xs text-gray-500">
+                      {/* <div className="text-xs text-gray-500">
                         Mua nhiều giảm nhiều
+                      </div> */}
+                      <div className="text-xs text-gray-500">
+                        {appliedPromo?.code ? `Áp dụng mã ${appliedPromo.code}` : "Mua nhiều giảm nhiều"}
                       </div>
                     </div>
                   </div>
