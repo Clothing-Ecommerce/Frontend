@@ -539,7 +539,9 @@ export default function CartPage() {
 
                   <Button className="w-full bg-black text-white hover:bg-gray-800 py-3">
                     <Lock className="w-4 h-4 mr-2" />
-                    Đặt Hàng
+                    <Link to="/cart/checkout">
+                      Đặt Hàng
+                    </Link>
                   </Button>
 
                   {/* Security / Policy */}
