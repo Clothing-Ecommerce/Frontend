@@ -1,8 +1,6 @@
-// src/pages/CartPage.tsx
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -16,7 +14,6 @@ import {
   Truck,
   Shield,
   RotateCcw,
-  Tag,
   Lock,
   Edit,
 } from "lucide-react";
@@ -32,7 +29,6 @@ import Footer from "@/components/layout/Footer";
 import api from "@/utils/axios";
 import { formatPrice } from "@/utils/formatPrice";
 import type {
-  AvailableCoupon,
   CartItem,
   CartResponse,
   CartSummary,
@@ -43,13 +39,8 @@ export default function CartPage() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [summary, setSummary] = useState<CartSummary | null>(null);
 
-  // ==== Promo states (server-driven) ====
-  const [availableCoupons, setAvailableCoupons] = useState<AvailableCoupon[]>([]);
-  const [promoCode, setPromoCode] = useState("");
-  // Lưu appliedPromo từ server (giúp hiển thị "FREE (promo)" nếu mã có freeship)
-  const [appliedPromo, setAppliedPromo] = useState<CartResponse["appliedPromo"] | undefined>(undefined);
-  const [isPromoLoading, setIsPromoLoading] = useState(false);
-  const [showPromoDialog, setShowPromoDialog] = useState(false);
+  // // Lưu appliedPromo từ server (giúp hiển thị "FREE (promo)" nếu mã có freeship)
+  // const [appliedPromo, setAppliedPromo] = useState<CartResponse["appliedPromo"] | undefined>(undefined);
 
   // ==== Edit dialog states ====
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -72,7 +63,7 @@ export default function CartPage() {
         const res = await api.get<CartResponse>("/cart");
         setCartItems(sortCartItems(res.data.items));
         setSummary(res.data.summary);
-        setAppliedPromo(res.data.appliedPromo);
+        // setAppliedPromo(res.data.appliedPromo);
       } catch (error) {
         console.error("Error fetching cart:", error);
       }
@@ -81,7 +72,6 @@ export default function CartPage() {
   }, []);
 
   const subtotal = summary?.subtotal ?? 0;
-  const savings = summary?.savings ?? 0;
   const shipping = summary?.shipping ?? 0;
   const tax = summary?.tax ?? 0;
   const total = summary?.total ?? 0;
@@ -91,7 +81,7 @@ export default function CartPage() {
   const refreshCartFromResponse = (res: { data: CartResponse }) => {
     setCartItems(sortCartItems(res.data.items));
     setSummary(res.data.summary);
-    setAppliedPromo(res.data.appliedPromo);
+    // setAppliedPromo(res.data.appliedPromo);
   };
 
   // ==== Cart item actions ====
@@ -233,77 +223,6 @@ export default function CartPage() {
         error?.message ||
         "Không thể lưu thay đổi";
       alert(msg);
-    }
-  };
-
-  // ==== Promo actions ====
-  const openPromoDialog = async () => {
-    setShowPromoDialog(true);
-    try {
-      const res = await api.get<{ coupons: AvailableCoupon[] }>(
-        "/cart/promos/available"
-      );
-      setAvailableCoupons(res.data.coupons);
-    } catch (e) {
-      console.error("Error loading available coupons", e);
-    }
-  };
-
-  const handleApplyPromo = async (selectedCode?: string) => {
-    const codeToApply = (selectedCode || promoCode || "").trim();
-    if (!codeToApply) return;
-
-    setIsPromoLoading(true);
-    try {
-      const res = await api.post<CartResponse>("/cart/promos/apply", {
-        code: codeToApply,
-      });
-      refreshCartFromResponse(res);
-      setShowPromoDialog(false);
-      setPromoCode("");
-    } catch (error: any) {
-      const code = error?.response?.data?.code;
-      const missing = error?.response?.data?.data?.missingAmount;
-      switch (code) {
-        case "MIN_ORDER_NOT_MET":
-          alert(`Cần mua thêm ${formatPrice(Number(missing) || 0)} để áp dụng mã`);
-          break;
-        case "INVALID_COUPON":
-          alert("Mã khuyến mãi không hợp lệ");
-          break;
-        case "COUPON_INACTIVE":
-          alert("Mã khuyến mãi đang tạm ngưng");
-          break;
-        case "COUPON_NOT_STARTED":
-          alert("Mã khuyến mãi chưa bắt đầu");
-          break;
-        case "COUPON_EXPIRED":
-          alert("Mã khuyến mãi đã hết hạn");
-          break;
-        case "USAGE_LIMIT_REACHED":
-          alert("Mã khuyến mãi đã đạt giới hạn sử dụng");
-          break;
-        case "CART_EMPTY":
-          alert("Giỏ hàng đang trống");
-          break;
-        default:
-          alert(error?.response?.data?.message || "Không thể áp dụng mã");
-      }
-    } finally {
-      setIsPromoLoading(false);
-    }
-  };
-
-  const handleRemovePromo = async () => {
-    setIsPromoLoading(true);
-    try {
-      const res = await api.delete<CartResponse>("/cart/promos/apply");
-      refreshCartFromResponse(res);
-      setPromoCode("");
-    } catch (error: any) {
-      alert(error?.response?.data?.message || "Không thể gỡ mã");
-    } finally {
-      setIsPromoLoading(false);
     }
   };
 
@@ -480,48 +399,10 @@ export default function CartPage() {
                     <span>{formatPrice(subtotal)}</span>
                   </div>
 
-                  {savings > 0 && (
-                    <div className="flex justify-between text-green-600">
-                      <span>Tiết kiệm</span>
-                      <span>-{formatPrice(savings)}</span>
-                    </div>
-                  )}
-
-                  {/* Promo Code Section */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium">Mã khuyến mãi</span>
-                      {(appliedPromo || (summary?.promoDiscount ?? 0) > 0) && (
-                        <Badge className="bg-green-100 text-green-800">
-                          {appliedPromo
-                            ? `${appliedPromo.code} (−${formatPrice(summary?.promoDiscount ?? 0)})`
-                            : `Đã áp dụng (−${formatPrice(summary?.promoDiscount ?? 0)})`}
-                        </Badge>
-                      )}
-                    </div>
-
-                    <Button
-                      variant="outline"
-                      className="w-full bg-transparent justify-between"
-                      onClick={openPromoDialog}
-                    >
-                      <span>
-                        {appliedPromo || (summary?.promoDiscount ?? 0) > 0
-                          ? "Đổi hoặc gỡ mã"
-                          : "Chọn/nhập mã khuyến mãi"}
-                      </span>
-                      <Tag className="w-4 h-4" />
-                    </Button>
-                  </div>
-
                   <div className="flex justify-between">
                     <span>Phí vận chuyển</span>
                     <span>
-                      {shipping === 0
-                        ? appliedPromo?.freeShipping
-                          ? "Miễn phí (mã KM)"
-                          : "Miễn phí"
-                        : formatPrice(shipping)}
+                      {shipping === 0 ? "Miễn phí" : formatPrice(shipping)}
                     </span>
                   </div>
 
@@ -561,7 +442,7 @@ export default function CartPage() {
                   </div>
 
                   {/* Payment Methods */}
-                  <div className="pt-4 border-t">
+                  {/* <div className="pt-4 border-t">
                     <p className="text-sm text-gray-600 mb-2">Phương thức thanh toán:</p>
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-6 bg-blue-600 rounded text-white text-xs flex items-center justify-center font-bold">
@@ -577,7 +458,7 @@ export default function CartPage() {
                         PP
                       </div>
                     </div>
-                  </div>
+                  </div> */}
                 </CardContent>
               </Card>
             </div>
@@ -729,129 +610,6 @@ export default function CartPage() {
                 </div>
               </div>
             )}
-          </DialogContent>
-        </Dialog>
-
-        {/* Promo Code Dialog */}
-        <Dialog open={showPromoDialog} onOpenChange={setShowPromoDialog}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <Tag className="w-5 h-5" />
-                Chọn mã khuyến mãi
-              </DialogTitle>
-              <DialogDescription>
-                Chọn từ danh sách hoặc nhập mã của bạn
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              {/* Available Codes */}
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm text-gray-700">
-                  Mã đang hoạt động
-                </h4>
-                <div className="max-h-[240px] overflow-y-auto space-y-2 pr-2">
-                  {availableCoupons.map((promo) => {
-                    const disabled = !promo.isEligible;
-                    return (
-                      <div
-                        key={promo.code}
-                        className={`border rounded-lg p-3 cursor-pointer transition-colors ${
-                          !disabled
-                            ? "border-gray-200 hover:border-amber-300 hover:bg-amber-50"
-                            : "border-gray-100 bg-gray-50 opacity-60 cursor-not-allowed"
-                        }`}
-                        onClick={() => !disabled && handleApplyPromo(promo.code)}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-bold text-amber-600">
-                            {promo.code}
-                          </span>
-                          <span className="text-sm font-medium text-gray-900">
-                            {promo.freeShipping
-                              ? "Miễn phí vận chuyển"
-                              : promo.type === "PERCENTAGE"
-                              ? `-${promo.value}%`
-                              : `-${formatPrice(promo.value)}`}
-                          </span>
-                        </div>
-                        {promo.description && (
-                          <p className="text-sm text-gray-600 mb-1">
-                            {promo.description}
-                          </p>
-                        )}
-                        <div className="flex items-center justify-between text-xs text-gray-500">
-                          <span>
-                            ĐH tối thiểu: {formatPrice(promo.minOrderValue)}
-                          </span>
-                          {promo.endsAt && (
-                            <span>
-                              Hết hạn: {new Date(promo.endsAt).toLocaleDateString("vi-VN")}
-                            </span>
-                          )}
-                        </div>
-                        {disabled && promo.missingAmount > 0 && (
-                          <p className="text-xs text-red-600 mt-1">
-                            Cần thêm {formatPrice(promo.missingAmount)} để đủ điều kiện
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
-                  {availableCoupons.length === 0 && (
-                    <p className="text-sm text-gray-500">
-                      Hiện chưa có mã nào.
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Manual Entry */}
-              <div className="space-y-2">
-                <h4 className="font-medium text-sm text-gray-700">
-                  Nhập mã thủ công
-                </h4>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Nhập mã khuyến mãi"
-                    value={promoCode}
-                    onChange={(e) => setPromoCode(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button
-                    onClick={() => handleApplyPromo()}
-                    disabled={!promoCode || isPromoLoading}
-                    className="bg-black text-white hover:bg-gray-800"
-                  >
-                    {isPromoLoading ? "Đang áp dụng..." : "Áp dụng"}
-                  </Button>
-                </div>
-              </div>
-
-              {(appliedPromo || (summary?.promoDiscount ?? 0) > 0) && (
-                <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-medium text-green-800">
-                        {appliedPromo ? appliedPromo.code : "Đã áp dụng mã"}
-                      </span>
-                      <p className="text-sm text-green-600">
-                        {`Giảm: -${formatPrice(summary?.promoDiscount ?? 0)}`}
-                      </p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleRemovePromo}
-                      className="text-green-600 hover:text-green-800 hover:bg-green-100"
-                    >
-                      Gỡ mã
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
           </DialogContent>
         </Dialog>
       </div>
