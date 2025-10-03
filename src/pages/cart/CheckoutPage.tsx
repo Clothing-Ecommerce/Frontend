@@ -60,7 +60,44 @@ const formatAddress = (address: CheckoutAddress) => {
   return formatted;
 };
 
-const paymentMethods = [
+type PaymentOptionId = "momo" | "cod";
+
+type PaymentMethodCode = "COD" | "MOMO";
+
+interface PlaceOrderResponse {
+  order: {
+    id: number;
+    status: string;
+    subtotal: number;
+    discount: number;
+    shippingFee: number;
+    tax: number;
+    total: number;
+    createdAt: string;
+  };
+  paymentMethod: PaymentMethodCode;
+  appliedPromo?: {
+    code: string;
+    discount: number;
+    freeShipping: boolean;
+  };
+  paymentAttempt?: {
+    paymentId: number;
+    payUrl: string | null;
+    gateway?: any;
+  };
+  paymentError?: {
+    code: string;
+    message?: string;
+  };
+}
+
+const paymentMethods: {
+  id: PaymentOptionId;
+  name: string;
+  description: string;
+  icon: "momo" | "cod";
+}[] = [
   {
     id: "momo",
     name: "MoMo E-Wallet",
@@ -79,7 +116,7 @@ export default function CheckoutPage() {
   const [addresses, setAddresses] = useState<CheckoutAddress[]>([]);
   const [isLoadingAddresses, setIsLoadingAddresses] = useState(true);
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
-  const [selectedPaymentId, setSelectedPaymentId] = useState("cod");
+  const [selectedPaymentId, setSelectedPaymentId] = useState<PaymentOptionId>("cod");
   const [showAddressDialog, setShowAddressDialog] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -90,6 +127,8 @@ export default function CheckoutPage() {
   const [promoCode, setPromoCode] = useState("");
   const [isPromoLoading, setIsPromoLoading] = useState(false);
   const [showPromoDialog, setShowPromoDialog] = useState(false);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [orderError, setOrderError] = useState<string | null>(null);
 
   const sortCartItems = (items: CartItem[]) => [...items].sort((a, b) => a.id - b.id);
 
@@ -188,8 +227,73 @@ export default function CheckoutPage() {
   const tax = summary?.tax ?? 0;
   const total = summary?.total ?? 0;
 
-  const handlePlaceOrder = () => {
-    window.location.href = "/cart/checkout/success";
+  const handlePlaceOrder = async () => {
+    if (isPlacingOrder) return;
+
+    if (!selectedAddressId) {
+      setOrderError("Vui lòng chọn địa chỉ giao hàng trước khi thanh toán.");
+      return;
+    }
+
+    if (!summary || cartItems.length === 0) {
+      setOrderError("Giỏ hàng của bạn đang trống. Vui lòng thêm sản phẩm trước khi đặt hàng.");
+      return;
+    }
+
+    const paymentMethod: PaymentMethodCode = selectedPaymentId === "momo" ? "MOMO" : "COD";
+
+    setOrderError(null);
+    setIsPlacingOrder(true);
+
+    try {
+      const payload = {
+        addressId: selectedAddressId,
+        paymentMethod,
+      };
+
+      const response = await api.post<PlaceOrderResponse>("/orders/checkout", payload);
+      const data = response.data;
+
+      if (paymentMethod === "MOMO") {
+        if (data.paymentError) {
+          setOrderError(data.paymentError.message || "Không thể tạo thanh toán MoMo. Vui lòng thử lại.");
+          return;
+        }
+
+        const payUrl = data.paymentAttempt?.payUrl || data.paymentAttempt?.gateway?.payUrl;
+        if (payUrl) {
+          window.location.href = payUrl;
+          return;
+        }
+
+        setOrderError("Không nhận được liên kết thanh toán MoMo. Vui lòng thử lại sau.");
+        return;
+      }
+
+      window.location.href = "/cart/checkout/success";
+    } catch (error: any) {
+      const message = error?.response?.data?.message;
+      const code = error?.response?.data?.code;
+
+      switch (code) {
+        case "ADDRESS_NOT_FOUND":
+          setOrderError("Không tìm thấy địa chỉ giao hàng. Vui lòng chọn lại địa chỉ khác.");
+          break;
+        case "CART_EMPTY":
+          setOrderError("Giỏ hàng của bạn đang trống.");
+          break;
+        case "ITEM_OUT_OF_STOCK":
+          setOrderError("Một số sản phẩm đã hết hàng. Vui lòng kiểm tra lại giỏ hàng.");
+          break;
+        case "QUANTITY_EXCEEDS_STOCK":
+          setOrderError("Số lượng sản phẩm vượt quá tồn kho. Vui lòng điều chỉnh lại giỏ hàng.");
+          break;
+        default:
+          setOrderError(message || "Không thể tạo đơn hàng. Vui lòng thử lại sau.");
+      }
+    } finally {
+      setIsPlacingOrder(false);
+    }
   };
 
   const openPromoDialog = async () => {
@@ -507,11 +611,20 @@ export default function CheckoutPage() {
 
                   <Button
                     onClick={handlePlaceOrder}
-                    className="w-full bg-gray-900 text-white hover:bg-gray-800 py-6 text-base font-medium rounded-lg"
+                    disabled={
+                      isPlacingOrder ||
+                      !selectedAddressId ||
+                      !summary ||
+                      cartItems.length === 0
+                    }
+                    className="w-full bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-70 disabled:cursor-not-allowed py-6 text-base font-medium rounded-lg"
                   >
-                    Thanh Toán
-                    <ChevronRight className="w-5 h-5 ml-2" />
+                    {isPlacingOrder ? "Đang xử lý..." : "Thanh Toán"}
+                    {!isPlacingOrder && <ChevronRight className="w-5 h-5 ml-2" />}
                   </Button>
+                  {orderError && (
+                    <p className="mt-3 text-sm text-red-600">{orderError}</p>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -536,7 +649,9 @@ export default function CheckoutPage() {
         onOpenChange={setShowPaymentDialog}
         paymentMethods={paymentMethods}
         selectedPaymentId={selectedPaymentId}
-        onSelectPayment={setSelectedPaymentId}
+        onSelectPayment={(paymentId) =>
+          setSelectedPaymentId(paymentId as PaymentOptionId)
+        }
       />
 
       <Dialog open={showPromoDialog} onOpenChange={setShowPromoDialog}>
