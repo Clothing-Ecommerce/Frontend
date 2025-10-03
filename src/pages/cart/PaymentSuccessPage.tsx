@@ -1,11 +1,134 @@
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle, ArrowRight, ExternalLink } from "lucide-react";
+import { CheckCircle, ArrowRight, ExternalLink, Loader2, ShieldCheck, TriangleAlert } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import api from "@/utils/axios";
+import {
+  clearLatestMomoAttempt,
+  loadLatestMomoAttempt,
+} from "@/utils/paymentStorage";
+import { cn } from "@/lib/utils";
+
+type PaymentDetail = {
+  id: number;
+  orderId: number;
+  status: string;
+  amount: string;
+  resultCode?: number | null;
+  resultMessage?: string | null;
+  paidAt?: string | null;
+};
+
+type SyncState = "idle" | "syncing" | "success" | "error";
+
+const isSucceededStatus = (status?: string) =>
+  status === "SUCCEEDED" || status === "AUTHORIZED";
 
 export default function PaymentSuccessPage() {
+  const location = useLocation();
+  const [syncState, setSyncState] = useState<SyncState>("idle");
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [paymentDetail, setPaymentDetail] = useState<PaymentDetail | null>(null);
+  const [hasSynced, setHasSynced] = useState(false);
+
+  useEffect(() => {
+    if (hasSynced) return;
+
+    const searchParams = new URLSearchParams(location.search);
+    const paymentIdParam = searchParams.get("paymentId");
+    const parsedPaymentId = paymentIdParam ? Number(paymentIdParam) : undefined;
+    const latestAttempt = loadLatestMomoAttempt();
+    const paymentId = Number.isFinite(parsedPaymentId)
+      ? Number(parsedPaymentId)
+      : latestAttempt?.paymentId;
+
+    if (!paymentId) {
+      clearLatestMomoAttempt();
+      return;
+    }
+
+    setHasSynced(true);
+    setSyncState("syncing");
+
+    let cancelled = false;
+
+    const syncPayment = async () => {
+      try {
+        await api.post(`/payment/${paymentId}/sync`);
+      } catch (error: any) {
+        console.error("Unable to sync payment status", error);
+        if (!cancelled) {
+          setErrorMessage(
+            error?.response?.data?.message ||
+              "Không thể đồng bộ trạng thái thanh toán. Vui lòng kiểm tra lại sau."
+          );
+          setSyncState("error");
+        }
+      }
+
+      try {
+        const { data } = await api.get<PaymentDetail>(`/payment/${paymentId}`);
+        if (!cancelled) {
+          setPaymentDetail(data);
+          setSyncState(isSucceededStatus(data?.status) ? "success" : "error");
+          setErrorMessage((prev) =>
+            isSucceededStatus(data?.status)
+              ? null
+              : prev ||
+                (data?.resultMessage
+                  ? `Trạng thái thanh toán: ${data.resultMessage}`
+                  : "Thanh toán chưa được xác nhận thành công.")
+          );
+        }
+      } catch (error: any) {
+        console.error("Unable to load payment detail", error);
+        if (!cancelled) {
+          setErrorMessage(
+            error?.response?.data?.message ||
+              "Không thể tải thông tin thanh toán. Vui lòng thử lại."
+          );
+          setSyncState((state) => (state === "success" ? state : "error"));
+        }
+      } finally {
+        clearLatestMomoAttempt();
+      }
+    };
+
+    void syncPayment();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [hasSynced, location.search]);
+
+  const statusBadge = useMemo(() => {
+    if (!paymentDetail) return null;
+
+    const statusTextMap: Record<string, string> = {
+      PENDING: "Đang xử lý",
+      SUCCEEDED: "Thành công",
+      AUTHORIZED: "Đã ủy quyền",
+      FAILED: "Thất bại",
+      CANCELLED: "Đã hủy",
+    };
+
+    const statusLabel = statusTextMap[paymentDetail.status] || paymentDetail.status;
+    const colorClass = isSucceededStatus(paymentDetail.status)
+      ? "text-green-600"
+      : paymentDetail.status === "FAILED"
+      ? "text-red-600"
+      : "text-amber-600";
+
+    return (
+      <div className={`text-sm font-medium ${colorClass}`}>
+        Trạng thái: {statusLabel}
+      </div>
+    );
+  }, [paymentDetail]);
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -26,12 +149,74 @@ export default function PaymentSuccessPage() {
               {/* Success Message */}
               <div className="text-center mb-8">
                 <h1 className="text-2xl font-bold text-gray-900 mb-3">
-                  Payment Successful!
+                  Cảm ơn bạn đã thanh toán!
                 </h1>
                 <p className="text-gray-600">
-                  Your order has been confirmed and will be processed soon.
+                  Chúng tôi đang xác nhận trạng thái giao dịch và sẽ xử lý đơn hàng trong giây lát.
                 </p>
               </div>
+
+              {/* Sync status */}
+              {(syncState !== "idle" || paymentDetail || errorMessage) && (
+                <div className="mb-8 space-y-3">
+                  {syncState === "syncing" && (
+                    <div className="rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-indigo-800">
+                      <div className="flex items-center gap-2 font-semibold text-indigo-900">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Đang xác nhận thanh toán
+                      </div>
+                      <p className="mt-2 text-sm text-indigo-700">
+                        Vui lòng chờ trong giây lát trong khi chúng tôi đồng bộ kết quả từ MoMo.
+                      </p>
+                    </div>
+                  )}
+
+                  {syncState === "success" && paymentDetail && (
+                    <div className="rounded-lg border border-green-100 bg-green-50 px-4 py-3 text-green-900">
+                      <div className="flex items-center gap-2 font-semibold text-green-900">
+                        <ShieldCheck className="h-4 w-4" />
+                        Thanh toán đã được xác nhận
+                      </div>
+                      <div className="mt-2 text-sm text-green-800">
+                        Đơn hàng #{paymentDetail.orderId} đã được ghi nhận thanh toán.
+                        <div className="mt-3 space-y-1">
+                          <div>Số tiền: {paymentDetail.amount}</div>
+                          {statusBadge}
+                          {paymentDetail.paidAt && (
+                            <div>
+                              Thời gian: {new Date(paymentDetail.paidAt).toLocaleString()}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {syncState === "error" && errorMessage && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-900">
+                      <div className="flex items-center gap-2 font-semibold text-red-900">
+                        <TriangleAlert className="h-4 w-4" />
+                        Không thể xác nhận thanh toán
+                      </div>
+                      <div className="mt-2 text-sm text-red-800">
+                        {errorMessage}
+                        {paymentDetail && (
+                          <div className="mt-3 space-y-1 text-sm">
+                            <div>Đơn hàng: #{paymentDetail.orderId}</div>
+                            {statusBadge}
+                            {typeof paymentDetail.resultCode === "number" && (
+                              <div>Mã kết quả: {paymentDetail.resultCode}</div>
+                            )}
+                            {paymentDetail.resultMessage && (
+                              <div>Thông báo: {paymentDetail.resultMessage}</div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Action Buttons */}
               <div className="space-y-3">
@@ -41,7 +226,10 @@ export default function PaymentSuccessPage() {
                 </Button>
                 <Button
                   variant="outline"
-                  className="w-full border-gray-300 text-gray-700 hover:bg-gray-50 py-6 text-base font-medium rounded-lg bg-transparent"
+                  className={cn(
+                    "w-full border-gray-300 text-gray-700 hover:bg-gray-50 py-6 text-base font-medium rounded-lg",
+                    "bg-transparent"
+                  )}
                   asChild
                 >
                   <Link to="/products">

@@ -20,6 +20,7 @@ import api from "@/utils/axios";
 import type { Address } from "@/types/addressType";
 import { formatPrice } from "@/utils/formatPrice";
 import type { AvailableCoupon, CartItem, CartResponse, CartSummary } from "@/types/cartType";
+import { saveLatestMomoAttempt } from "@/utils/paymentStorage";
 
 type CheckoutAddress = Address & { addressId: number };
 
@@ -251,7 +252,7 @@ export default function CheckoutPage() {
         paymentMethod,
       };
 
-      const response = await api.post<PlaceOrderResponse>("/orders/checkout", payload);
+      const response = await api.post<PlaceOrderResponse>("/order/checkout", payload);
       const data = response.data;
 
       if (paymentMethod === "MOMO") {
@@ -262,6 +263,12 @@ export default function CheckoutPage() {
 
         const payUrl = data.paymentAttempt?.payUrl || data.paymentAttempt?.gateway?.payUrl;
         if (payUrl) {
+          if (data.paymentAttempt?.paymentId) {
+            saveLatestMomoAttempt({
+              paymentId: data.paymentAttempt.paymentId,
+              orderId: data.order?.id,
+            });
+          }
           window.location.href = payUrl;
           return;
         }
