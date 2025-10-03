@@ -24,8 +24,13 @@ type PaymentDetail = {
 
 type SyncState = "idle" | "syncing" | "success" | "error";
 
-const isSucceededStatus = (status?: string) =>
-  status === "SUCCEEDED" || status === "AUTHORIZED";
+const isSucceededStatus = (status?: string) => {
+  if (!status) return false;
+
+  const normalizedStatus = status.toUpperCase();
+
+  return ["SUCCEEDED", "SUCCESS", "AUTHORIZED", "PAID"].includes(normalizedStatus);
+};
 
 export default function PaymentSuccessPage() {
   const location = useLocation();
@@ -110,12 +115,19 @@ export default function PaymentSuccessPage() {
     const statusTextMap: Record<string, string> = {
       PENDING: "Đang xử lý",
       SUCCEEDED: "Thành công",
+      SUCCESS: "Thành công",
+      PAID: "Đã thanh toán",
       AUTHORIZED: "Đã ủy quyền",
       FAILED: "Thất bại",
       CANCELLED: "Đã hủy",
     };
 
-    const statusLabel = statusTextMap[paymentDetail.status] || paymentDetail.status;
+    const normalizedStatus = paymentDetail.status
+      ? paymentDetail.status.toUpperCase()
+      : paymentDetail.status;
+      
+    const statusLabel = statusTextMap[normalizedStatus] || paymentDetail.status;
+
     const colorClass = isSucceededStatus(paymentDetail.status)
       ? "text-green-600"
       : paymentDetail.status === "FAILED"
