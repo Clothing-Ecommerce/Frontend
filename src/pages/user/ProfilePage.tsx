@@ -36,6 +36,8 @@ import {
   X,
   Camera,
   Upload,
+  CalendarDays,
+  Star,
 } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -54,6 +56,7 @@ import type { UserProfile } from "@/types/userType";
 import { AddressFormDialog } from "@/components/address/addressFormDialog";
 import { DeleteAddressDialog } from "@/components/address/deleteAddressDialog";
 import type { Address } from "@/types/addressType";
+import { formatPrice } from "@/utils/formatPrice";
 
 const emptyUser: UserProfile = {
   userId: 0,
@@ -66,93 +69,196 @@ const emptyUser: UserProfile = {
   createdAt: "",
 };
 
+// const orders = [
+//   {
+//     id: "ORD-2024-001",
+//     date: "2024-01-20",
+//     status: "delivered",
+//     total: 398,
+//     items: [
+//       {
+//         name: "Classic Navy Blazer",
+//         price: 299,
+//         quantity: 1,
+//         image: "/placeholder.svg?height=80&width=80",
+//       },
+//       {
+//         name: "Cotton Dress Shirt",
+//         price: 79,
+//         quantity: 1,
+//         image: "/placeholder.svg?height=80&width=80",
+//       },
+//     ],
+//     shipping: {
+//       method: "Standard Shipping",
+//       cost: 0,
+//       address: "123 Main Street, Apt 4B, New York, NY 10001",
+//     },
+//     tracking: "TRK123456789",
+//   },
+//   {
+//     id: "ORD-2024-002",
+//     date: "2024-01-15",
+//     status: "shipped",
+//     total: 244,
+//     items: [
+//       {
+//         name: "Oxford Leather Shoes",
+//         price: 159,
+//         quantity: 1,
+//         image: "/placeholder.svg?height=80&width=80",
+//       },
+//       {
+//         name: "Silk Tie Collection",
+//         price: 45,
+//         quantity: 1,
+//         image: "/placeholder.svg?height=80&width=80",
+//       },
+//     ],
+//     shipping: {
+//       method: "Express Shipping",
+//       cost: 15,
+//       address: "456 Business Ave, Suite 200, New York, NY 10002",
+//     },
+//     tracking: "TRK987654321",
+//   },
+//   {
+//     id: "ORD-2024-003",
+//     date: "2024-01-10",
+//     status: "processing",
+//     total: 189,
+//     items: [
+//       {
+//         name: "Designer Sunglasses",
+//         price: 189,
+//         quantity: 1,
+//         image: "/placeholder.svg?height=80&width=80",
+//       },
+//     ],
+//     shipping: {
+//       method: "Standard Shipping",
+//       cost: 0,
+//       address: "123 Main Street, Apt 4B, New York, NY 10001",
+//     },
+//     tracking: null,
+//   },
+// ];
+
 const orders = [
   {
-    id: "ORD-2024-001",
-    date: "2024-01-20",
+    id: "ORD-368537856",
+    placedOn: "2025-10-01",
+    status: "pending",
+    statusLabel: "Pending Payment",
+    canCancel: true,
+    items: [
+      {
+        name: "Faherty Legend Sweater Shirt",
+        price: 178,
+        quantity: 1,
+        color: "Beige",
+        size: "L",
+        image:
+          "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?auto=format&fit=crop&w=200&q=80",
+      },
+    ],
+    shippingAddress: {
+      fullName: "Nguyen Hoai Phong",
+      phone: "023456789",
+      address:
+        "Tổ Long Xuyên, Thị trấn Long Xuyên, Phường Bình Đức, Thành phố Long Xuyên, An Giang",
+    },
+    totals: {
+      subtotal: 178,
+      shipping: 0,
+      shippingLabel: "FREE",
+      tax: 17.8,
+      total: 195.8,
+    },
+  },
+  {
+    id: "ORD-002123546",
+    placedOn: "2025-09-02",
     status: "delivered",
-    total: 398,
+    statusLabel: "Delivered",
+    deliveredOn: "2025-09-24",
     items: [
       {
-        name: "Classic Navy Blazer",
-        price: 299,
+        name: "Adidas Trefoil Series Loose Tee",
+        price: 108.3,
         quantity: 1,
-        image: "/placeholder.svg?height=80&width=80",
+        color: "Green",
+        size: "S",
+        image:
+          "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?auto=format&fit=crop&w=200&q=80",
+        reviewStatus: "reviewed",
       },
       {
-        name: "Cotton Dress Shirt",
-        price: 79,
+        name: "Vans Core Basic Pullover Hoodie",
+        price: 89.99,
         quantity: 1,
-        image: "/placeholder.svg?height=80&width=80",
+        color: "Black",
+        size: "M",
+        image:
+          "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=200&q=80",
+        allowReview: true,
+      },
+      {
+        name: "Adidas Adilette Slides",
+        price: 34.59,
+        quantity: 1,
+        color: "Beige",
+        size: "9",
+        image:
+          "https://images.unsplash.com/photo-1523381140794-a1eef18a37c7?auto=format&fit=crop&w=200&q=80",
+        allowReview: true,
       },
     ],
-    shipping: {
-      method: "Standard Shipping",
-      cost: 0,
-      address: "123 Main Street, Apt 4B, New York, NY 10001",
+    shippingAddress: {
+      fullName: "Nguyen Hoai Phong",
+      phone: "023456789",
+      address:
+        "Tổ Long Xuyên, Thị trấn Long Xuyên, Phường Bình Đức, Thành phố Long Xuyên, An Giang",
     },
-    tracking: "TRK123456789",
-  },
-  {
-    id: "ORD-2024-002",
-    date: "2024-01-15",
-    status: "shipped",
-    total: 244,
-    items: [
-      {
-        name: "Oxford Leather Shoes",
-        price: 159,
-        quantity: 1,
-        image: "/placeholder.svg?height=80&width=80",
-      },
-      {
-        name: "Silk Tie Collection",
-        price: 45,
-        quantity: 1,
-        image: "/placeholder.svg?height=80&width=80",
-      },
-    ],
-    shipping: {
-      method: "Express Shipping",
-      cost: 15,
-      address: "456 Business Ave, Suite 200, New York, NY 10002",
+    totals: {
+      subtotal: 232.88,
+      shipping: 7.99,
+      discount: -12,
+      tax: 4.31,
+      total: 233.18,
     },
-    tracking: "TRK987654321",
-  },
-  {
-    id: "ORD-2024-003",
-    date: "2024-01-10",
-    status: "processing",
-    total: 189,
-    items: [
-      {
-        name: "Designer Sunglasses",
-        price: 189,
-        quantity: 1,
-        image: "/placeholder.svg?height=80&width=80",
-      },
-    ],
-    shipping: {
-      method: "Standard Shipping",
-      cost: 0,
-      address: "123 Main Street, Apt 4B, New York, NY 10001",
-    },
-    tracking: null,
   },
 ];
+
+// const getStatusColor = (status: string) => {
+//   switch (status) {
+//     case "delivered":
+//       return "bg-green-100 text-green-800";
+//     case "shipped":
+//       return "bg-blue-100 text-blue-800";
+//     case "processing":
+//       return "bg-yellow-100 text-yellow-800";
+//     case "cancelled":
+//       return "bg-red-100 text-red-800";
+//     default:
+//       return "bg-gray-100 text-gray-800";
+//   }
+// };
 
 const getStatusColor = (status: string) => {
   switch (status) {
     case "delivered":
-      return "bg-green-100 text-green-800";
+      return "bg-emerald-100 text-emerald-700 border border-emerald-200";
     case "shipped":
-      return "bg-blue-100 text-blue-800";
+      return "bg-blue-100 text-blue-700 border border-blue-200";
     case "processing":
-      return "bg-yellow-100 text-yellow-800";
+      return "bg-amber-100 text-amber-700 border border-amber-200";
+    case "pending":
+      return "bg-amber-100 text-amber-700 border border-amber-200";
     case "cancelled":
-      return "bg-red-100 text-red-800";
+      return "bg-red-100 text-red-700 border border-red-200";
     default:
-      return "bg-gray-100 text-gray-800";
+      return "bg-gray-100 text-gray-700 border border-gray-200";
   }
 };
 
@@ -163,12 +269,23 @@ const getStatusIcon = (status: string) => {
     case "shipped":
       return <Truck className="w-4 h-4" />;
     case "processing":
+    case "pending":
       return <Clock className="w-4 h-4" />;
     case "cancelled":
       return <X className="w-4 h-4" />;
     default:
       return <Package className="w-4 h-4" />;
   }
+};
+
+const formatOrderDate = (date: string) => {
+  const parsed = new Date(date);
+  if (Number.isNaN(parsed.getTime())) return date;
+  return parsed.toLocaleDateString("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 };
 
 const getLabelText = (label: string) => {
@@ -962,88 +1079,171 @@ export default function ProfilePage() {
                     {orders.map((order) => (
                       <div
                         key={order.id}
-                        className="border border-gray-200 rounded-lg p-6"
+                        className="overflow-hidden rounded-2xl border border-gray-200 shadow-sm"
                       >
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-4">
-                            <h3 className="font-semibold text-gray-900">
-                              Order {order.id}
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 bg-gray-50 px-6 py-4">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <h3 className="text-base font-semibold text-gray-900">
+                              Order #{order.id}
                             </h3>
-                            <Badge className={getStatusColor(order.status)}>
+                            <Badge
+                              className={`${getStatusColor(order.status)} flex items-center gap-1 px-2.5 py-1 text-xs font-medium`}
+                            >
                               {getStatusIcon(order.status)}
-                              <span className="ml-1 capitalize">
-                                {order.status}
-                              </span>
+                              <span className="ml-1">{order.statusLabel}</span>
                             </Badge>
                           </div>
-                          <div className="text-right">
-                            <p className="text-sm text-gray-600">
-                              {order.date}
-                            </p>
-                            <p className="font-semibold text-gray-900">
-                              ${order.total}
-                            </p>
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <CalendarDays className="h-4 w-4" />
+                            <span>Placed on {formatOrderDate(order.placedOn)}</span>
                           </div>
                         </div>
 
-                        <div className="space-y-3 mb-4">
-                          {order.items.map((item, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center gap-4"
-                            >
-                              <img
-                                src={item.image || "/placeholder.svg"}
-                                alt={item.name}
-                                width={60}
-                                height={60}
-                                className="w-15 h-15 object-cover rounded-md"
-                              />
-                              <div className="flex-1">
+                        <div className="space-y-6 px-6 py-6">
+                          <div className="space-y-4">
+                            {order.items.map((item, index) => (
+                              <div
+                                key={`${order.id}-${index}`}
+                                className="flex flex-wrap items-start gap-4 rounded-xl border border-gray-100 p-4"
+                              >
+                                <img
+                                  src={item.image || "/placeholder.svg"}
+                                  alt={item.name}
+                                  width={80}
+                                  height={80}
+                                  className="h-20 w-20 rounded-xl object-cover"
+                                />
+                                <div className="min-w-[200px] flex-1">
+                                  <div className="flex flex-wrap items-center gap-3">
+                                    <p className="font-semibold text-gray-900">
+                                      {item.name}
+                                    </p>
+                                    {item.reviewStatus === "reviewed" && (
+                                      <Badge className="flex items-center gap-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                                        <CheckCircle className="h-3.5 w-3.5" />
+                                        <span className="text-xs font-medium uppercase">
+                                          Reviewed
+                                        </span>
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
+                                    {item.color && <span>Color: {item.color}</span>}
+                                    {item.size && <span>Size: {item.size}</span>}
+                                    <span>Qty: {item.quantity}</span>
+                                  </div>
+                                </div>
+                                <div className="flex min-w-[120px] flex-col items-end gap-2">
+                                  <p className="text-sm font-semibold text-gray-900">
+                                    {formatPrice(item.price)}
+                                  </p>
+                                  {item.allowReview && !item.reviewStatus && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="border-purple-200 text-purple-600 hover:bg-purple-50"
+                                    >
+                                      <Star
+                                        className="mr-2 h-4 w-4"
+                                        fill="currentColor"
+                                        strokeWidth={1.5}
+                                      />
+                                      Review
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="grid gap-6 md:grid-cols-2">
+                            <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+                              <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                                <MapPin className="w-4 h-4 text-gray-600" />
+                                Shipping Address
+                              </h4>
+                              <div className="mt-3 space-y-1 text-sm text-gray-600">
                                 <p className="font-medium text-gray-900">
-                                  {item.name}
+                                  {order.shippingAddress.fullName}
                                 </p>
-                                <p className="text-sm text-gray-600">
-                                  Quantity: {item.quantity}
+                                <p>{order.shippingAddress.phone}</p>
+                                <p className="leading-relaxed">
+                                  {order.shippingAddress.address}
                                 </p>
                               </div>
-                              <p className="font-semibold text-gray-900">
-                                ${item.price}
-                              </p>
                             </div>
-                          ))}
+                            <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+                              <h4 className="text-sm font-semibold text-gray-900">
+                                Order Total
+                              </h4>
+                              <div className="mt-3 space-y-3 text-sm text-gray-600">
+                                <div className="flex items-center justify-between">
+                                  <span>Subtotal</span>
+                                  <span>
+                                    {formatPrice(order.totals.subtotal)}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <span>Shipping</span>
+                                  <span>
+                                    {order.totals.shippingLabel ??
+                                      formatPrice(order.totals.shipping)}
+                                  </span>
+                                </div>
+                                {typeof order.totals.discount === "number" &&
+                                  order.totals.discount !== 0 && (
+                                    <div className="flex items-center justify-between">
+                                      <span>Discount</span>
+                                      <span
+                                        className={
+                                          order.totals.discount < 0
+                                            ? "text-emerald-600"
+                                            : ""
+                                        }
+                                      >
+                                        {order.totals.discount < 0
+                                          ? `- ${formatPrice(
+                                              Math.abs(order.totals.discount)
+                                            )}`
+                                          : formatPrice(order.totals.discount)}
+                                      </span>
+                                    </div>
+                                  )}
+                                {typeof order.totals.tax === "number" && (
+                                  <div className="flex items-center justify-between">
+                                    <span>Tax</span>
+                                    <span>{formatPrice(order.totals.tax)}</span>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="mt-4 flex items-center justify-between border-t border-dashed border-gray-200 pt-4 text-base font-semibold text-gray-900">
+                                <span>Total</span>
+                                <span>{formatPrice(order.totals.total)}</span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
 
-                        <div className="border-t pt-4">
-                          <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-                            <span>Shipping to:</span>
-                            <span>{order.shipping.address}</span>
-                          </div>
-                          {order.tracking && (
-                            <div className="flex items-center justify-between text-sm text-gray-600 mb-2">
-                              <span>Tracking:</span>
-                              <span className="font-mono">
-                                {order.tracking}
-                              </span>
-                            </div>
-                          )}
-                          <div className="flex gap-2 mt-4">
-                            <Button variant="outline" size="sm">
-                              <Eye className="w-4 h-4 mr-2" />
-                              View Details
+                        <div className="flex flex-col gap-3 border-t border-gray-100 bg-gray-50 px-6 py-4 md:flex-row md:items-center md:justify-between">
+                          {order.canCancel ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-red-200 text-red-600 hover:bg-red-50 md:w-auto"
+                            >
+                              Cancel Order
                             </Button>
-                            {order.status === "delivered" && (
-                              <Button variant="outline" size="sm">
-                                <Download className="w-4 h-4 mr-2" />
-                                Invoice
-                              </Button>
-                            )}
-                            {order.tracking && (
-                              <Button variant="outline" size="sm">
-                                <Truck className="w-4 h-4 mr-2" />
-                                Track Package
-                              </Button>
-                            )}
+                          ) : order.deliveredOn ? (
+                            <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
+                              <CheckCircle className="h-4 w-4" />
+                              Delivered on {formatOrderDate(order.deliveredOn)}
+                            </div>
+                          ) : null}
+                          <div className="text-sm text-gray-500 md:text-right">
+                            Need help?{" "}
+                            <span className="font-medium text-gray-900">
+                              Contact support
+                            </span>
                           </div>
                         </div>
                       </div>
