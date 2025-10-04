@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -37,10 +37,10 @@ export default function PaymentSuccessPage() {
   const [syncState, setSyncState] = useState<SyncState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [paymentDetail, setPaymentDetail] = useState<PaymentDetail | null>(null);
-  const [hasSynced, setHasSynced] = useState(false);
+  const hasSyncedRef = useRef(false);
 
   useEffect(() => {
-    if (hasSynced) return;
+    if (hasSyncedRef.current) return;
 
     const searchParams = new URLSearchParams(location.search);
     const paymentIdParam = searchParams.get("paymentId");
@@ -55,7 +55,7 @@ export default function PaymentSuccessPage() {
       return;
     }
 
-    setHasSynced(true);
+    hasSyncedRef.current = true;
     setSyncState("syncing");
 
     let cancelled = false;
@@ -106,8 +106,9 @@ export default function PaymentSuccessPage() {
 
     return () => {
       cancelled = true;
+      hasSyncedRef.current = false;
     };
-  }, [hasSynced, location.search]);
+  }, [location.search]);
 
   const statusBadge = useMemo(() => {
     if (!paymentDetail) return null;
