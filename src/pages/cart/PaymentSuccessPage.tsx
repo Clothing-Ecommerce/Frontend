@@ -162,7 +162,7 @@ export default function PaymentSuccessPage() {
               {/* Success Message */}
               <div className="text-center mb-8">
                 <h1 className="text-2xl font-bold text-gray-900 mb-3">
-                  Cảm ơn bạn đã thanh toán!
+                  Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi!
                 </h1>
                 <p className="text-gray-600">
                   Chúng tôi đang xác nhận trạng thái giao dịch và sẽ xử lý đơn hàng trong giây lát.
