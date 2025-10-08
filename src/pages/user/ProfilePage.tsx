@@ -27,7 +27,6 @@ import {
   Edit,
   Trash2,
   Plus,
-  Eye,
   Download,
   CreditCard,
   Truck,
@@ -38,6 +37,7 @@ import {
   Upload,
   CalendarDays,
   Star,
+  ChevronDown,
 } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -319,6 +319,7 @@ export default function ProfilePage() {
   const [addressDialogMode, setAddressDialogMode] = useState<"add" | "edit">("add")
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deletingAddress, setDeletingAddress] = useState<Address | null>(null)
+  const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null)
 
   // const handleInputChange = (
   //   e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -607,6 +608,10 @@ export default function ProfilePage() {
 
     return formatted
   }
+
+  const toggleOrderExpansion = (orderId: string) => {
+    setExpandedOrderId((prev) => (prev === orderId ? null : orderId));
+  };
 
   const sidebarItems = [
     { id: "profile", label: "Profile", icon: User },
@@ -1071,183 +1076,222 @@ export default function ProfilePage() {
             {activeSection === "orders" && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Order History</CardTitle>
-                  <CardDescription>View and track your orders</CardDescription>
+                  <CardTitle>Lịch Sử Đơn Hàng</CardTitle>
+                  <CardDescription>Xem và theo dõi đơn hàng của bạn</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-6">
-                    {orders.map((order) => (
-                      <div
-                        key={order.id}
-                        className="overflow-hidden rounded-2xl border border-gray-200 shadow-sm"
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 bg-gray-50 px-6 py-4">
-                          <div className="flex flex-wrap items-center gap-3">
-                            <h3 className="text-base font-semibold text-gray-900">
-                              Order #{order.id}
-                            </h3>
-                            <Badge
-                              className={`${getStatusColor(order.status)} flex items-center gap-1 px-2.5 py-1 text-xs font-medium`}
-                            >
-                              {getStatusIcon(order.status)}
-                              <span className="ml-1">{order.statusLabel}</span>
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
-                            <CalendarDays className="h-4 w-4" />
-                            <span>Placed on {formatOrderDate(order.placedOn)}</span>
-                          </div>
-                        </div>
+                    {orders.map((order) => {
+                      const isExpanded = expandedOrderId === order.id;
 
-                        <div className="space-y-6 px-6 py-6">
-                          <div className="space-y-4">
-                            {order.items.map((item, index) => (
-                              <div
-                                key={`${order.id}-${index}`}
-                                className="flex flex-wrap items-start gap-4 rounded-xl border border-gray-100 p-4"
-                              >
-                                <img
-                                  src={item.image || "/placeholder.svg"}
-                                  alt={item.name}
-                                  width={80}
-                                  height={80}
-                                  className="h-20 w-20 rounded-xl object-cover"
+                      return (
+                        <div
+                          key={order.id}
+                          className="overflow-hidden rounded-lg border border-gray-200 bg-white"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => toggleOrderExpansion(order.id)}
+                            className="w-full px-4 py-4 text-left transition hover:bg-gray-50 focus-visible:outline-none"
+                          >
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center gap-3">
+                                <h3 className="text-sm font-semibold text-gray-900">
+                                  Đơn hàng #{order.id}
+                                </h3>
+                                <Badge
+                                  className={`${getStatusColor(order.status)} flex items-center gap-1 px-2 py-0.5 text-xs font-medium`}
+                                >
+                                  {getStatusIcon(order.status)}
+                                  <span>{order.statusLabel}</span>
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                  <CalendarDays className="h-3.5 w-3.5" />
+                                  <span>Đã đặt vào ngày {formatOrderDate(order.placedOn)}</span>
+                                </div>
+                                <ChevronDown
+                                  className={`h-5 w-5 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`}
                                 />
-                                <div className="min-w-[200px] flex-1">
-                                  <div className="flex flex-wrap items-center gap-3">
-                                    <p className="font-semibold text-gray-900">
-                                      {item.name}
-                                    </p>
-                                    {item.reviewStatus === "reviewed" && (
-                                      <Badge className="flex items-center gap-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
-                                        <CheckCircle className="h-3.5 w-3.5" />
-                                        <span className="text-xs font-medium uppercase">
-                                          Reviewed
-                                        </span>
-                                      </Badge>
-                                    )}
+                              </div>
+                            </div>
+
+                            {!isExpanded && (
+                              <div className="flex items-center gap-3">
+                                {order.items.map((item, index) => (
+                                  <div
+                                    key={`${order.id}-summary-${index}`}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <div className="relative w-16 h-16 rounded border border-gray-200 overflow-hidden bg-gray-50">
+                                      <img
+                                        src={item.image || "/placeholder.svg"}
+                                        alt={item.name}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </div>
+                                    <div className="text-xs text-gray-600">
+                                      {item.color && <div className="font-medium text-gray-900">{item.color}</div>}
+                                      {item.size && <div>{item.size}</div>}
+                                      <div>x {item.quantity}</div>
+                                    </div>
                                   </div>
-                                  <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
-                                    {item.color && <span>Color: {item.color}</span>}
-                                    {item.size && <span>Size: {item.size}</span>}
-                                    <span>Qty: {item.quantity}</span>
+                                ))}
+                                <div className="ml-auto text-right">
+                                  <div className="text-xs text-gray-500">Tổng: 
+                                    <span className="text-base font-semibold text-gray-900">
+                                      {formatPrice(order.totals.total)}
+                                      </span>
+                                    </div>
+                                </div>
+                              </div>
+                            )}
+                          </button>
+
+                          {isExpanded && (
+                            <div className="border-t border-gray-100 bg-gray-50 px-6 py-6">
+                              <div className="p-6 space-y-6">
+                                <div className="max-h-80 space-y-4 overflow-y-auto pr-1">
+                                  {order.items.map((item, index) => (
+                                    <div
+                                      key={`${order.id}-${index}`}
+                                      className="flex flex-wrap items-start gap-4 rounded-xl border border-gray-100 bg-white p-4"
+                                    >
+                                      <img
+                                        src={item.image || "/placeholder.svg"}
+                                        alt={item.name}
+                                        width={80}
+                                        height={80}
+                                        className="h-20 w-20 rounded-xl object-cover"
+                                      />
+                                      <div className="min-w-[200px] flex-1">
+                                        <div className="flex flex-wrap items-center gap-3">
+                                          <p className="font-semibold text-gray-900">
+                                            {item.name}
+                                          </p>
+                                          {item.reviewStatus === "reviewed" && (
+                                            <Badge className="flex items-center gap-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                                              <CheckCircle className="h-3.5 w-3.5" />
+                                              <span className="text-xs font-medium uppercase">
+                                                Đã Đánh Giá
+                                              </span>
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
+                                          {item.color && <span>Màu: {item.color}</span>}
+                                          {item.size && <span>Kích Cỡ: {item.size}</span>}
+                                          <span>Số Lượng: {item.quantity}</span>
+                                        </div>
+                                      </div>
+                                      <div className="flex min-w-[120px] flex-col items-end gap-2">
+                                        <p className="text-sm font-semibold text-gray-900">
+                                          {formatPrice(item.price)}
+                                        </p>
+                                        {item.allowReview && !item.reviewStatus && (
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="border-purple-200 text-purple-600 hover:bg-purple-50"
+                                          >
+                                            <Star
+                                              className="mr-2 h-4 w-4"
+                                              fill="currentColor"
+                                              strokeWidth={1.5}
+                                            />
+                                            Đánh Giá
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+
+                                <div className="grid gap-6 md:grid-cols-2">
+                                  {/* Shipping Address */}
+                                  <div className="rounded-lg border border-gray-200 bg-white p-6">
+                                    <h4 className="flex items-center gap-2 text-base font-semibold text-gray-900 mb-3">
+                                      <MapPin className="h-5 w-5 text-gray-600" />
+                                      Địa Chỉ Giao Hàng
+                                    </h4>
+                                    <div className="space-y-1 text-sm text-gray-700">
+                                      <p className="font-semibold text-gray-900">
+                                        {order.shippingAddress.fullName}
+                                      </p>
+                                      <p>{order.shippingAddress.phone}</p>
+                                      <p className="text-gray-600 leading-relaxed">
+                                        {order.shippingAddress.address}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  {/* Order Summary */}
+                                  <div className="rounded-lg border border-gray-200 bg-white p-6">
+                                    <h4 className="text-base font-semibold text-gray-900 mb-3">
+                                      Tóm Tắt Đơn Hàng
+                                    </h4>
+                                    <div className="space-y-2 text-sm text-gray-700">
+                                      <div className="flex justify-between">
+                                        <span>Tạm Tính</span>
+                                        <span>{formatPrice(order.totals.subtotal)}</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span>Vận Chuyển</span>
+                                        <span className="font-medium">
+                                          {order.totals.shippingLabel ?? formatPrice(order.totals.shipping)}
+                                        </span>
+                                      </div>
+                                      {typeof order.totals.tax === "number" && (
+                                        <div className="flex justify-between">
+                                          <span>Thuế</span>
+                                          <span>{formatPrice(order.totals.tax)}</span>
+                                        </div>
+                                      )}
+                                      <hr className="my-3 border-gray-200" />
+                                      <div className="flex justify-between text-base font-semibold text-gray-900">
+                                        <span>Tổng Cộng</span>
+                                        <span>{formatPrice(order.totals.total)}</span>
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
-                                <div className="flex min-w-[120px] flex-col items-end gap-2">
-                                  <p className="text-sm font-semibold text-gray-900">
-                                    {formatPrice(item.price)}
-                                  </p>
-                                  {item.allowReview && !item.reviewStatus && (
+                              </div>
+
+                              <div className="mt-6 flex flex-col gap-3 border-t border-gray-200 pt-4 md:flex-row md:items-center md:justify-between">
+                                <div className="flex flex-wrap items-center gap-3">
+                                  {order.canCancel && (
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      className="border-purple-200 text-purple-600 hover:bg-purple-50"
+                                      className="border-red-200 text-red-600 hover:bg-red-50"
                                     >
-                                      <Star
-                                        className="mr-2 h-4 w-4"
-                                        fill="currentColor"
-                                        strokeWidth={1.5}
-                                      />
-                                      Review
+                                      Hủy Đơn
+                                    </Button>
+                                  )}
+                                  {order.status === "delivered" && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="border-gray-200 text-gray-700 hover:bg-gray-100"
+                                    >
+                                      Mua Lại
                                     </Button>
                                   )}
                                 </div>
-                              </div>
-                            ))}
-                          </div>
 
-                          <div className="grid gap-6 md:grid-cols-2">
-                            <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-                              <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-                                <MapPin className="w-4 h-4 text-gray-600" />
-                                Shipping Address
-                              </h4>
-                              <div className="mt-3 space-y-1 text-sm text-gray-600">
-                                <p className="font-medium text-gray-900">
-                                  {order.shippingAddress.fullName}
-                                </p>
-                                <p>{order.shippingAddress.phone}</p>
-                                <p className="leading-relaxed">
-                                  {order.shippingAddress.address}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-                              <h4 className="text-sm font-semibold text-gray-900">
-                                Order Total
-                              </h4>
-                              <div className="mt-3 space-y-3 text-sm text-gray-600">
-                                <div className="flex items-center justify-between">
-                                  <span>Subtotal</span>
-                                  <span>
-                                    {formatPrice(order.totals.subtotal)}
-                                  </span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                  <span>Shipping</span>
-                                  <span>
-                                    {order.totals.shippingLabel ??
-                                      formatPrice(order.totals.shipping)}
-                                  </span>
-                                </div>
-                                {typeof order.totals.discount === "number" &&
-                                  order.totals.discount !== 0 && (
-                                    <div className="flex items-center justify-between">
-                                      <span>Discount</span>
-                                      <span
-                                        className={
-                                          order.totals.discount < 0
-                                            ? "text-emerald-600"
-                                            : ""
-                                        }
-                                      >
-                                        {order.totals.discount < 0
-                                          ? `- ${formatPrice(
-                                              Math.abs(order.totals.discount)
-                                            )}`
-                                          : formatPrice(order.totals.discount)}
-                                      </span>
-                                    </div>
-                                  )}
-                                {typeof order.totals.tax === "number" && (
-                                  <div className="flex items-center justify-between">
-                                    <span>Tax</span>
-                                    <span>{formatPrice(order.totals.tax)}</span>
+                                {order.deliveredOn && (
+                                  <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
+                                    <CheckCircle className="h-4 w-4" />
+                                    Đã giao vào ngày {formatOrderDate(order.deliveredOn)}
                                   </div>
                                 )}
                               </div>
-                              <div className="mt-4 flex items-center justify-between border-t border-dashed border-gray-200 pt-4 text-base font-semibold text-gray-900">
-                                <span>Total</span>
-                                <span>{formatPrice(order.totals.total)}</span>
-                              </div>
                             </div>
-                          </div>
+                          )}
                         </div>
-
-                        <div className="flex flex-col gap-3 border-t border-gray-100 bg-gray-50 px-6 py-4 md:flex-row md:items-center md:justify-between">
-                          {order.canCancel ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="border-red-200 text-red-600 hover:bg-red-50 md:w-auto"
-                            >
-                              Cancel Order
-                            </Button>
-                          ) : order.deliveredOn ? (
-                            <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
-                              <CheckCircle className="h-4 w-4" />
-                              Delivered on {formatOrderDate(order.deliveredOn)}
-                            </div>
-                          ) : null}
-                          <div className="text-sm text-gray-500 md:text-right">
-                            Need help?{" "}
-                            <span className="font-medium text-gray-900">
-                              Contact support
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </CardContent>
               </Card>
