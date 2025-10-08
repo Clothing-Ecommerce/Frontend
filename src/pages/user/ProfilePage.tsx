@@ -57,7 +57,11 @@ import { AddressFormDialog } from "@/components/address/addressFormDialog";
 import { DeleteAddressDialog } from "@/components/address/deleteAddressDialog";
 import type { Address } from "@/types/addressType";
 import { formatPrice } from "@/utils/formatPrice";
-import type { OrderDetailResponse, OrderListResponse, OrderSummaryResponse } from "@/types/orderType";
+import type {
+  OrderDetailResponse,
+  OrderListResponse,
+  OrderSummaryResponse,
+} from "@/types/orderType";
 
 const emptyUser: UserProfile = {
   userId: 0,
@@ -123,15 +127,15 @@ const formatOrderDate = (date: string) => {
 const getLabelText = (label: string) => {
   switch (label) {
     case "HOME":
-      return "Nhà"
+      return "Nhà";
     case "WORK":
-      return "Chỗ Làm"
+      return "Chỗ Làm";
     case "OTHER":
-      return "Khác"
+      return "Khác";
     default:
-      return label
+      return label;
   }
-}
+};
 
 export default function ProfilePage() {
   const [activeSection, setActiveSection] = useState("profile");
@@ -148,21 +152,30 @@ export default function ProfilePage() {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [showAddressDialog, setShowAddressDialog] = useState(false);
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
-  const [addressDialogMode, setAddressDialogMode] = useState<"add" | "edit">("add");
+  const [addressDialogMode, setAddressDialogMode] = useState<"add" | "edit">(
+    "add"
+  );
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deletingAddress, setDeletingAddress] = useState<Address | null>(null);
 
   // Orders management states
   const [orders, setOrders] = useState<OrderSummaryResponse[]>([]);
-  const [ordersPagination, setOrdersPagination] =
-    useState<OrderListResponse["pagination"] | null>(null);
+  const [ordersPagination, setOrdersPagination] = useState<
+    OrderListResponse["pagination"] | null
+  >(null);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState<string | null>(null);
   const [ordersLoaded, setOrdersLoaded] = useState(false);
-  const [orderDetails, setOrderDetails] = useState<Record<number, OrderDetailResponse>>({});
-  const [orderDetailErrors, setOrderDetailErrors] = useState<Record<number, string>>({});
+  const [orderDetails, setOrderDetails] = useState<
+    Record<number, OrderDetailResponse>
+  >({});
+  const [orderDetailErrors, setOrderDetailErrors] = useState<
+    Record<number, string>
+  >({});
   const [loadingDetailId, setLoadingDetailId] = useState<number | null>(null);
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
+  const [cancelingOrderId, setCancelingOrderId] = useState<number | null>(null);
+  const [reorderingOrderId, setReorderingOrderId] = useState<number | null>(null);
 
   // const handleInputChange = (
   //   e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -231,7 +244,6 @@ export default function ProfilePage() {
         console.error("Failed to fetch profile", e);
       } finally {
         // if (mounted) setLoading(false);
-
         /* loading state removed */
       }
     })();
@@ -326,7 +338,7 @@ export default function ProfilePage() {
     // setIsDropdownOpen(false);
   };
 
-// nạp danh sách địa chỉ
+  // nạp danh sách địa chỉ
   useEffect(() => {
     (async () => {
       try {
@@ -368,7 +380,9 @@ export default function ProfilePage() {
       });
 
       try {
-        const { data } = await api.get<OrderDetailResponse>(`/order/${orderId}`);
+        const { data } = await api.get<OrderDetailResponse>(
+          `/order/${orderId}`
+        );
         setOrderDetails((prev) => ({ ...prev, [orderId]: data }));
       } catch (e) {
         console.error(`Failed to load order detail ${orderId}`, e);
@@ -396,118 +410,215 @@ export default function ProfilePage() {
     void fetchOrderDetail(expandedOrderId);
   }, [expandedOrderId, orderDetails, fetchOrderDetail]);
 
+  const handleCancelOrder = useCallback(
+    async (orderId: number) => {
+      setCancelingOrderId(orderId);
+      try {
+        const { data } = await api.post<OrderDetailResponse>(
+          `/order/${orderId}/cancel`
+        );
+
+        const summary: OrderSummaryResponse = {
+          id: data.id,
+          code: data.code,
+          status: data.status,
+          statusLabel: data.statusLabel,
+          placedAt: data.placedAt,
+          updatedAt: data.updatedAt,
+          deliveredAt: data.deliveredAt,
+          canCancel: data.canCancel,
+          canReorder: data.canReorder,
+          totals: data.totals,
+          items: data.items,
+        };
+
+        setOrders((prev) =>
+          prev.map((order) => (order.id === orderId ? summary : order))
+        );
+        setOrderDetails((prev) => ({ ...prev, [orderId]: data }));
+        setOrderDetailErrors((prev) => {
+          const { [orderId]: _removed, ...rest } = prev;
+          void _removed;
+          return rest;
+        });
+        toast.success("Thành công", "Đơn hàng đã được hủy");
+      } catch (err: any) {
+        const message =
+          err?.response?.data?.message ?? "Không thể hủy đơn hàng lúc này";
+        toast.error("Lỗi", message);
+      } finally {
+        setCancelingOrderId((current) => (current === orderId ? null : current));
+      }
+    },
+    [toast]
+  );
+
+  const handleReorder = useCallback(
+    async (orderId: number) => {
+      setReorderingOrderId(orderId);
+      try {
+        const { data } = await api.post<{
+          addedItems: { variantId: number; quantity: number }[];
+        }>(`/order/${orderId}/reorder`);
+
+        const itemCount = data?.addedItems?.reduce(
+          (sum, item) => sum + (item?.quantity ?? 0),
+          0
+        );
+        toast.success(
+          "Thành công",
+          itemCount && itemCount > 0
+            ? `Đã thêm ${itemCount} sản phẩm vào giỏ hàng`
+            : "Đã thêm sản phẩm vào giỏ hàng"
+        );
+      } catch (err: any) {
+        const message =
+          err?.response?.data?.message ?? "Không thể mua lại đơn hàng";
+        toast.error("Lỗi", message);
+      } finally {
+        setReorderingOrderId((current) =>
+          current === orderId ? null : current
+        );
+      }
+    },
+    [toast]
+  );
 
   // Address management functions
   const handleAddAddress = () => {
-    setAddressDialogMode("add")
-    setEditingAddress(null)
-    setShowAddressDialog(true)
-  }
+    setAddressDialogMode("add");
+    setEditingAddress(null);
+    setShowAddressDialog(true);
+  };
 
   const handleEditAddress = (address: Address) => {
-    setAddressDialogMode("edit")
-    setEditingAddress(address)
-    setShowAddressDialog(true)
-  }
+    setAddressDialogMode("edit");
+    setEditingAddress(address);
+    setShowAddressDialog(true);
+  };
 
   const handleDeleteAddress = (address: Address) => {
-    setDeletingAddress(address)
-    setShowDeleteDialog(true)
-  }
+    setDeletingAddress(address);
+    setShowDeleteDialog(true);
+  };
 
   const handleSaveAddress = async (addressData: Address) => {
-   try {
-     if (addressDialogMode === "add") {
-      //  const { addressId, isDefault, ...payload } = addressData;
-       const { addressId: _addressId, isDefault: _isDefault, ...payload } = addressData;
-       void _addressId;
-       void _isDefault;
+    try {
+      if (addressDialogMode === "add") {
+        //  const { addressId, isDefault, ...payload } = addressData;
+        const {
+          addressId: _addressId,
+          isDefault: _isDefault,
+          ...payload
+        } = addressData;
+        void _addressId;
+        void _isDefault;
 
-       const { data } = await api.post<Address>("/user/addresses", {
-         ...payload,
-         setDefault: !!addressData.isDefault
-       });
-       setAddresses((prev) => {
-         const next = data.isDefault ? prev.map(a => ({ ...a, isDefault: false })) : prev.slice();
-         return [...next, data];
-       });
-       toast.success("Thành công", "Đã thêm địa chỉ");
-     } else if (editingAddress?.addressId) {
-      //  const { addressId: _ignore, isDefault, ...payload } = addressData;
-       const { addressId: _ignore, isDefault: _isDefault, ...payload } = addressData;
-       void _ignore;
-       void _isDefault;
-       
-       const { data } = await api.patch<Address>(`/user/addresses/${editingAddress.addressId}`, {
-         ...payload,
-         setDefault: !!addressData.isDefault
-       });
-       setAddresses((prev) => {
-         const next = data.isDefault ? prev.map(a => ({ ...a, isDefault: false })) : prev.slice();
-         return next.map(a => a.addressId === data.addressId ? data : a);
-       });
-       toast.success("Thành công", "Đã cập nhật địa chỉ");
-     }
-   } catch (e) {
-     console.error(e);
-     toast.error("Lỗi", "Không lưu được địa chỉ");
-   }
- }
+        const { data } = await api.post<Address>("/user/addresses", {
+          ...payload,
+          setDefault: !!addressData.isDefault,
+        });
+        setAddresses((prev) => {
+          const next = data.isDefault
+            ? prev.map((a) => ({ ...a, isDefault: false }))
+            : prev.slice();
+          return [...next, data];
+        });
+        toast.success("Thành công", "Đã thêm địa chỉ");
+      } else if (editingAddress?.addressId) {
+        //  const { addressId: _ignore, isDefault, ...payload } = addressData;
+        const {
+          addressId: _ignore,
+          isDefault: _isDefault,
+          ...payload
+        } = addressData;
+        void _ignore;
+        void _isDefault;
+
+        const { data } = await api.patch<Address>(
+          `/user/addresses/${editingAddress.addressId}`,
+          {
+            ...payload,
+            setDefault: !!addressData.isDefault,
+          }
+        );
+        setAddresses((prev) => {
+          const next = data.isDefault
+            ? prev.map((a) => ({ ...a, isDefault: false }))
+            : prev.slice();
+          return next.map((a) => (a.addressId === data.addressId ? data : a));
+        });
+        toast.success("Thành công", "Đã cập nhật địa chỉ");
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Lỗi", "Không lưu được địa chỉ");
+    }
+  };
 
   const handleConfirmDelete = async () => {
-   if (!deletingAddress?.addressId) return;
-   try {
-     const { data } = await api.delete(`/user/addresses/${deletingAddress.addressId}`);
-     setAddresses((prev) => {
-       const filtered = prev.filter(a => a.addressId !== deletingAddress.addressId);
-       if (data.wasDefault && data.newDefaultAddressId) {
-         return filtered.map(a => ({ ...a, isDefault: a.addressId === data.newDefaultAddressId }));
-       }
-       return filtered;
-     });
-     toast.success("Thành công", "Đã xoá địa chỉ");
-   } catch (e) {
-     console.error(e);
-     toast.error("Lỗi", "Không xoá được địa chỉ");
-   } finally {
-     setDeletingAddress(null);
-   }
- }
+    if (!deletingAddress?.addressId) return;
+    try {
+      const { data } = await api.delete(
+        `/user/addresses/${deletingAddress.addressId}`
+      );
+      setAddresses((prev) => {
+        const filtered = prev.filter(
+          (a) => a.addressId !== deletingAddress.addressId
+        );
+        if (data.wasDefault && data.newDefaultAddressId) {
+          return filtered.map((a) => ({
+            ...a,
+            isDefault: a.addressId === data.newDefaultAddressId,
+          }));
+        }
+        return filtered;
+      });
+      toast.success("Thành công", "Đã xoá địa chỉ");
+    } catch (e) {
+      console.error(e);
+      toast.error("Lỗi", "Không xoá được địa chỉ");
+    } finally {
+      setDeletingAddress(null);
+    }
+  };
 
   const handleSetDefault = async (addressId: number) => {
-   try {
-     await api.post(`/user/addresses/${addressId}/default`);
-     setAddresses((prev) => prev.map(a => ({ ...a, isDefault: a.addressId === addressId })));
-     toast.success("Thành công", "Đã đặt địa chỉ mặc định");
-   } catch {
-     toast.error("Lỗi", "Không đặt được địa chỉ mặc định");
-   }
- }
- 
- const formatAddress = (address: Address) => {
-    const parts = []
+    try {
+      await api.post(`/user/addresses/${addressId}/default`);
+      setAddresses((prev) =>
+        prev.map((a) => ({ ...a, isDefault: a.addressId === addressId }))
+      );
+      toast.success("Thành công", "Đã đặt địa chỉ mặc định");
+    } catch {
+      toast.error("Lỗi", "Không đặt được địa chỉ mặc định");
+    }
+  };
 
-    if (address.houseNumber) parts.push(address.houseNumber)
-    if (address.street) parts.push(address.street)
-    if (address.wardName) parts.push(address.wardName)
-    if (address.districtName) parts.push(address.districtName)
-    if (address.provinceName) parts.push(address.provinceName)
+  const formatAddress = (address: Address) => {
+    const parts = [];
 
-    let formatted = parts.join(", ")
+    if (address.houseNumber) parts.push(address.houseNumber);
+    if (address.street) parts.push(address.street);
+    if (address.wardName) parts.push(address.wardName);
+    if (address.districtName) parts.push(address.districtName);
+    if (address.provinceName) parts.push(address.provinceName);
+
+    let formatted = parts.join(", ");
 
     // Add building details if available
-    const buildingDetails = []
-    if (address.building) buildingDetails.push(address.building)
-    if (address.block) buildingDetails.push(address.block)
-    if (address.floor) buildingDetails.push(address.floor)
-    if (address.room) buildingDetails.push(address.room)
+    const buildingDetails = [];
+    if (address.building) buildingDetails.push(address.building);
+    if (address.block) buildingDetails.push(address.block);
+    if (address.floor) buildingDetails.push(address.floor);
+    if (address.room) buildingDetails.push(address.room);
 
     if (buildingDetails.length > 0) {
-      formatted = `${buildingDetails.join(", ")}, ${formatted}`
+      formatted = `${buildingDetails.join(", ")}, ${formatted}`;
     }
 
-    return formatted
-  }
+    return formatted;
+  };
 
   const toggleOrderExpansion = (orderId: number) => {
     setExpandedOrderId((prev) => (prev === orderId ? null : orderId));
@@ -870,9 +981,14 @@ export default function ProfilePage() {
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
                     <CardTitle>Địa chỉ giao hàng</CardTitle>
-                    <CardDescription>Quản lý địa chỉ giao hàng của bạn</CardDescription>
+                    <CardDescription>
+                      Quản lý địa chỉ giao hàng của bạn
+                    </CardDescription>
                   </div>
-                  <Button onClick={handleAddAddress} className="bg-black text-white hover:bg-gray-800">
+                  <Button
+                    onClick={handleAddAddress}
+                    className="bg-black text-white hover:bg-gray-800"
+                  >
                     <Plus className="w-4 h-4 mr-2" />
                     Thêm địa chỉ
                   </Button>
@@ -880,50 +996,73 @@ export default function ProfilePage() {
                 <CardContent>
                   <div className="space-y-4">
                     {addresses.map((address) => (
-                      <div key={address.addressId} className="border border-gray-200 rounded-lg p-6">
+                      <div
+                        key={address.addressId}
+                        className="border border-gray-200 rounded-lg p-6"
+                      >
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <div className="flex items-center gap-2 mb-3">
-                              <h3 className="font-semibold text-gray-900">{getLabelText(address.label)}</h3>
-                              {address.isDefault && <Badge className="bg-amber-100 text-amber-800">Mặc định</Badge>}
+                              <h3 className="font-semibold text-gray-900">
+                                {getLabelText(address.label)}
+                              </h3>
+                              {address.isDefault && (
+                                <Badge className="bg-amber-100 text-amber-800">
+                                  Mặc định
+                                </Badge>
+                              )}
                             </div>
 
                             <div className="space-y-2 text-gray-600">
                               <div className="flex items-start gap-2">
-                                <span className="font-medium text-gray-900 min-w-[100px]">Người nhận:</span>
+                                <span className="font-medium text-gray-900 min-w-[100px]">
+                                  Người nhận:
+                                </span>
                                 <span>{address.recipient}</span>
                               </div>
 
                               {address.phone && (
                                 <div className="flex items-start gap-2">
-                                  <span className="font-medium text-gray-900 min-w-[100px]">Điện thoại:</span>
+                                  <span className="font-medium text-gray-900 min-w-[100px]">
+                                    Điện thoại:
+                                  </span>
                                   <span>{address.phone}</span>
                                 </div>
                               )}
 
                               {address.company && (
                                 <div className="flex items-start gap-2">
-                                  <span className="font-medium text-gray-900 min-w-[100px]">Công ty:</span>
+                                  <span className="font-medium text-gray-900 min-w-[100px]">
+                                    Công ty:
+                                  </span>
                                   <span>{address.company}</span>
                                 </div>
                               )}
 
                               <div className="flex items-start gap-2">
-                                <span className="font-medium text-gray-900 min-w-[100px]">Địa chỉ:</span>
+                                <span className="font-medium text-gray-900 min-w-[100px]">
+                                  Địa chỉ:
+                                </span>
                                 <span>{formatAddress(address)}</span>
                               </div>
 
                               {address.postalCode && (
                                 <div className="flex items-start gap-2">
-                                  <span className="font-medium text-gray-900 min-w-[100px]">Mã bưu điện:</span>
+                                  <span className="font-medium text-gray-900 min-w-[100px]">
+                                    Mã bưu điện:
+                                  </span>
                                   <span>{address.postalCode}</span>
                                 </div>
                               )}
 
                               {address.notes && (
                                 <div className="flex items-start gap-2">
-                                  <span className="font-medium text-gray-900 min-w-[100px]">Ghi chú:</span>
-                                  <span className="italic">{address.notes}</span>
+                                  <span className="font-medium text-gray-900 min-w-[100px]">
+                                    Ghi chú:
+                                  </span>
+                                  <span className="italic">
+                                    {address.notes}
+                                  </span>
                                 </div>
                               )}
                             </div>
@@ -931,7 +1070,11 @@ export default function ProfilePage() {
 
                           <div className="flex flex-col gap-2 ml-4">
                             <div className="flex gap-2">
-                              <Button variant="outline" size="sm" onClick={() => handleEditAddress(address)}>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditAddress(address)}
+                              >
                                 <Edit className="w-4 h-4" />
                               </Button>
                               <Button
@@ -947,7 +1090,9 @@ export default function ProfilePage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleSetDefault(address.addressId!)}
+                                onClick={() =>
+                                  handleSetDefault(address.addressId!)
+                                }
                                 className="text-amber-600 hover:text-amber-700 border-amber-200 hover:bg-amber-50 bg-transparent w-full"
                               >
                                 Mặc Định
@@ -961,8 +1106,13 @@ export default function ProfilePage() {
                     {addresses.length === 0 && (
                       <div className="text-center py-12">
                         <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-600 text-lg mb-4">Chưa có địa chỉ giao hàng nào</p>
-                        <Button onClick={handleAddAddress} className="bg-black text-white hover:bg-gray-800">
+                        <p className="text-gray-600 text-lg mb-4">
+                          Chưa có địa chỉ giao hàng nào
+                        </p>
+                        <Button
+                          onClick={handleAddAddress}
+                          className="bg-black text-white hover:bg-gray-800"
+                        >
                           <Plus className="w-4 h-4 mr-2" />
                           Thêm địa chỉ đầu tiên
                         </Button>
@@ -978,7 +1128,9 @@ export default function ProfilePage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Lịch Sử Đơn Hàng</CardTitle>
-                  <CardDescription>Xem và theo dõi đơn hàng của bạn</CardDescription>
+                  <CardDescription>
+                    Xem và theo dõi đơn hàng của bạn
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {ordersLoading && (
@@ -1011,10 +1163,12 @@ export default function ProfilePage() {
                         const totals = detail?.totals ?? order.totals;
                         const detailError = orderDetailErrors[order.id];
                         const isDetailLoading = loadingDetailId === order.id;
-                        const deliveredAt = detail?.deliveredAt ?? order.deliveredAt;
+                        const deliveredAt =
+                          detail?.deliveredAt ?? order.deliveredAt;
                         const shippingAddress = detail?.shippingAddress;
                         const shippingDisplay =
-                          typeof totals.shipping === "number" && totals.shipping === 0
+                          typeof totals.shipping === "number" &&
+                          totals.shipping === 0
                             ? "FREE"
                             : formatPrice(totals.shipping);
 
@@ -1034,7 +1188,9 @@ export default function ProfilePage() {
                                     Đơn hàng #{order.code}
                                   </h3>
                                   <Badge
-                                    className={`${getStatusColor(order.status)} flex items-center gap-1 px-2 py-0.5 text-xs font-medium`}
+                                    className={`${getStatusColor(
+                                      order.status
+                                    )} flex items-center gap-1 px-2 py-0.5 text-xs font-medium`}
                                   >
                                     {getStatusIcon(order.status)}
                                     <span>{order.statusLabel}</span>
@@ -1044,7 +1200,8 @@ export default function ProfilePage() {
                                   <div className="flex items-center gap-2 text-xs text-gray-500">
                                     <CalendarDays className="h-3.5 w-3.5" />
                                     <span>
-                                      Đã đặt vào ngày {formatOrderDate(order.placedAt)}
+                                      Đã đặt vào ngày{" "}
+                                      {formatOrderDate(order.placedAt)}
                                     </span>
                                   </div>
                                   <ChevronDown
@@ -1064,7 +1221,9 @@ export default function ProfilePage() {
                                     >
                                       <div className="relative h-16 w-16 overflow-hidden rounded border border-gray-200 bg-gray-50">
                                         <img
-                                          src={item.imageUrl || "/placeholder.svg"}
+                                          src={
+                                            item.imageUrl || "/placeholder.svg"
+                                          }
                                           alt={item.name}
                                           className="h-full w-full object-cover"
                                         />
@@ -1081,7 +1240,9 @@ export default function ProfilePage() {
                                     </div>
                                   ))}
                                   <div className="ml-auto text-right">
-                                    <div className="text-xs text-gray-500">Tổng:</div>
+                                    <div className="text-xs text-gray-500">
+                                      Tổng:
+                                    </div>
                                     <div className="text-base font-semibold text-gray-900">
                                       {formatPrice(totals.total)}
                                     </div>
@@ -1105,7 +1266,9 @@ export default function ProfilePage() {
                                         variant="outline"
                                         size="sm"
                                         className="border-red-200 text-red-600 hover:bg-red-100"
-                                        onClick={() => fetchOrderDetail(order.id)}
+                                        onClick={() =>
+                                          fetchOrderDetail(order.id)
+                                        }
                                       >
                                         Thử lại
                                       </Button>
@@ -1121,7 +1284,9 @@ export default function ProfilePage() {
                                         className="flex flex-wrap items-start gap-4 rounded-xl border border-gray-100 bg-white p-4"
                                       >
                                         <img
-                                          src={item.imageUrl || "/placeholder.svg"}
+                                          src={
+                                            item.imageUrl || "/placeholder.svg"
+                                          }
                                           alt={item.name}
                                           width={80}
                                           height={80}
@@ -1129,7 +1294,9 @@ export default function ProfilePage() {
                                         />
                                         <div className="min-w-[200px] flex-1">
                                           <div className="flex flex-wrap items-center gap-3">
-                                            <p className="font-semibold text-gray-900">{item.name}</p>
+                                            <p className="font-semibold text-gray-900">
+                                              {item.name}
+                                            </p>
                                             {item.reviewed && (
                                               <Badge className="flex items-center gap-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
                                                 <CheckCircle className="h-3.5 w-3.5" />
@@ -1140,9 +1307,15 @@ export default function ProfilePage() {
                                             )}
                                           </div>
                                           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
-                                            {item.color && <span>Màu: {item.color}</span>}
-                                            {item.size && <span>Kích Cỡ: {item.size}</span>}
-                                            <span>Số Lượng: {item.quantity}</span>
+                                            {item.color && (
+                                              <span>Màu: {item.color}</span>
+                                            )}
+                                            {item.size && (
+                                              <span>Kích Cỡ: {item.size}</span>
+                                            )}
+                                            <span>
+                                              Số Lượng: {item.quantity}
+                                            </span>
                                           </div>
                                         </div>
                                         <div className="flex min-w-[120px] flex-col items-end gap-2">
@@ -1179,7 +1352,9 @@ export default function ProfilePage() {
                                           <p className="font-semibold text-gray-900">
                                             {shippingAddress.recipient}
                                           </p>
-                                          {shippingAddress.phone && <p>{shippingAddress.phone}</p>}
+                                          {shippingAddress.phone && (
+                                            <p>{shippingAddress.phone}</p>
+                                          )}
                                           <p className="text-gray-600 leading-relaxed">
                                             {shippingAddress.addressLine}
                                           </p>
@@ -1200,28 +1375,39 @@ export default function ProfilePage() {
                                       <div className="space-y-2 text-sm text-gray-700">
                                         <div className="flex justify-between">
                                           <span>Tạm Tính</span>
-                                          <span>{formatPrice(totals.subtotal)}</span>
+                                          <span>
+                                            {formatPrice(totals.subtotal)}
+                                          </span>
                                         </div>
                                         {totals.discount > 0 && (
                                           <div className="flex justify-between text-red-600">
                                             <span>Giảm Giá</span>
-                                            <span>-{formatPrice(totals.discount)}</span>
+                                            <span>
+                                              -{formatPrice(totals.discount)}
+                                            </span>
                                           </div>
                                         )}
                                         <div className="flex justify-between">
                                           <span>Vận Chuyển</span>
-                                          <span className="font-medium">{shippingDisplay}</span>
+                                          <span className="font-medium">
+                                            {shippingDisplay}
+                                          </span>
                                         </div>
-                                        {typeof totals.tax === "number" && totals.tax > 0 && (
-                                          <div className="flex justify-between">
-                                            <span>Thuế</span>
-                                            <span>{formatPrice(totals.tax)}</span>
-                                          </div>
-                                        )}
+                                        {typeof totals.tax === "number" &&
+                                          totals.tax > 0 && (
+                                            <div className="flex justify-between">
+                                              <span>Thuế</span>
+                                              <span>
+                                                {formatPrice(totals.tax)}
+                                              </span>
+                                            </div>
+                                          )}
                                         <hr className="my-3 border-gray-200" />
                                         <div className="flex justify-between text-base font-semibold text-gray-900">
                                           <span>Tổng Cộng</span>
-                                          <span>{formatPrice(totals.total)}</span>
+                                          <span>
+                                            {formatPrice(totals.total)}
+                                          </span>
                                         </div>
                                       </div>
                                     </div>
@@ -1235,8 +1421,15 @@ export default function ProfilePage() {
                                         variant="outline"
                                         size="sm"
                                         className="border-red-200 text-red-600 hover:bg-red-50"
+                                        onClick={() => handleCancelOrder(order.id)}
+                                        disabled={
+                                          cancelingOrderId === order.id ||
+                                          reorderingOrderId === order.id
+                                        }
                                       >
-                                        Hủy Đơn
+                                        {cancelingOrderId === order.id
+                                          ? "Đang hủy..."
+                                          : "Hủy Đơn"}
                                       </Button>
                                     )}
                                     {order.canReorder && (
@@ -1244,8 +1437,15 @@ export default function ProfilePage() {
                                         variant="outline"
                                         size="sm"
                                         className="border-gray-200 text-gray-700 hover:bg-gray-100"
+                                        onClick={() => handleReorder(order.id)}
+                                        disabled={
+                                          reorderingOrderId === order.id ||
+                                          cancelingOrderId === order.id
+                                        }
                                       >
-                                        Mua Lại
+                                        {reorderingOrderId === order.id
+                                          ? "Đang xử lý..."
+                                          : "Mua Lại"}
                                       </Button>
                                     )}
                                   </div>
@@ -1253,7 +1453,8 @@ export default function ProfilePage() {
                                   {deliveredAt && (
                                     <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
                                       <CheckCircle className="h-4 w-4" />
-                                      Đã giao vào ngày {formatOrderDate(deliveredAt)}
+                                      Đã giao vào ngày{" "}
+                                      {formatOrderDate(deliveredAt)}
                                     </div>
                                   )}
                                 </div>
@@ -1394,10 +1595,11 @@ export default function ProfilePage() {
       <DeleteAddressDialog
         open={showDeleteDialog}
         onOpenChange={setShowDeleteDialog}
-        addressLabel={deletingAddress ? getLabelText(deletingAddress.label) : ""}
+        addressLabel={
+          deletingAddress ? getLabelText(deletingAddress.label) : ""
+        }
         onConfirm={handleConfirmDelete}
       />
-      
     </div>
   );
 }
