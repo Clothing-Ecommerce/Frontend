@@ -49,6 +49,15 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
 import api from "@/utils/axios";
@@ -163,6 +172,7 @@ export default function ProfilePage() {
   const [ordersPagination, setOrdersPagination] = useState<
     OrderListResponse["pagination"] | null
   >(null);
+  const [ordersRequest, setOrdersRequest] = useState({ page: 1, pageSize: 5 });
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState<string | null>(null);
   const [ordersLoaded, setOrdersLoaded] = useState(false);
@@ -175,7 +185,9 @@ export default function ProfilePage() {
   const [loadingDetailId, setLoadingDetailId] = useState<number | null>(null);
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
   const [cancelingOrderId, setCancelingOrderId] = useState<number | null>(null);
-  const [reorderingOrderId, setReorderingOrderId] = useState<number | null>(null);
+  const [reorderingOrderId, setReorderingOrderId] = useState<number | null>(
+    null
+  );
 
   // const handleInputChange = (
   //   e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -351,24 +363,42 @@ export default function ProfilePage() {
     })();
   }, [toast]);
 
-  const fetchOrders = useCallback(async () => {
-    setOrdersLoading(true);
-    setOrdersError(null);
-    try {
-      const { data } = await api.get<OrderListResponse>("/order/list");
-      setOrders(data.orders);
-      setOrdersPagination(data.pagination);
-    } catch (e) {
-      console.error("Failed to load orders", e);
-      setOrders([]);
-      setOrdersPagination(null);
-      setOrdersError("Không thể tải danh sách đơn hàng");
-      toast.error("Lỗi", "Không thể tải danh sách đơn hàng");
-    } finally {
-      setOrdersLoading(false);
-      setOrdersLoaded(true);
-    }
-  }, [toast]);
+  const fetchOrders = useCallback(
+    async (query: { page: number; pageSize: number }) => {
+      setOrdersLoading(true);
+      setOrdersError(null);
+      try {
+        const { data } = await api.get<OrderListResponse>("/order/list", {
+          params: {
+            page: query.page,
+            pageSize: query.pageSize,
+          },
+        });
+        setOrders(data.orders);
+        setOrdersPagination(data.pagination);
+        setOrdersRequest((prev) => {
+          const next = {
+            page: data.pagination.page,
+            pageSize: data.pagination.pageSize,
+          };
+          if (prev.page === next.page && prev.pageSize === next.pageSize) {
+            return prev;
+          }
+          return next;
+        });
+      } catch (e) {
+        console.error("Failed to load orders", e);
+        setOrders([]);
+        setOrdersPagination(null);
+        setOrdersError("Không thể tải danh sách đơn hàng");
+        toast.error("Lỗi", "Không thể tải danh sách đơn hàng");
+      } finally {
+        setOrdersLoading(false);
+        setOrdersLoaded(true);
+      }
+    },
+    [toast]
+  );
 
   const fetchOrderDetail = useCallback(
     async (orderId: number) => {
@@ -400,9 +430,103 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (activeSection !== "orders") return;
-    if (ordersLoaded || ordersLoading) return;
-    void fetchOrders();
-  }, [activeSection, ordersLoaded, ordersLoading, fetchOrders]);
+    if (
+      ordersLoaded &&
+      ordersPagination &&
+      ordersPagination.page === ordersRequest.page &&
+      ordersPagination.pageSize === ordersRequest.pageSize
+    ) {
+      return;
+    }
+    void fetchOrders(ordersRequest);
+  }, [
+    activeSection,
+    ordersLoaded,
+    ordersPagination,
+    ordersRequest,
+    fetchOrders,
+  ]);
+
+  const handleOrdersPageChange = useCallback(
+    (targetPage: number) => {
+      if (!ordersPagination) return;
+      const maxPage = Math.max(ordersPagination.totalPages, 1);
+      const normalizedPage = Math.min(Math.max(targetPage, 1), maxPage);
+      setOrdersRequest((prev) => {
+        const next = {
+          page: normalizedPage,
+          pageSize: ordersPagination.pageSize,
+        };
+        if (prev.page === next.page && prev.pageSize === next.pageSize) {
+          return prev;
+        }
+        return next;
+      });
+    },
+    [ordersPagination]
+  );
+
+  const buildOrdersPageHref = useCallback(
+    (targetPage: number) => {
+      if (!ordersPagination) return "#";
+      const origin =
+        typeof window !== "undefined"
+          ? window.location.origin
+          : "http://localhost";
+      const baseLink =
+        ordersPagination.nextLink ??
+        ordersPagination.previousLink ??
+        (typeof window !== "undefined"
+          ? window.location.href
+          : `${origin}/order/list`);
+
+      try {
+        const url = new URL(baseLink, origin);
+        url.searchParams.set("page", String(targetPage));
+        url.searchParams.set("pageSize", String(ordersPagination.pageSize));
+
+        if (baseLink.startsWith("http")) {
+          return url.toString();
+        }
+
+        return `${url.pathname}${url.search}`;
+      } catch (err) {
+        console.error("Failed to build orders pagination href", err);
+        return `?page=${targetPage}&pageSize=${ordersPagination.pageSize}`;
+      }
+    },
+    [ordersPagination]
+  );
+
+  const ordersPageItems = useMemo(() => {
+    if (!ordersPagination) return [];
+    const { totalPages, page } = ordersPagination;
+    if (totalPages <= 0) return [];
+
+    const pages = new Set<number>();
+    pages.add(1);
+    pages.add(totalPages);
+    for (let offset = -2; offset <= 2; offset += 1) {
+      const value = page + offset;
+      if (value >= 1 && value <= totalPages) {
+        pages.add(value);
+      }
+    }
+
+    const sorted = Array.from(pages).sort((a, b) => a - b);
+    const items: Array<number | "ellipsis"> = [];
+
+    for (let i = 0; i < sorted.length; i += 1) {
+      const current = sorted[i];
+      const previous = sorted[i - 1];
+      if (previous !== undefined && current - previous > 1) {
+        items.push("ellipsis");
+      }
+      items.push(current);
+    }
+
+    return items;
+  }, [ordersPagination]);
 
   useEffect(() => {
     if (expandedOrderId == null) return;
@@ -447,7 +571,9 @@ export default function ProfilePage() {
           err?.response?.data?.message ?? "Không thể hủy đơn hàng lúc này";
         toast.error("Lỗi", message);
       } finally {
-        setCancelingOrderId((current) => (current === orderId ? null : current));
+        setCancelingOrderId((current) =>
+          current === orderId ? null : current
+        );
       }
     },
     [toast]
@@ -625,10 +751,10 @@ export default function ProfilePage() {
   };
 
   const sidebarItems = [
-    { id: "profile", label: "Profile", icon: User },
-    { id: "addresses", label: "Addresses", icon: MapPin },
-    { id: "orders", label: "Orders", icon: Package },
-    { id: "settings", label: "Settings", icon: Settings },
+    { id: "profile", label: "Hồ Sơ", icon: User },
+    { id: "addresses", label: "Địa Chỉ", icon: MapPin },
+    { id: "orders", label: "Đơn Hàng", icon: Package },
+    { id: "settings", label: "Cài Đặt", icon: Settings },
   ];
 
   return (
@@ -788,7 +914,7 @@ export default function ProfilePage() {
                     className="w-full text-red-600 border-red-200 hover:bg-red-50 bg-transparent"
                   >
                     <LogOut className="w-4 h-4 mr-2" />
-                    Log Out
+                    Đăng Xuất
                   </Button>
                 </div>
               </CardContent>
@@ -1142,7 +1268,9 @@ export default function ProfilePage() {
                     <div className="py-12 text-center">
                       <p className="mb-4 text-sm text-red-600">{ordersError}</p>
                       <Button
-                        onClick={() => fetchOrders()}
+                        onClick={() => {
+                          void fetchOrders(ordersRequest);
+                        }}
                         className="bg-black text-white hover:bg-gray-800"
                       >
                         Thử lại
@@ -1155,314 +1283,407 @@ export default function ProfilePage() {
                     </div>
                   )}
                   {!ordersLoading && !ordersError && orders.length > 0 && (
-                    <div className="space-y-6">
-                      {orders.map((order) => {
-                        const isExpanded = expandedOrderId === order.id;
-                        const detail = orderDetails[order.id];
-                        const items = detail?.items ?? order.items;
-                        const totals = detail?.totals ?? order.totals;
-                        const detailError = orderDetailErrors[order.id];
-                        const isDetailLoading = loadingDetailId === order.id;
-                        const deliveredAt =
-                          detail?.deliveredAt ?? order.deliveredAt;
-                        const shippingAddress = detail?.shippingAddress;
-                        const shippingDisplay =
-                          typeof totals.shipping === "number" &&
-                          totals.shipping === 0
-                            ? "FREE"
-                            : formatPrice(totals.shipping);
+                    <div className="space-y-8">
+                      <div className="space-y-6">
+                        {orders.map((order) => {
+                          const isExpanded = expandedOrderId === order.id;
+                          const detail = orderDetails[order.id];
+                          const items = detail?.items ?? order.items;
+                          const totals = detail?.totals ?? order.totals;
+                          const detailError = orderDetailErrors[order.id];
+                          const isDetailLoading = loadingDetailId === order.id;
+                          const deliveredAt =
+                            detail?.deliveredAt ?? order.deliveredAt;
+                          const shippingAddress = detail?.shippingAddress;
+                          const shippingDisplay =
+                            typeof totals.shipping === "number" &&
+                            totals.shipping === 0
+                              ? "FREE"
+                              : formatPrice(totals.shipping);
 
-                        return (
-                          <div
-                            key={order.id}
-                            className="overflow-hidden rounded-lg border border-gray-200 bg-white"
-                          >
-                            <button
-                              type="button"
-                              onClick={() => toggleOrderExpansion(order.id)}
-                              className="w-full px-4 py-4 text-left transition hover:bg-gray-50 focus-visible:outline-none"
+                          return (
+                            <div
+                              key={order.id}
+                              className="overflow-hidden rounded-lg border border-gray-200 bg-white"
                             >
-                              <div className="mb-3 flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                  <h3 className="text-sm font-semibold text-gray-900">
-                                    Đơn hàng #{order.code}
-                                  </h3>
-                                  <Badge
-                                    className={`${getStatusColor(
-                                      order.status
-                                    )} flex items-center gap-1 px-2 py-0.5 text-xs font-medium`}
-                                  >
-                                    {getStatusIcon(order.status)}
-                                    <span>{order.statusLabel}</span>
-                                  </Badge>
-                                </div>
-                                <div className="flex items-center gap-4">
-                                  <div className="flex items-center gap-2 text-xs text-gray-500">
-                                    <CalendarDays className="h-3.5 w-3.5" />
-                                    <span>
-                                      Đã đặt vào ngày{" "}
-                                      {formatOrderDate(order.placedAt)}
-                                    </span>
-                                  </div>
-                                  <ChevronDown
-                                    className={`h-5 w-5 text-gray-400 transition-transform ${
-                                      isExpanded ? "rotate-180" : ""
-                                    }`}
-                                  />
-                                </div>
-                              </div>
-
-                              {!isExpanded && (
-                                <div className="flex items-center gap-3">
-                                  {items.map((item, index) => (
-                                    <div
-                                      key={`${order.id}-summary-${index}`}
-                                      className="flex items-center gap-2"
+                              <button
+                                type="button"
+                                onClick={() => toggleOrderExpansion(order.id)}
+                                className="w-full px-4 py-4 text-left transition hover:bg-gray-50 focus-visible:outline-none"
+                              >
+                                <div className="mb-3 flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <h3 className="text-sm font-semibold text-gray-900">
+                                      Đơn hàng #{order.code}
+                                    </h3>
+                                    <Badge
+                                      className={`${getStatusColor(
+                                        order.status
+                                      )} flex items-center gap-1 px-2 py-0.5 text-xs font-medium`}
                                     >
-                                      <div className="relative h-16 w-16 overflow-hidden rounded border border-gray-200 bg-gray-50">
-                                        <img
-                                          src={
-                                            item.imageUrl || "/placeholder.svg"
-                                          }
-                                          alt={item.name}
-                                          className="h-full w-full object-cover"
-                                        />
-                                      </div>
-                                      <div className="text-xs text-gray-600">
-                                        <div className="font-medium text-gray-900">
-                                          {item.name}
-                                        </div>
-                                        <div>
-                                          x {item.quantity}
-                                          {item.size ? ` · ${item.size}` : ""}
-                                        </div>
-                                      </div>
+                                      {getStatusIcon(order.status)}
+                                      <span>{order.statusLabel}</span>
+                                    </Badge>
+                                  </div>
+                                  <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                                      <CalendarDays className="h-3.5 w-3.5" />
+                                      <span>
+                                        Đã đặt vào ngày{" "}
+                                        {formatOrderDate(order.placedAt)}
+                                      </span>
                                     </div>
-                                  ))}
-                                  <div className="ml-auto text-right">
-                                    <div className="text-xs text-gray-500">
-                                      Tổng:
-                                    </div>
-                                    <div className="text-base font-semibold text-gray-900">
-                                      {formatPrice(totals.total)}
-                                    </div>
+                                    <ChevronDown
+                                      className={`h-5 w-5 text-gray-400 transition-transform ${
+                                        isExpanded ? "rotate-180" : ""
+                                      }`}
+                                    />
                                   </div>
                                 </div>
-                              )}
-                            </button>
 
-                            {isExpanded && (
-                              <div className="border-t border-gray-100 bg-gray-50 px-6 py-6">
-                                <div className="space-y-4">
-                                  {isDetailLoading && !detail && (
-                                    <div className="rounded-md border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500">
-                                      Đang tải chi tiết đơn hàng...
-                                    </div>
-                                  )}
-                                  {detailError && (
-                                    <div className="flex flex-col gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 md:flex-row md:items-center md:justify-between">
-                                      <span>{detailError}</span>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="border-red-200 text-red-600 hover:bg-red-100"
-                                        onClick={() =>
-                                          fetchOrderDetail(order.id)
-                                        }
-                                      >
-                                        Thử lại
-                                      </Button>
-                                    </div>
-                                  )}
-                                </div>
-
-                                <div className="p-6">
-                                  <div className="max-h-80 space-y-4 overflow-y-auto pr-1">
+                                {!isExpanded && (
+                                  <div className="flex items-center gap-3">
                                     {items.map((item, index) => (
                                       <div
-                                        key={`${order.id}-${index}`}
-                                        className="flex flex-wrap items-start gap-4 rounded-xl border border-gray-100 bg-white p-4"
+                                        key={`${order.id}-summary-${index}`}
+                                        className="flex items-center gap-2"
                                       >
-                                        <img
-                                          src={
-                                            item.imageUrl || "/placeholder.svg"
-                                          }
-                                          alt={item.name}
-                                          width={80}
-                                          height={80}
-                                          className="h-20 w-20 rounded-xl object-cover"
-                                        />
-                                        <div className="min-w-[200px] flex-1">
-                                          <div className="flex flex-wrap items-center gap-3">
-                                            <p className="font-semibold text-gray-900">
-                                              {item.name}
-                                            </p>
-                                            {item.reviewed && (
-                                              <Badge className="flex items-center gap-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
-                                                <CheckCircle className="h-3.5 w-3.5" />
-                                                <span className="text-xs font-medium uppercase">
-                                                  Đã Đánh Giá
-                                                </span>
-                                              </Badge>
-                                            )}
-                                          </div>
-                                          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
-                                            {item.color && (
-                                              <span>Màu: {item.color}</span>
-                                            )}
-                                            {item.size && (
-                                              <span>Kích Cỡ: {item.size}</span>
-                                            )}
-                                            <span>
-                                              Số Lượng: {item.quantity}
-                                            </span>
-                                          </div>
+                                        <div className="relative h-16 w-16 overflow-hidden rounded border border-gray-200 bg-gray-50">
+                                          <img
+                                            src={
+                                              item.imageUrl ||
+                                              "/placeholder.svg"
+                                            }
+                                            alt={item.name}
+                                            className="h-full w-full object-cover"
+                                          />
                                         </div>
-                                        <div className="flex min-w-[120px] flex-col items-end gap-2">
-                                          <p className="text-sm font-semibold text-gray-900">
-                                            {formatPrice(item.unitPrice)}
-                                          </p>
-                                          {item.canReview && (
-                                            <Button
-                                              variant="outline"
-                                              size="sm"
-                                              className="border-purple-200 text-purple-600 hover:bg-purple-50"
-                                            >
-                                              <Star
-                                                className="mr-2 h-4 w-4"
-                                                fill="currentColor"
-                                                strokeWidth={1.5}
-                                              />
-                                              Đánh Giá
-                                            </Button>
-                                          )}
+                                        <div className="text-xs text-gray-600">
+                                          <div className="font-medium text-gray-900">
+                                            {item.name}
+                                          </div>
+                                          <div>
+                                            {item.color}{" "}
+                                            {item.size ? ` · ${item.size}` : ""}{" "}
+                                            x {item.quantity}
+                                          </div>
                                         </div>
                                       </div>
                                     ))}
+                                    <div className="ml-auto text-right">
+                                      <div className="text-xs text-gray-500">
+                                        Tổng:
+                                      </div>
+                                      <div className="text-base font-semibold text-gray-900">
+                                        {formatPrice(totals.total)}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </button>
+
+                              {isExpanded && (
+                                <div className="border-t border-gray-100 bg-gray-50 px-6 py-6">
+                                  <div className="space-y-4">
+                                    {isDetailLoading && !detail && (
+                                      <div className="rounded-md border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500">
+                                        Đang tải chi tiết đơn hàng...
+                                      </div>
+                                    )}
+                                    {detailError && (
+                                      <div className="flex flex-col gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 md:flex-row md:items-center md:justify-between">
+                                        <span>{detailError}</span>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="border-red-200 text-red-600 hover:bg-red-100"
+                                          onClick={() =>
+                                            fetchOrderDetail(order.id)
+                                          }
+                                        >
+                                          Thử lại
+                                        </Button>
+                                      </div>
+                                    )}
                                   </div>
 
-                                  <div className="mt-6 grid gap-6 md:grid-cols-2">
-                                    <div className="rounded-lg border border-gray-200 bg-white p-6">
-                                      <h4 className="mb-3 flex items-center gap-2 text-base font-semibold text-gray-900">
-                                        <MapPin className="h-5 w-5 text-gray-600" />
-                                        Địa Chỉ Giao Hàng
-                                      </h4>
-                                      {shippingAddress ? (
-                                        <div className="space-y-1 text-sm text-gray-700">
-                                          <p className="font-semibold text-gray-900">
-                                            {shippingAddress.recipient}
-                                          </p>
-                                          {shippingAddress.phone && (
-                                            <p>{shippingAddress.phone}</p>
-                                          )}
-                                          <p className="text-gray-600 leading-relaxed">
-                                            {shippingAddress.addressLine}
-                                          </p>
+                                  <div className="p-6">
+                                    <div className="max-h-80 space-y-4 overflow-y-auto pr-1">
+                                      {items.map((item, index) => (
+                                        <div
+                                          key={`${order.id}-${index}`}
+                                          className="flex flex-wrap items-start gap-4 rounded-xl border border-gray-100 bg-white p-4"
+                                        >
+                                          <img
+                                            src={
+                                              item.imageUrl ||
+                                              "/placeholder.svg"
+                                            }
+                                            alt={item.name}
+                                            width={80}
+                                            height={80}
+                                            className="h-20 w-20 rounded-xl object-cover"
+                                          />
+                                          <div className="min-w-[200px] flex-1">
+                                            <div className="flex flex-wrap items-center gap-3">
+                                              <p className="font-semibold text-gray-900">
+                                                {item.name}
+                                              </p>
+                                              {item.reviewed && (
+                                                <Badge className="flex items-center gap-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                                                  <CheckCircle className="h-3.5 w-3.5" />
+                                                  <span className="text-xs font-medium uppercase">
+                                                    Đã Đánh Giá
+                                                  </span>
+                                                </Badge>
+                                              )}
+                                            </div>
+                                            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
+                                              {item.color && (
+                                                <span>Màu: {item.color}</span>
+                                              )}
+                                              {item.size && (
+                                                <span>
+                                                  Kích Cỡ: {item.size}
+                                                </span>
+                                              )}
+                                              <span>
+                                                Số Lượng: {item.quantity}
+                                              </span>
+                                            </div>
+                                          </div>
+                                          <div className="flex min-w-[120px] flex-col items-end gap-2">
+                                            <p className="text-sm font-semibold text-gray-900">
+                                              {formatPrice(item.unitPrice)}
+                                            </p>
+                                            {item.canReview && (
+                                              <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="border-purple-200 text-purple-600 hover:bg-purple-50"
+                                              >
+                                                <Star
+                                                  className="mr-2 h-4 w-4"
+                                                  fill="currentColor"
+                                                  strokeWidth={1.5}
+                                                />
+                                                Đánh Giá
+                                              </Button>
+                                            )}
+                                          </div>
                                         </div>
-                                      ) : (
-                                        <p className="text-sm text-gray-500">
-                                          {isDetailLoading
-                                            ? "Đang tải địa chỉ giao hàng..."
-                                            : "Không có thông tin địa chỉ giao hàng"}
-                                        </p>
-                                      )}
+                                      ))}
                                     </div>
 
-                                    <div className="rounded-lg border border-gray-200 bg-white p-6">
-                                      <h4 className="mb-3 text-base font-semibold text-gray-900">
-                                        Tóm Tắt Đơn Hàng
-                                      </h4>
-                                      <div className="space-y-2 text-sm text-gray-700">
-                                        <div className="flex justify-between">
-                                          <span>Tạm Tính</span>
-                                          <span>
-                                            {formatPrice(totals.subtotal)}
-                                          </span>
-                                        </div>
-                                        {totals.discount > 0 && (
-                                          <div className="flex justify-between text-red-600">
-                                            <span>Giảm Giá</span>
+                                    <div className="mt-6 grid gap-6 md:grid-cols-2">
+                                      <div className="rounded-lg border border-gray-200 bg-white p-6">
+                                        <h4 className="mb-3 flex items-center gap-2 text-base font-semibold text-gray-900">
+                                          <MapPin className="h-5 w-5 text-gray-600" />
+                                          Địa Chỉ Giao Hàng
+                                        </h4>
+                                        {shippingAddress ? (
+                                          <div className="space-y-1 text-sm text-gray-700">
+                                            <p className="font-semibold text-gray-900">
+                                              {shippingAddress.recipient}
+                                            </p>
+                                            {shippingAddress.phone && (
+                                              <p>{shippingAddress.phone}</p>
+                                            )}
+                                            <p className="text-gray-600 leading-relaxed">
+                                              {shippingAddress.addressLine}
+                                            </p>
+                                          </div>
+                                        ) : (
+                                          <p className="text-sm text-gray-500">
+                                            {isDetailLoading
+                                              ? "Đang tải địa chỉ giao hàng..."
+                                              : "Không có thông tin địa chỉ giao hàng"}
+                                          </p>
+                                        )}
+                                      </div>
+
+                                      <div className="rounded-lg border border-gray-200 bg-white p-6">
+                                        <h4 className="mb-3 text-base font-semibold text-gray-900">
+                                          Tóm Tắt Đơn Hàng
+                                        </h4>
+                                        <div className="space-y-2 text-sm text-gray-700">
+                                          <div className="flex justify-between">
+                                            <span>Tạm Tính</span>
                                             <span>
-                                              -{formatPrice(totals.discount)}
+                                              {formatPrice(totals.subtotal)}
                                             </span>
                                           </div>
-                                        )}
-                                        <div className="flex justify-between">
-                                          <span>Vận Chuyển</span>
-                                          <span className="font-medium">
-                                            {shippingDisplay}
-                                          </span>
-                                        </div>
-                                        {typeof totals.tax === "number" &&
-                                          totals.tax > 0 && (
-                                            <div className="flex justify-between">
-                                              <span>Thuế</span>
+                                          {totals.discount > 0 && (
+                                            <div className="flex justify-between text-red-600">
+                                              <span>Giảm Giá</span>
                                               <span>
-                                                {formatPrice(totals.tax)}
+                                                -{formatPrice(totals.discount)}
                                               </span>
                                             </div>
                                           )}
-                                        <hr className="my-3 border-gray-200" />
-                                        <div className="flex justify-between text-base font-semibold text-gray-900">
-                                          <span>Tổng Cộng</span>
-                                          <span>
-                                            {formatPrice(totals.total)}
-                                          </span>
+                                          <div className="flex justify-between">
+                                            <span>Vận Chuyển</span>
+                                            <span className="font-medium">
+                                              {shippingDisplay}
+                                            </span>
+                                          </div>
+                                          {typeof totals.tax === "number" &&
+                                            totals.tax > 0 && (
+                                              <div className="flex justify-between">
+                                                <span>Thuế</span>
+                                                <span>
+                                                  {formatPrice(totals.tax)}
+                                                </span>
+                                              </div>
+                                            )}
+                                          <hr className="my-3 border-gray-200" />
+                                          <div className="flex justify-between text-base font-semibold text-gray-900">
+                                            <span>Tổng Cộng</span>
+                                            <span>
+                                              {formatPrice(totals.total)}
+                                            </span>
+                                          </div>
                                         </div>
                                       </div>
                                     </div>
                                   </div>
-                                </div>
 
-                                <div className="mt-6 flex flex-col gap-3 border-t border-gray-200 pt-4 md:flex-row md:items-center md:justify-between">
-                                  <div className="flex flex-wrap items-center gap-3">
-                                    {order.canCancel && (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="border-red-200 text-red-600 hover:bg-red-50"
-                                        onClick={() => handleCancelOrder(order.id)}
-                                        disabled={
-                                          cancelingOrderId === order.id ||
-                                          reorderingOrderId === order.id
-                                        }
-                                      >
-                                        {cancelingOrderId === order.id
-                                          ? "Đang hủy..."
-                                          : "Hủy Đơn"}
-                                      </Button>
-                                    )}
-                                    {order.canReorder && (
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="border-gray-200 text-gray-700 hover:bg-gray-100"
-                                        onClick={() => handleReorder(order.id)}
-                                        disabled={
-                                          reorderingOrderId === order.id ||
-                                          cancelingOrderId === order.id
-                                        }
-                                      >
-                                        {reorderingOrderId === order.id
-                                          ? "Đang xử lý..."
-                                          : "Mua Lại"}
-                                      </Button>
+                                  <div className="mt-6 flex flex-col gap-3 border-t border-gray-200 pt-4 md:flex-row md:items-center md:justify-between">
+                                    <div className="flex flex-wrap items-center gap-3">
+                                      {order.canCancel && (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="border-red-200 text-red-600 hover:bg-red-50"
+                                          onClick={() =>
+                                            handleCancelOrder(order.id)
+                                          }
+                                          disabled={
+                                            cancelingOrderId === order.id ||
+                                            reorderingOrderId === order.id
+                                          }
+                                        >
+                                          {cancelingOrderId === order.id
+                                            ? "Đang hủy..."
+                                            : "Hủy Đơn"}
+                                        </Button>
+                                      )}
+                                      {order.canReorder && (
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="border-gray-200 text-gray-700 hover:bg-gray-100"
+                                          onClick={() =>
+                                            handleReorder(order.id)
+                                          }
+                                          disabled={
+                                            reorderingOrderId === order.id ||
+                                            cancelingOrderId === order.id
+                                          }
+                                        >
+                                          {reorderingOrderId === order.id
+                                            ? "Đang xử lý..."
+                                            : "Mua Lại"}
+                                        </Button>
+                                      )}
+                                    </div>
+
+                                    {deliveredAt && (
+                                      <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
+                                        <CheckCircle className="h-4 w-4" />
+                                        Đã giao vào ngày{" "}
+                                        {formatOrderDate(deliveredAt)}
+                                      </div>
                                     )}
                                   </div>
-
-                                  {deliveredAt && (
-                                    <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
-                                      <CheckCircle className="h-4 w-4" />
-                                      Đã giao vào ngày{" "}
-                                      {formatOrderDate(deliveredAt)}
-                                    </div>
-                                  )}
                                 </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {ordersPagination && ordersPagination.totalPages > 1 && (
+                        <Pagination className="pt-2">
+                          <PaginationContent>
+                            <PaginationItem>
+                              <PaginationPrevious
+                                href={
+                                  ordersPagination.previousLink ??
+                                  buildOrdersPageHref(
+                                    Math.max(ordersPagination.page - 1, 1)
+                                  )
+                                }
+                                onClick={(event) => {
+                                  event.preventDefault();
+                                  if (ordersPagination.page <= 1) return;
+                                  handleOrdersPageChange(
+                                    ordersPagination.page - 1
+                                  );
+                                }}
+                                className={
+                                  ordersPagination.page <= 1
+                                    ? "pointer-events-none opacity-50"
+                                    : undefined
+                                }
+                              />
+                            </PaginationItem>
+                            {ordersPageItems.map((item, index) => (
+                              <PaginationItem
+                                key={`orders-page-${item}-${index}`}
+                              >
+                                {item === "ellipsis" ? (
+                                  <PaginationEllipsis />
+                                ) : (
+                                  <PaginationLink
+                                    href={buildOrdersPageHref(item)}
+                                    size="default"
+                                    isActive={ordersPagination.page === item}
+                                    onClick={(event) => {
+                                      event.preventDefault();
+                                      if (ordersPagination.page === item)
+                                        return;
+                                      handleOrdersPageChange(item);
+                                    }}
+                                  >
+                                    {item}
+                                  </PaginationLink>
+                                )}
+                              </PaginationItem>
+                            ))}
+                            <PaginationItem>
+                              <PaginationNext
+                                href={
+                                  ordersPagination.nextLink ??
+                                  buildOrdersPageHref(
+                                    Math.min(
+                                      ordersPagination.page + 1,
+                                      Math.max(ordersPagination.totalPages, 1)
+                                    )
+                                  )
+                                }
+                                onClick={(event) => {
+                                  event.preventDefault();
+                                  if (
+                                    ordersPagination.page >=
+                                    ordersPagination.totalPages
+                                  ) {
+                                    return;
+                                  }
+                                  handleOrdersPageChange(
+                                    ordersPagination.page + 1
+                                  );
+                                }}
+                                className={
+                                  ordersPagination.page >=
+                                  ordersPagination.totalPages
+                                    ? "pointer-events-none opacity-50"
+                                    : undefined
+                                }
+                              />
+                            </PaginationItem>
+                          </PaginationContent>
+                        </Pagination>
+                      )}
                     </div>
                   )}
                 </CardContent>
