@@ -89,6 +89,15 @@
   --chart-5: oklch(0.645 0.246 16.439);
 }
 
+/* Ẩn scrollbar trên tất cả trình duyệt nhưng vẫn cho phép cuộn */
+.scrollbar-hide {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE, Edge */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
 @layer base {
   * {
     border-color: var(--border);

@@ -1,8 +1,15 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+} from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -38,6 +45,7 @@ import {
   CalendarDays,
   Star,
   ChevronDown,
+  Film,
 } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -48,6 +56,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Pagination,
@@ -67,6 +76,7 @@ import { DeleteAddressDialog } from "@/components/address/deleteAddressDialog";
 import type { Address } from "@/types/addressType";
 import { formatPrice } from "@/utils/formatPrice";
 import type {
+  OrderItemSummary,
   OrderDetailResponse,
   OrderListResponse,
   OrderSummaryResponse,
@@ -188,6 +198,28 @@ export default function ProfilePage() {
   const [reorderingOrderId, setReorderingOrderId] = useState<number | null>(
     null
   );
+
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [reviewItem, setReviewItem] = useState<
+    | (OrderItemSummary & {
+        orderId: number;
+        orderCode: string;
+        deliveredAt: string | null;
+      })
+    | null
+  >(null);
+  const [reviewForm, setReviewForm] = useState({
+    rating: 0,
+    title: "",
+    details: "",
+    files: [] as File[],
+  });
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewFilePreviews, setReviewFilePreviews] = useState<string[]>([]);
+  const REVIEW_TITLE_MAX_LENGTH = 100;
+  const REVIEW_DETAILS_MAX_LENGTH = 500;
+  const REVIEW_MAX_FILES = 5;
+  const REVIEW_MAX_FILE_SIZE_MB = 5;
 
   // const handleInputChange = (
   //   e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -399,6 +431,15 @@ export default function ProfilePage() {
     },
     [toast]
   );
+
+  useEffect(() => {
+    const previews = reviewForm.files.map((file) => URL.createObjectURL(file));
+    setReviewFilePreviews(previews);
+
+    return () => {
+      previews.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [reviewForm.files]);
 
   const fetchOrderDetail = useCallback(
     async (orderId: number) => {
@@ -749,6 +790,105 @@ export default function ProfilePage() {
   const toggleOrderExpansion = (orderId: number) => {
     setExpandedOrderId((prev) => (prev === orderId ? null : orderId));
   };
+
+  const handleOpenReviewDialog = (
+    order: OrderSummaryResponse,
+    item: OrderItemSummary
+  ) => {
+    setReviewItem({
+      ...item,
+      orderId: order.id,
+      orderCode: order.code,
+      deliveredAt: order.deliveredAt ?? null,
+    });
+    setReviewForm({ rating: 0, title: "", details: "", files: [] });
+    setReviewDialogOpen(true);
+  };
+
+  const handleCloseReviewDialog = () => {
+    setReviewDialogOpen(false);
+    setReviewItem(null);
+    setReviewForm({ rating: 0, title: "", details: "", files: [] });
+    setReviewSubmitting(false);
+  };
+
+  const handleReviewRatingChange = (value: number) => {
+    setReviewForm(prev => ({ ...prev, rating: prev.rating === value ? 0 : value }));
+  };
+
+  const handleReviewInputChange = (
+    field: "title" | "details",
+    value: string
+  ) => {
+    setReviewForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleReviewFilesChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const fileList = Array.from(event.target.files ?? []);
+    if (fileList.length === 0) return;
+
+    const validFiles = fileList.filter((file) => {
+      const isValid =
+        file.size <= REVIEW_MAX_FILE_SIZE_MB * 1024 * 1024;
+      if (!isValid) {
+        toast.error(
+          "Tệp quá lớn",
+          `${file.name} vượt quá dung lượng ${REVIEW_MAX_FILE_SIZE_MB}MB`
+        );
+      }
+      return isValid;
+    });
+
+    if (validFiles.length === 0) {
+      event.target.value = "";
+      return;
+    }
+
+    setReviewForm((prev) => {
+      const remainingSlots = Math.max(REVIEW_MAX_FILES - prev.files.length, 0);
+      const filesToAdd = validFiles.slice(0, remainingSlots);
+
+      if (filesToAdd.length < validFiles.length) {
+        toast.error(
+          "Quá số lượng cho phép",
+          `Chỉ có thể tải lên tối đa ${REVIEW_MAX_FILES} tệp`
+        );
+      }
+
+      return {
+        ...prev,
+        files: [...prev.files, ...filesToAdd],
+      };
+    });
+
+    event.target.value = "";
+  };
+
+  const handleRemoveReviewFile = (index: number) => {
+    setReviewForm((prev) => ({
+      ...prev,
+      files: prev.files.filter((_, fileIndex) => fileIndex !== index),
+    }));
+  };
+
+  const handleReviewSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!reviewItem) return;
+
+    setReviewSubmitting(true);
+    setTimeout(() => {
+      toast.success(
+        "Đánh giá đã được gửi",
+        "Cảm ơn bạn đã chia sẻ trải nghiệm sản phẩm!"
+      );
+      handleCloseReviewDialog();
+    }, 800);
+  };
+
+  const isReviewSubmitDisabled =
+    reviewSubmitting ||
+    reviewForm.rating === 0 ||
+    reviewForm.title.trim().length === 0;
 
   const sidebarItems = [
     { id: "profile", label: "Hồ Sơ", icon: User },
@@ -1460,7 +1600,18 @@ export default function ProfilePage() {
                                               <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="border-purple-200 text-purple-600 hover:bg-purple-50"
+                                                className="
+                                                    border-[#D1A679] text-[#D1A679] 
+                                                    hover:bg-[#D1A679] hover:text-white hover:border-[#C59660]
+                                                    transition-colors duration-200
+                                                  "
+                                                type="button"
+                                                onClick={() =>
+                                                  handleOpenReviewDialog(
+                                                    order,
+                                                    item
+                                                  )
+                                                }
                                               >
                                                 <Star
                                                   className="mr-2 h-4 w-4"
@@ -1801,6 +1952,214 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+      <Dialog
+        open={reviewDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleCloseReviewDialog();
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto overflow-x-hidden px-6 pt-4 pb-0 scrollbar-hide bg-white">
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="text-xl font-semibold">
+              Viết đánh giá
+            </DialogTitle>
+            <DialogDescription>
+              Chia sẻ cảm nhận của bạn về sản phẩm để giúp người mua khác.
+            </DialogDescription>
+          </DialogHeader>
+
+          {reviewItem && (
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+              <div className="flex gap-4">
+                <div className="h-20 w-20 overflow-hidden rounded-lg border border-gray-200 bg-white">
+                  <img
+                    src={reviewItem.imageUrl || "/placeholder.svg"}
+                    alt={reviewItem.name}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+                <div className="flex-1 space-y-2">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {reviewItem.name}
+                    </p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-600">
+                      {reviewItem.color && <span>Màu: {reviewItem.color}</span>}
+                      {reviewItem.size && (
+                        <span className="rounded-full border border-gray-200 bg-white px-2 py-0.5 font-medium">
+                          Size {reviewItem.size}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    <span className="font-medium text-gray-700">
+                      Đơn hàng #{reviewItem.orderCode}
+                    </span>
+                    {reviewItem.deliveredAt && (
+                      <span>
+                        {" "}- đã giao ngày {formatOrderDate(reviewItem.deliveredAt)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <form className="space-y-5" onSubmit={handleReviewSubmit}>
+            <div>
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium text-gray-900">
+                  Đánh giá
+                </Label>
+                <span className="text-xs text-gray-500">
+                  {reviewForm.rating > 0
+                    ? `${reviewForm.rating}/5`
+                    : "Chọn số sao"}
+                </span>
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                {Array.from({ length: 5 }).map((_, index) => {
+                  const value = index + 1;
+                  const isActive = reviewForm.rating >= value;
+                  return (
+                    <button
+                      key={`rating-${value}`}
+                      type="button"
+                      onClick={() => handleReviewRatingChange(value)}
+                      className="rounded-full p-1 transition hover:-translate-y-0.5 hover:text-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                      aria-label={`Chọn ${value} sao`}
+                    >
+                      <Star
+                        className={`h-7 w-7 ${
+                          isActive ? "text-amber-400" : "text-gray-300"
+                        }`}
+                        fill={isActive ? "currentColor" : "none"}
+                        strokeWidth={isActive ? 1.5 : 1.25}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="review-details" className="text-sm font-medium text-gray-900">
+                  Nội dung đánh giá
+                </Label>
+                <span className="text-xs text-gray-500">
+                  {reviewForm.details.length}/{REVIEW_DETAILS_MAX_LENGTH}
+                </span>
+              </div>
+              <Textarea
+                id="review-details"
+                placeholder="Chia sẻ chi tiết hơn về chất lượng, kích thước hoặc trải nghiệm sử dụng sản phẩm"
+                value={reviewForm.details}
+                maxLength={REVIEW_DETAILS_MAX_LENGTH}
+                onChange={(event) =>
+                  handleReviewInputChange("details", event.target.value)
+                }
+                className="mt-2 min-h-[120px] resize-none"
+              />
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium text-gray-900">
+                Hình ảnh hoặc video <span className="text-gray-400">(Không bắt buộc)</span>
+              </Label>
+              <p className="mt-1 text-xs text-gray-500">
+                Tối đa {REVIEW_MAX_FILES} tệp, mỗi tệp {REVIEW_MAX_FILE_SIZE_MB}MB
+              </p>
+              <div className="mt-3">
+                <label
+                  htmlFor="review-media-upload"
+                  className="flex h-28 w-full cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-[#E8D7BF] bg-[#F8F3ED] text-center transition hover:border-[#D1A679] hover:bg-[#F3E9DC]"
+                >
+                  <Upload className="h-8 w-8 text-[#C59660]" />
+                  <span className="mt-2 text-sm font-medium text-[#A97B50]">
+                    Nhấn để tải ảnh hoặc video
+                  </span>
+                  <span className="mt-1 text-xs text-gray-500">
+                    Hỗ trợ định dạng JPG, PNG, MP4
+                  </span>
+                </label>
+                <Input
+                  id="review-media-upload"
+                  type="file"
+                  className="sr-only"
+                  accept="image/*,video/*"
+                  multiple
+                  onChange={handleReviewFilesChange}
+                />
+              </div>
+
+              {reviewForm.files.length > 0 && (
+                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {reviewForm.files.map((file, index) => {
+                    const isImage = file.type.startsWith("image/");
+                    const preview = reviewFilePreviews[index];
+
+                    return (
+                      <div
+                        key={`${file.name}-${index}`}
+                        className="group relative overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
+                      >
+                        {isImage && preview ? (
+                          <img
+                            src={preview}
+                            alt={file.name}
+                            className="h-28 w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-28 w-full flex-col items-center justify-center gap-2 bg-gray-50 text-center text-xs text-gray-600">
+                            <Film className="h-8 w-8 text-gray-400" />
+                            <span className="px-2 text-[11px] font-medium">
+                              {file.name}
+                            </span>
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveReviewFile(index)}
+                          className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-gray-600 shadow transition hover:bg-white hover:text-gray-900"
+                          aria-label={`Xóa ${file.name}`}
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="sticky bottom-0 py-4 bg-white">
+              <DialogFooter className="gap-2">
+                <Button
+                type="button"
+                variant="outline"
+                onClick={handleCloseReviewDialog}
+                disabled={reviewSubmitting}
+                className="w-1/2"
+              >
+                Hủy
+              </Button>
+              <Button
+                type="submit"
+                className="w-1/2 bg-[#D1A679] text-white hover:bg-[#C59660]"
+                disabled={isReviewSubmitDisabled}
+              >
+                {reviewSubmitting ? "Đang gửi..." : "Gửi đánh giá"}
+              </Button>
+              </DialogFooter>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
       <Footer />
 
       {/* Address Form Dialog */}
