@@ -216,7 +216,6 @@ export default function ProfilePage() {
   });
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewFilePreviews, setReviewFilePreviews] = useState<string[]>([]);
-  const REVIEW_TITLE_MAX_LENGTH = 100;
   const REVIEW_DETAILS_MAX_LENGTH = 500;
   const REVIEW_MAX_FILES = 5;
   const REVIEW_MAX_FILE_SIZE_MB = 5;

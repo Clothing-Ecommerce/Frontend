@@ -29,6 +29,7 @@ import { formatPrice } from "@/utils/formatPrice";
 import type { Product, ProductVariant, ColorOption } from "@/types/productType";
 import type { ProductListResponse } from "@/types/productType";
 import { MediaGallery } from "@/components/products/MediaGallery";
+import { ReviewsSection } from "@/components/products/ReviewsSection";
 
 export default function ProductDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -506,11 +507,10 @@ export default function ProductDetailsPage() {
               </Card>
             </TabsContent>
             <TabsContent value="reviews" className="mt-6">
-              <Card>
-                <CardContent className="p-6">
-                  <p className="text-gray-600">No reviews yet.</p>
-                </CardContent>
-              </Card>
+              <ReviewsSection
+                reviews={product?.reviews}
+                isLoading={isLoadingProduct}
+              />
             </TabsContent>
             <TabsContent value="shipping" className="mt-6">
               <Card>
