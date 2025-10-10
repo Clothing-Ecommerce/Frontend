@@ -281,11 +281,6 @@ export const ReviewsSection = ({
                             Đánh giá của bạn
                           </Badge>
                         )}
-                        {review.title && (
-                          <Badge variant="secondary" className="rounded-full">
-                            {review.title}
-                          </Badge>
-                        )}
                         {review.isPublished === false && (
                           <Badge variant="outline" className="rounded-full">
                             Chờ duyệt

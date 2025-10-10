@@ -97,7 +97,6 @@ export interface Review {
   userId?: number;
   orderItemId?: number;
   rating: number;
-  title?: string | null;
   content?: string | null;
   isPublished: boolean;
   createdAt: string;

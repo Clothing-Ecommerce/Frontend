@@ -211,7 +211,6 @@ export default function ProductDetailsPage() {
           userId: data.userId,
           orderItemId: data.orderItemId,
           rating: data.rating,
-          title: null,
           content: data.content ?? null,
           isPublished: data.isPublished,
           createdAt: data.createdAt,
