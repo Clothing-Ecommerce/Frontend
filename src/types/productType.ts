@@ -101,6 +101,11 @@ export interface Review {
   isPublished: boolean;
   createdAt: string;
   updatedAt: string;
+  user?: {
+    id: number;
+    username: string;
+    avatar: string | null;
+  } | null;
   media?: {
     id: number;
     type: "IMAGE" | "VIDEO";

@@ -70,6 +70,24 @@ export default function ProductDetailsPage() {
       setErrorProduct(null);
       try {
         const res = await api.get(`/products/${id}`);
+
+        const reviews = Array.isArray(res.data.reviews)
+          ? res.data.reviews.map((review: any) => ({
+              ...review,
+              rating:
+                typeof review.rating === "number"
+                  ? review.rating
+                  : Number.parseFloat(review.rating ?? "0") || 0,
+              user: review.user
+                ? {
+                    id: review.user.id,
+                    username: review.user.username,
+                    avatar: review.user.avatar ?? null,
+                  }
+                : review.user ?? null,
+            }))
+          : [];
+
         const data: Product = {
           ...res.data,
           basePrice: Number(res.data.basePrice),
@@ -80,6 +98,7 @@ export default function ProductDetailsPage() {
               price: v.price ? Number(v.price) : null,
             })
           ),
+          reviews,
         };
         setProduct(data);
         // build color and size options from variants

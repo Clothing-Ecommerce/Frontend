@@ -260,6 +260,12 @@ export const ReviewsSection = ({
                 const isHighlighted =
                   highlightedReviewId != null &&
                   review.id === highlightedReviewId;
+                const username = review.user?.username
+                  ? review.user.username.trim()
+                  : "";
+                const reviewerName =
+                  username.length > 0 ? username : "Khách hàng";
+                const avatarUrl = review.user?.avatar ?? null;
                 return (
                 <article
                   key={review.id}
@@ -270,11 +276,23 @@ export const ReviewsSection = ({
                   }`}
                 >
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-100">
-                      <UserRound className="h-5 w-5 text-gray-500" />
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100">
+                      {avatarUrl ? (
+                        <img
+                          src={avatarUrl}
+                          alt={`Ảnh đại diện của ${reviewerName}`}
+                          className="h-full w-full object-cover"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <UserRound className="h-5 w-5 text-gray-500" />
+                      )}
                     </div>
                     <div className="flex-1 space-y-3">
                       <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-semibold text-gray-900">
+                          {reviewerName}
+                        </span>
                         <RatingStars rating={review.rating} />
                         {isHighlighted && (
                           <Badge variant="default" className="rounded-full bg-amber-100 text-amber-700">
@@ -296,7 +314,6 @@ export const ReviewsSection = ({
                         {formatReviewDate(review.createdAt) && (
                           <span>Đăng ngày {formatReviewDate(review.createdAt)}</span>
                         )}
-                        <span>Đánh giá {review.rating.toFixed(1)}/5</span>
                       </div>
                     </div>
                   </div>
