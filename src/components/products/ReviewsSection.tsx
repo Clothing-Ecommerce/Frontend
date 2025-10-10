@@ -7,6 +7,7 @@ import type { Review } from "@/types/productType";
 interface ReviewsSectionProps {
   reviews?: Review[] | null;
   isLoading?: boolean;
+  highlightedReviewId?: number | null;
 }
 
 const ratingFilters = [5, 4, 3, 2, 1] as const;
@@ -48,18 +49,23 @@ const formatReviewDate = (value?: string | null) => {
 export const ReviewsSection = ({
   reviews = [],
   isLoading = false,
+  highlightedReviewId = null,
 }: ReviewsSectionProps) => {
+  const safeReviews = reviews ?? [];
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
 
-  const totalReviews = reviews.length;
+  const totalReviews = safeReviews.length;
 
   const averageRating = useMemo(() => {
     if (totalReviews === 0) {
       return 0;
     }
-    const total = reviews.reduce((acc, review) => acc + (review.rating || 0), 0);
+    const total = safeReviews.reduce(
+      (acc, review) => acc + (review.rating || 0),
+      0
+    );
     return total / totalReviews;
-  }, [reviews, totalReviews]);
+  }, [safeReviews, totalReviews]);
 
   const ratingCounts = useMemo(() => {
     const counts: Record<number, number> = {
@@ -69,20 +75,20 @@ export const ReviewsSection = ({
       4: 0,
       5: 0,
     };
-    reviews.forEach((review) => {
+    safeReviews.forEach((review) => {
       const rounded = Math.min(5, Math.max(1, Math.round(review.rating)));
       counts[rounded] += 1;
     });
     return counts;
-  }, [reviews]);
+  }, [safeReviews]);
 
   const sortedReviews = useMemo(() => {
-    return [...reviews].sort((a, b) => {
+    return [...safeReviews].sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return dateB - dateA;
     });
-  }, [reviews]);
+  }, [safeReviews]);
 
   const filteredReviews = useMemo(() => {
     if (!selectedRating) {
@@ -250,10 +256,18 @@ export const ReviewsSection = ({
 
           {filteredReviews.length > 0 ? (
             <div className="space-y-4">
-              {filteredReviews.map((review) => (
+              {filteredReviews.map((review) => {
+                const isHighlighted =
+                  highlightedReviewId != null &&
+                  review.id === highlightedReviewId;
+                return (
                 <article
                   key={review.id}
-                  className="rounded-2xl border bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+                  className={`rounded-2xl border bg-white p-6 shadow-sm transition-shadow hover:shadow-md ${
+                    isHighlighted
+                      ? "border-amber-300 ring-2 ring-amber-200"
+                      : ""
+                  }`}
                 >
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-100">
@@ -262,6 +276,11 @@ export const ReviewsSection = ({
                     <div className="flex-1 space-y-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <RatingStars rating={review.rating} />
+                        {isHighlighted && (
+                          <Badge variant="default" className="rounded-full bg-amber-100 text-amber-700">
+                            Đánh giá của bạn
+                          </Badge>
+                        )}
                         {review.title && (
                           <Badge variant="secondary" className="rounded-full">
                             {review.title}
@@ -287,7 +306,8 @@ export const ReviewsSection = ({
                     </div>
                   </div>
                 </article>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed bg-gray-50 p-10 text-center text-sm text-gray-500">

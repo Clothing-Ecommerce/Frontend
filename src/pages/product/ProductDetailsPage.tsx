@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { Link, useParams, useLocation } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
@@ -26,10 +26,12 @@ import { ToastContainer } from "@/components/ui/toast";
 import { useToast } from "@/hooks/useToast";
 import axios from "axios";
 import { formatPrice } from "@/utils/formatPrice";
-import type { Product, ProductVariant, ColorOption } from "@/types/productType";
+import type { Product, ProductVariant, ColorOption, Review } from "@/types/productType";
 import type { ProductListResponse } from "@/types/productType";
+import type { OrderItemReview } from "@/types/orderType";
 import { MediaGallery } from "@/components/products/MediaGallery";
 import { ReviewsSection } from "@/components/products/ReviewsSection";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function ProductDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -39,6 +41,18 @@ export default function ProductDetailsPage() {
   const [isLoadingRelated, setIsLoadingRelated] = useState(true);
   const [errorProduct, setErrorProduct] = useState<string | null>(null);
   const [errorRelated, setErrorRelated] = useState<string | null>(null);
+
+  const location = useLocation();
+  const searchParams = useMemo(
+    () => new URLSearchParams(location.search),
+    [location.search]
+  );
+  const orderIdParam = searchParams.get("orderId");
+  const orderItemIdParam = searchParams.get("orderItemId");
+  const { isAuthenticated } = useAuth();
+  const [userReview, setUserReview] = useState<Review | null>(null);
+  const [isLoadingUserReview, setIsLoadingUserReview] = useState(false);
+  const [userReviewError, setUserReviewError] = useState<string | null>(null);
 
   // const [selectedImage, setSelectedImage] = useState(0);
   const [colorOptions, setColorOptions] = useState<ColorOption[]>([]);
@@ -156,6 +170,76 @@ export default function ProductDetailsPage() {
     }
   }, [product]);
 
+  useEffect(() => {
+    if (!orderIdParam || !orderItemIdParam) {
+      setUserReview(null);
+      setUserReviewError(null);
+      setIsLoadingUserReview(false);
+      return;
+    }
+
+    if (!isAuthenticated) {
+      setUserReview(null);
+      setUserReviewError(null);
+      return;
+    }
+
+    const orderId = Number(orderIdParam);
+    const orderItemId = Number(orderItemIdParam);
+    if (
+      !Number.isSafeInteger(orderId) ||
+      orderId <= 0 ||
+      !Number.isSafeInteger(orderItemId) ||
+      orderItemId <= 0
+    ) {
+      setUserReview(null);
+      setUserReviewError(null);
+      return;
+    }
+
+    let isMounted = true;
+    setIsLoadingUserReview(true);
+    setUserReviewError(null);
+
+    api
+      .get<OrderItemReview>(`/order/${orderId}/items/${orderItemId}/review`)
+      .then(({ data }) => {
+        if (!isMounted) return;
+        setUserReview({
+          id: data.id,
+          productId: data.productId,
+          userId: data.userId,
+          orderItemId: data.orderItemId,
+          rating: data.rating,
+          title: null,
+          content: data.content ?? null,
+          isPublished: data.isPublished,
+          createdAt: data.createdAt,
+          updatedAt: data.updatedAt,
+          media: data.media,
+        });
+      })
+      .catch((error) => {
+        if (!isMounted) return;
+        if (axios.isAxiosError(error) && error.response?.status === 404) {
+          setUserReview(null);
+        } else {
+          console.error("Error fetching user review:", error);
+          setUserReviewError("Không thể tải đánh giá của bạn.");
+          toast.error("Lỗi", "Không thể tải đánh giá của bạn.");
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoadingUserReview(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [orderIdParam, orderItemIdParam, isAuthenticated, toast]);
+
   // helpers for active SALE & effective price
   const nowActive = (startAt?: string | null, endAt?: string | null) => {
     const now = Date.now();
@@ -186,6 +270,15 @@ export default function ProductDetailsPage() {
     selectedVariant
   );
   const stockCount = selectedVariant?.stock ?? 0;
+
+  const combinedReviews = useMemo<Review[]>(() => {
+    const base = product?.reviews ?? [];
+    if (!userReview) {
+      return base;
+    }
+    const exists = base.some((review) => review.id === userReview.id);
+    return exists ? base : [userReview, ...base];
+  }, [product, userReview]);
 
   const handleAddToCart = async () => {
     if (!selectedSize) {
@@ -507,9 +600,18 @@ export default function ProductDetailsPage() {
               </Card>
             </TabsContent>
             <TabsContent value="reviews" className="mt-6">
+              {isLoadingUserReview && (
+                <p className="mb-4 text-sm text-gray-500">
+                  Đang tải đánh giá của bạn...
+                </p>
+              )}
+              {userReviewError && (
+                <p className="mb-4 text-sm text-red-600">{userReviewError}</p>
+              )}
               <ReviewsSection
-                reviews={product?.reviews}
+                reviews={combinedReviews}
                 isLoading={isLoadingProduct}
+                highlightedReviewId={userReview?.id ?? null}
               />
             </TabsContent>
             <TabsContent value="shipping" className="mt-6">
