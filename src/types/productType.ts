@@ -94,14 +94,28 @@ export interface Product {
 export interface Review {
   id: number;
   productId: number;
-  userId: number;
+  userId?: number;
+  orderItemId?: number;
   rating: number;
   title?: string | null;
   content?: string | null;
   isPublished: boolean;
   createdAt: string;
   updatedAt: string;
+  media?: {
+    id: number;
+    type: "IMAGE" | "VIDEO";
+    url: string;
+    thumbnailUrl: string | null;
+    width: number | null;
+    height: number | null;
+    durationSeconds: number | null;
+    originalFileName: string | null;
+    fileSize: number | null;
+    createdAt: string;
+  }[];
 }
+
 
 // ====== List payload (GET /products) ======
 export interface ProductCard {

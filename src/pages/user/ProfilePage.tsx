@@ -1,9 +1,4 @@
-import {
-  useState,
-  useEffect,
-  useMemo,
-  useCallback,
-} from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -80,7 +75,9 @@ import type {
   OrderDetailResponse,
   OrderListResponse,
   OrderSummaryResponse,
+  OrderItemReview,
 } from "@/types/orderType";
+import axios from "axios";
 
 const emptyUser: UserProfile = {
   userId: 0,
@@ -210,12 +207,18 @@ export default function ProfilePage() {
   >(null);
   const [reviewForm, setReviewForm] = useState({
     rating: 0,
-    title: "",
     details: "",
     files: [] as File[],
   });
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [reviewFilePreviews, setReviewFilePreviews] = useState<string[]>([]);
+
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [existingReview, setExistingReview] = useState<OrderItemReview | null>(
+    null
+  );
+  const [reviewError, setReviewError] = useState<string | null>(null);
+
   const REVIEW_DETAILS_MAX_LENGTH = 500;
   const REVIEW_MAX_FILES = 5;
   const REVIEW_MAX_FILE_SIZE_MB = 5;
@@ -800,35 +803,47 @@ export default function ProfilePage() {
       orderCode: order.code,
       deliveredAt: order.deliveredAt ?? null,
     });
-    setReviewForm({ rating: 0, title: "", details: "", files: [] });
+    setReviewForm({ rating: 0, details: "", files: [] });
+    setExistingReview(null);
+    setReviewError(null);
     setReviewDialogOpen(true);
+    void loadExistingReview(order.id, item.id);
   };
 
   const handleCloseReviewDialog = () => {
     setReviewDialogOpen(false);
     setReviewItem(null);
-    setReviewForm({ rating: 0, title: "", details: "", files: [] });
+    setReviewForm({ rating: 0, details: "", files: [] });
     setReviewSubmitting(false);
+    setReviewFilePreviews([]);
+    setReviewLoading(false);
+    setExistingReview(null);
+    setReviewError(null);
   };
 
   const handleReviewRatingChange = (value: number) => {
-    setReviewForm(prev => ({ ...prev, rating: prev.rating === value ? 0 : value }));
+    setReviewForm((prev) => ({
+      ...prev,
+      rating: prev.rating === value ? 0 : value,
+    }));
   };
 
-  const handleReviewInputChange = (
-    field: "title" | "details",
-    value: string
-  ) => {
-    setReviewForm((prev) => ({ ...prev, [field]: value }));
+  const handleReviewDetailsChange = (value: string) => {
+    setReviewForm((prev) => ({ ...prev, details: value }));
   };
 
   const handleReviewFilesChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (existingReview) {
+      toast.error("Không thể tải tệp", "Bạn đã gửi đánh giá cho sản phẩm này.");
+      event.target.value = "";
+      return;
+    }
+
     const fileList = Array.from(event.target.files ?? []);
     if (fileList.length === 0) return;
 
     const validFiles = fileList.filter((file) => {
-      const isValid =
-        file.size <= REVIEW_MAX_FILE_SIZE_MB * 1024 * 1024;
+      const isValid = file.size <= REVIEW_MAX_FILE_SIZE_MB * 1024 * 1024;
       if (!isValid) {
         toast.error(
           "Tệp quá lớn",
@@ -870,24 +885,127 @@ export default function ProfilePage() {
     }));
   };
 
-  const handleReviewSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const loadExistingReview = useCallback(
+    async (orderId: number, orderItemId: number) => {
+      setReviewLoading(true);
+      setReviewError(null);
+      try {
+        const { data } = await api.get<OrderItemReview>(
+          `/order/${orderId}/items/${orderItemId}/review`
+        );
+        setExistingReview(data);
+        setReviewForm({
+          rating: data.rating,
+          details: data.content ?? "",
+          files: [],
+        });
+      } catch (error) {
+        if (axios.isAxiosError(error)) {
+          if (error.response?.status === 404) {
+            setExistingReview(null);
+          } else {
+            console.error(
+              `Failed to load review for order item ${orderItemId}`,
+              error
+            );
+            setReviewError("Không thể tải đánh giá hiện có");
+            toast.error("Lỗi", "Không thể tải đánh giá hiện có");
+          }
+        } else {
+          console.error(
+            `Failed to load review for order item ${orderItemId}`,
+            error
+          );
+          setReviewError("Không thể tải đánh giá hiện có");
+          toast.error("Lỗi", "Không thể tải đánh giá hiện có");
+        }
+      } finally {
+        setReviewLoading(false);
+      }
+    },
+    [toast]
+  );
+
+  const handleReviewSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!reviewItem) return;
+    if (!reviewItem || existingReview) {
+      return;
+    }
+
+    if (reviewForm.rating === 0) {
+      toast.error("Thiếu thông tin", "Vui lòng chọn số sao đánh giá");
+      return;
+    }
 
     setReviewSubmitting(true);
-    setTimeout(() => {
+    try {
+      const payload = {
+        rating: reviewForm.rating,
+        content: reviewForm.details.trim()
+          ? reviewForm.details.trim()
+          : undefined,
+      };
+      const { data } = await api.post<OrderItemReview>(
+        `/order/${reviewItem.orderId}/items/${reviewItem.id}/review`,
+        payload
+      );
+
+      setOrders((prev) =>
+        prev.map((order) =>
+          order.id === reviewItem.orderId
+            ? {
+                ...order,
+                items: order.items.map((item) =>
+                  item.id === reviewItem.id
+                    ? { ...item, reviewed: true, canReview: false }
+                    : item
+                ),
+              }
+            : order
+        )
+      );
+      setOrderDetails((prev) => {
+        const current = prev[reviewItem.orderId];
+        if (!current) return prev;
+        return {
+          ...prev,
+          [reviewItem.orderId]: {
+            ...current,
+            items: current.items.map((item) =>
+              item.id === reviewItem.id
+                ? { ...item, reviewed: true, canReview: false }
+                : item
+            ),
+          },
+        };
+      });
+
+      setExistingReview(data);
       toast.success(
         "Đánh giá đã được gửi",
         "Cảm ơn bạn đã chia sẻ trải nghiệm sản phẩm!"
       );
+      setReviewSubmitting(false);
       handleCloseReviewDialog();
-    }, 800);
+    } catch (error) {
+      setReviewSubmitting(false);
+      if (axios.isAxiosError(error)) {
+        const message =
+          (error.response?.data as { message?: string } | undefined)?.message ||
+          "Không thể gửi đánh giá";
+        toast.error("Lỗi", message);
+      } else {
+        toast.error("Lỗi", "Không thể gửi đánh giá");
+      }
+      console.error("Failed to submit review", error);
+    }
   };
 
   const isReviewSubmitDisabled =
     reviewSubmitting ||
+    reviewLoading ||
     reviewForm.rating === 0 ||
-    reviewForm.title.trim().length === 0;
+    !!existingReview;
 
   const sidebarItems = [
     { id: "profile", label: "Hồ Sơ", icon: User },
@@ -1999,12 +2117,33 @@ export default function ProfilePage() {
                     </span>
                     {reviewItem.deliveredAt && (
                       <span>
-                        {" "}- đã giao ngày {formatOrderDate(reviewItem.deliveredAt)}
+                        {" "}
+                        - đã giao ngày {formatOrderDate(reviewItem.deliveredAt)}
                       </span>
                     )}
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {reviewLoading && (
+            <p className="mt-3 text-sm text-gray-500">
+              Đang kiểm tra đánh giá trước đó...
+            </p>
+          )}
+          {reviewError && (
+            <p className="mt-3 text-sm text-red-600">{reviewError}</p>
+          )}
+          {existingReview && (
+            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+              <p className="font-semibold">Bạn đã đánh giá sản phẩm này</p>
+              <p className="mt-2">
+                Đánh giá {existingReview.rating}/5
+                {existingReview.content
+                  ? ` – ${existingReview.content}`
+                  : " – Không có nội dung chi tiết."}
+              </p>
             </div>
           )}
 
@@ -2030,6 +2169,7 @@ export default function ProfilePage() {
                       type="button"
                       onClick={() => handleReviewRatingChange(value)}
                       className="rounded-full p-1 transition hover:-translate-y-0.5 hover:text-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                      disabled={reviewLoading || !!existingReview}
                       aria-label={`Chọn ${value} sao`}
                     >
                       <Star
@@ -2047,7 +2187,10 @@ export default function ProfilePage() {
 
             <div>
               <div className="flex items-center justify-between">
-                <Label htmlFor="review-details" className="text-sm font-medium text-gray-900">
+                <Label
+                  htmlFor="review-details"
+                  className="text-sm font-medium text-gray-900"
+                >
                   Nội dung đánh giá
                 </Label>
                 <span className="text-xs text-gray-500">
@@ -2060,23 +2203,29 @@ export default function ProfilePage() {
                 value={reviewForm.details}
                 maxLength={REVIEW_DETAILS_MAX_LENGTH}
                 onChange={(event) =>
-                  handleReviewInputChange("details", event.target.value)
+                  handleReviewDetailsChange(event.target.value)
                 }
                 className="mt-2 min-h-[120px] resize-none"
+                disabled={reviewLoading || !!existingReview}
               />
             </div>
 
             <div>
               <Label className="text-sm font-medium text-gray-900">
-                Hình ảnh hoặc video <span className="text-gray-400">(Không bắt buộc)</span>
+                Hình ảnh hoặc video{" "}
+                <span className="text-gray-400">(Không bắt buộc)</span>
               </Label>
               <p className="mt-1 text-xs text-gray-500">
-                Tối đa {REVIEW_MAX_FILES} tệp, mỗi tệp {REVIEW_MAX_FILE_SIZE_MB}MB
+                Tối đa {REVIEW_MAX_FILES} tệp, mỗi tệp {REVIEW_MAX_FILE_SIZE_MB}
+                MB
               </p>
               <div className="mt-3">
                 <label
                   htmlFor="review-media-upload"
-                  className="flex h-28 w-full cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-[#E8D7BF] bg-[#F8F3ED] text-center transition hover:border-[#D1A679] hover:bg-[#F3E9DC]"
+                  className={`flex h-28 w-full flex-col items-center justify-center rounded-xl border border-dashed border-[#E8D7BF] bg-[#F8F3ED] text-center transition hover:border-[#D1A679] hover:bg-[#F3E9DC] ${
+                    reviewLoading || existingReview ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+                  }`}
+                  aria-disabled={reviewLoading || !!existingReview}
                 >
                   <Upload className="h-8 w-8 text-[#C59660]" />
                   <span className="mt-2 text-sm font-medium text-[#A97B50]">
@@ -2093,6 +2242,7 @@ export default function ProfilePage() {
                   accept="image/*,video/*"
                   multiple
                   onChange={handleReviewFilesChange}
+                  disabled={reviewLoading || !!existingReview}
                 />
               </div>
 
@@ -2139,21 +2289,21 @@ export default function ProfilePage() {
             <div className="sticky bottom-0 py-4 bg-white">
               <DialogFooter className="gap-2">
                 <Button
-                type="button"
-                variant="outline"
-                onClick={handleCloseReviewDialog}
-                disabled={reviewSubmitting}
-                className="w-1/2"
-              >
-                Hủy
-              </Button>
-              <Button
-                type="submit"
-                className="w-1/2 bg-[#D1A679] text-white hover:bg-[#C59660]"
-                disabled={isReviewSubmitDisabled}
-              >
-                {reviewSubmitting ? "Đang gửi..." : "Gửi đánh giá"}
-              </Button>
+                  type="button"
+                  variant="outline"
+                  onClick={handleCloseReviewDialog}
+                  disabled={reviewSubmitting}
+                  className="w-1/2"
+                >
+                  Hủy
+                </Button>
+                <Button
+                  type="submit"
+                  className="w-1/2 bg-[#D1A679] text-white hover:bg-[#C59660]"
+                  disabled={isReviewSubmitDisabled}
+                >
+                  {reviewSubmitting ? "Đang gửi..." : "Gửi đánh giá"}
+                </Button>
               </DialogFooter>
             </div>
           </form>

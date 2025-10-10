@@ -24,6 +24,35 @@ export interface OrderItemSummary {
   canReview?: boolean;
 }
 
+export type ReviewMediaType = "IMAGE" | "VIDEO";
+
+export interface OrderItemReviewMedia {
+  id: number;
+  type: ReviewMediaType;
+  url: string;
+  thumbnailUrl: string | null;
+  width: number | null;
+  height: number | null;
+  durationSeconds: number | null;
+  originalFileName: string | null;
+  fileSize: number | null;
+  createdAt: string;
+}
+
+export interface OrderItemReview {
+  id: number;
+  productId: number;
+  orderItemId: number;
+  userId?: number;
+  rating: number;
+  content: string | null;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
+  media: OrderItemReviewMedia[];
+}
+
+
 export interface OrderTotalsSummary {
   subtotal: number;
   discount: number;
