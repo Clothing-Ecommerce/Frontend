@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Upload, X, Star, Film } from "lucide-react";
 import type { OrderItemSummary, OrderItemReview } from "@/types/orderType";
+import type { ReviewMediaType } from "@/types/orderType";
 
 export type ReviewableOrderItem =
   | (OrderItemSummary & {
@@ -47,6 +48,17 @@ export interface OrderReviewDialogProps {
   onDetailsChange: (value: string) => void;
   onFilesChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onRemoveFile: (index: number) => void;
+  mode?: "create" | "edit";
+  title?: string;
+  description?: string | null;
+  submitButtonLabel?: string;
+  cancelButtonLabel?: string;
+  existingMediaPreviews?: {
+    id: number | string;
+    type: ReviewMediaType;
+    url: string;
+    thumbnailUrl?: string | null;
+  }[];
 }
 
 export function OrderReviewDialog({
@@ -70,15 +82,30 @@ export function OrderReviewDialog({
   onDetailsChange,
   onFilesChange,
   onRemoveFile,
+  mode = "create",
+  title,
+  description,
+  submitButtonLabel,
+  cancelButtonLabel,
+  existingMediaPreviews = [],
 }: OrderReviewDialogProps) {
+    const isEditMode = mode === "edit";
+    const effectiveTitle = title ?? (isEditMode ? "Chỉnh sửa đánh giá" : "Viết đánh giá");
+    const effectiveDescription =
+        description ??
+        (isEditMode
+        ? "Cập nhật chia sẻ của bạn về sản phẩm."
+        : "Chia sẻ cảm nhận của bạn về sản phẩm để giúp người mua khác.");
+    const effectiveCancelLabel = cancelButtonLabel ?? "Hủy";
+    const effectiveSubmitLabel = submitButtonLabel ?? (isEditMode ? "Lưu thay đổi" : "Gửi đánh giá");
+    const shouldDisableInputs = reviewLoading || (!isEditMode && !!existingReview);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto overflow-x-hidden px-6 pt-4 pb-0 scrollbar-hide bg-white">
         <DialogHeader className="space-y-1">
-          <DialogTitle className="text-xl font-semibold">Viết đánh giá</DialogTitle>
-          <DialogDescription>
-            Chia sẻ cảm nhận của bạn về sản phẩm để giúp người mua khác.
-          </DialogDescription>
+          <DialogTitle className="text-xl font-semibold">{effectiveTitle}</DialogTitle>
+          {effectiveDescription && <DialogDescription>{effectiveDescription}</DialogDescription>}
         </DialogHeader>
 
         {reviewItem && (
@@ -120,7 +147,7 @@ export function OrderReviewDialog({
           <p className="mt-3 text-sm text-gray-500">Đang kiểm tra đánh giá trước đó...</p>
         )}
         {reviewError && <p className="mt-3 text-sm text-red-600">{reviewError}</p>}
-        {existingReview && (
+        {!isEditMode && existingReview && (
           <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
             <p className="font-semibold">Bạn đã đánh giá sản phẩm này</p>
             <p className="mt-2">
@@ -150,7 +177,7 @@ export function OrderReviewDialog({
                     type="button"
                     onClick={() => onRatingChange(value)}
                     className="rounded-full p-1 transition hover:-translate-y-0.5 hover:text-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
-                    disabled={reviewLoading || !!existingReview}
+                    disabled={shouldDisableInputs}
                     aria-label={`Chọn ${value} sao`}
                   >
                     <Star
@@ -180,7 +207,7 @@ export function OrderReviewDialog({
               maxLength={reviewDetailsMaxLength}
               onChange={(event) => onDetailsChange(event.target.value)}
               className="mt-2 min-h-[120px] resize-none"
-              disabled={reviewLoading || !!existingReview}
+              disabled={shouldDisableInputs}
             />
           </div>
 
@@ -195,9 +222,9 @@ export function OrderReviewDialog({
               <label
                 htmlFor="review-media-upload"
                 className={`flex h-28 w-full flex-col items-center justify-center rounded-xl border border-dashed border-[#E8D7BF] bg-[#F8F3ED] text-center transition hover:border-[#D1A679] hover:bg-[#F3E9DC] ${
-                  reviewLoading || existingReview ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+                  shouldDisableInputs ? "cursor-not-allowed opacity-60" : "cursor-pointer"
                 }`}
-                aria-disabled={reviewLoading || !!existingReview}
+                aria-disabled={shouldDisableInputs}
               >
                 <Upload className="h-8 w-8 text-[#C59660]" />
                 <span className="mt-2 text-sm font-medium text-[#A97B50]">
@@ -212,9 +239,40 @@ export function OrderReviewDialog({
                 accept="image/*,video/*"
                 multiple
                 onChange={onFilesChange}
-                disabled={reviewLoading || !!existingReview}
+                disabled={shouldDisableInputs}
               />
             </div>
+
+            {existingMediaPreviews.length > 0 && (
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {existingMediaPreviews.map((media) => {
+                  const isImage = media.type === "IMAGE";
+                  const previewUrl = media.thumbnailUrl ?? media.url;
+                  return (
+                    <div
+                      key={`existing-${media.id}`}
+                      className="relative overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
+                    >
+                      {isImage ? (
+                        <img
+                          src={previewUrl}
+                          alt="Tệp đã tải lên"
+                          className="h-28 w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-28 w-full flex-col items-center justify-center gap-2 bg-gray-50 text-center text-xs text-gray-600">
+                          <Film className="h-8 w-8 text-gray-400" />
+                          <span className="px-2 text-[11px] font-medium">Video đã tải</span>
+                        </div>
+                      )}
+                      <div className="absolute inset-x-0 bottom-0 bg-black/40 p-1 text-center text-[11px] font-medium text-white">
+                        Đã tải lên
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             {reviewForm.files.length > 0 && (
               <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -259,14 +317,18 @@ export function OrderReviewDialog({
                 disabled={reviewSubmitting}
                 className="w-1/2"
               >
-                Hủy
+                {effectiveCancelLabel}
               </Button>
               <Button
                 type="submit"
                 className="w-1/2 bg-[#D1A679] text-white hover:bg-[#C59660]"
                 disabled={isSubmitDisabled}
               >
-                {reviewSubmitting ? "Đang gửi..." : "Gửi đánh giá"}
+                {reviewSubmitting
+                  ? isEditMode
+                    ? "Đang lưu..."
+                    : "Đang gửi..."
+                  : effectiveSubmitLabel}
               </Button>
             </DialogFooter>
           </div>

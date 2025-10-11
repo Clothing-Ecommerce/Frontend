@@ -1,4 +1,10 @@
-import { useState, useEffect, useMemo } from "react";
+import {
+  useState,
+  useEffect,
+  useMemo,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import { Link, useParams, useLocation } from "react-router-dom";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -31,6 +37,15 @@ import type { ProductListResponse } from "@/types/productType";
 import type { OrderItemReview } from "@/types/orderType";
 import { MediaGallery } from "@/components/products/MediaGallery";
 import { ReviewsSection } from "@/components/products/ReviewsSection";
+import { OrderReviewDialog } from "@/components/review/OrderReviewDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function ProductDetailsPage() {
@@ -49,7 +64,7 @@ export default function ProductDetailsPage() {
   );
   const orderIdParam = searchParams.get("orderId");
   const orderItemIdParam = searchParams.get("orderItemId");
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [userReview, setUserReview] = useState<Review | null>(null);
   const [isLoadingUserReview, setIsLoadingUserReview] = useState(false);
   const [userReviewError, setUserReviewError] = useState<string | null>(null);
@@ -62,6 +77,33 @@ export default function ProductDetailsPage() {
   const [quantity, setQuantity] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const { toasts, toast, removeToast } = useToast();
+
+  const REVIEW_DETAILS_MAX_LENGTH = 500;
+  const REVIEW_MAX_FILES = 5;
+  const REVIEW_MAX_FILE_SIZE_MB = 5;
+
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingReview, setEditingReview] = useState<Review | null>(null);
+  const [editReviewForm, setEditReviewForm] = useState({
+    rating: 0,
+    details: "",
+    files: [] as File[],
+  });
+  const [editReviewFilePreviews, setEditReviewFilePreviews] = useState<string[]>([]);
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editExistingMedia, setEditExistingMedia] = useState<Review["media"]>([]);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [reviewToDelete, setReviewToDelete] = useState<Review | null>(null);
+  const [isDeletingReview, setIsDeletingReview] = useState(false);
+
+  useEffect(() => {
+    const previews = editReviewForm.files.map((file) => URL.createObjectURL(file));
+    setEditReviewFilePreviews(previews);
+
+    return () => {
+      previews.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, [editReviewForm.files]);
 
   // Fetch product data
   useEffect(() => {
@@ -297,6 +339,207 @@ export default function ProductDetailsPage() {
     const exists = base.some((review) => review.id === userReview.id);
     return exists ? base : [userReview, ...base];
   }, [product, userReview]);
+
+  const currentUserId = (() => {
+    if (typeof user?.id === "number") return user.id;
+    if (typeof user?.id === "string") {
+      const parsed = Number.parseInt(user.id, 10);
+      return Number.isNaN(parsed) ? null : parsed;
+    }
+    return null;
+  })();
+
+  const handleOpenEditReview = (review: Review) => {
+    setEditingReview(review);
+    setEditReviewForm({
+      rating: review.rating,
+      details: review.content ?? "",
+      files: [],
+    });
+    setEditExistingMedia(review.media ?? []);
+    setEditReviewFilePreviews([]);
+    setIsEditDialogOpen(true);
+    setEditSubmitting(false);
+  };
+
+  const handleCloseEditDialog = () => {
+    setIsEditDialogOpen(false);
+    setEditingReview(null);
+    setEditReviewForm({ rating: 0, details: "", files: [] });
+    setEditReviewFilePreviews([]);
+    setEditExistingMedia([]);
+    setEditSubmitting(false);
+  };
+
+  const handleEditRatingChange = (value: number) => {
+    setEditReviewForm((prev) => ({
+      ...prev,
+      rating: prev.rating === value ? 0 : value,
+    }));
+  };
+
+  const handleEditDetailsChange = (value: string) => {
+    setEditReviewForm((prev) => ({ ...prev, details: value }));
+  };
+
+  const handleEditFilesChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const fileList = Array.from(event.target.files ?? []);
+    if (fileList.length === 0) return;
+
+    const validFiles = fileList.filter((file) => {
+      const isValid = file.size <= REVIEW_MAX_FILE_SIZE_MB * 1024 * 1024;
+      if (!isValid) {
+        toast.error(
+          "Tệp quá lớn",
+          `${file.name} vượt quá dung lượng ${REVIEW_MAX_FILE_SIZE_MB}MB`
+        );
+      }
+      return isValid;
+    });
+
+    if (validFiles.length === 0) {
+      event.target.value = "";
+      return;
+    }
+
+    setEditReviewForm((prev) => {
+      const remainingSlots = Math.max(REVIEW_MAX_FILES - prev.files.length, 0);
+      const filesToAdd = validFiles.slice(0, remainingSlots);
+
+      if (filesToAdd.length < validFiles.length) {
+        toast.error(
+          "Quá số lượng cho phép",
+          `Chỉ có thể tải lên tối đa ${REVIEW_MAX_FILES} tệp`
+        );
+      }
+
+      return {
+        ...prev,
+        files: [...prev.files, ...filesToAdd],
+      };
+    });
+
+    event.target.value = "";
+  };
+
+  const handleRemoveEditFile = (index: number) => {
+    setEditReviewForm((prev) => ({
+      ...prev,
+      files: prev.files.filter((_, fileIndex) => fileIndex !== index),
+    }));
+  };
+
+  const handleEditReviewSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editingReview) {
+      return;
+    }
+
+    if (editReviewForm.rating === 0) {
+      toast.error("Thiếu thông tin", "Vui lòng chọn số sao đánh giá");
+      return;
+    }
+
+    setEditSubmitting(true);
+    try {
+      const payload = {
+        rating: editReviewForm.rating,
+        content: editReviewForm.details.trim()
+          ? editReviewForm.details.trim()
+          : null,
+      };
+      const { data } = await api.patch<OrderItemReview>(
+        `/review/${editingReview.id}`,
+        payload
+      );
+
+      const updatedReview: Review = {
+        ...editingReview,
+        rating: data.rating,
+        content: data.content ?? null,
+        isPublished: data.isPublished,
+        updatedAt: data.updatedAt,
+        media: data.media,
+      };
+
+      setProduct((prev) => {
+        if (!prev) return prev;
+        const nextReviews = (prev.reviews ?? []).map((reviewItem) =>
+          reviewItem.id === updatedReview.id
+            ? { ...reviewItem, ...updatedReview }
+            : reviewItem
+        );
+        return { ...prev, reviews: nextReviews };
+      });
+
+      setUserReview((prev) =>
+        prev && prev.id === updatedReview.id ? { ...prev, ...updatedReview } : prev
+      );
+
+      toast.success("✅", "Cập nhật đánh giá thành công");
+      handleCloseEditDialog();
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const message =
+          (error.response?.data as { message?: string } | undefined)?.message ||
+          "Không thể cập nhật đánh giá";
+        toast.error("Lỗi", message);
+      } else {
+        toast.error("Lỗi", "Không thể cập nhật đánh giá");
+      }
+      console.error("Failed to update review", error);
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
+  const handleConfirmDeleteReview = (review: Review) => {
+    setReviewToDelete(review);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleCloseDeleteDialog = () => {
+    setIsDeleteDialogOpen(false);
+    setReviewToDelete(null);
+  };
+
+  const handleDeleteReview = async () => {
+    if (!reviewToDelete) {
+      return;
+    }
+
+    setIsDeletingReview(true);
+    try {
+      await api.delete(`/review/${reviewToDelete.id}`);
+      setProduct((prev) => {
+        if (!prev) return prev;
+        const nextReviews = (prev.reviews ?? []).filter(
+          (reviewItem) => reviewItem.id !== reviewToDelete.id
+        );
+        return { ...prev, reviews: nextReviews };
+      });
+      setUserReview((prev) =>
+        prev && prev.id === reviewToDelete.id ? null : prev
+      );
+      toast.success("✅", "Đã xóa đánh giá thành công");
+      handleCloseDeleteDialog();
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const message =
+          (error.response?.data as { message?: string } | undefined)?.message ||
+          "Không thể xóa đánh giá";
+        toast.error("Lỗi", message);
+      } else {
+        toast.error("Lỗi", "Không thể xóa đánh giá");
+      }
+      console.error("Failed to delete review", error);
+    } finally {
+      setIsDeletingReview(false);
+    }
+  };
+
+  const isEditSubmitDisabled =
+    editSubmitting || editReviewForm.rating === 0 || !editingReview;
 
   const handleAddToCart = async () => {
     if (!selectedSize) {
@@ -630,6 +873,9 @@ export default function ProductDetailsPage() {
                 reviews={combinedReviews}
                 isLoading={isLoadingProduct}
                 highlightedReviewId={userReview?.id ?? null}
+                currentUserId={currentUserId}
+                onEditReview={handleOpenEditReview}
+                onDeleteReview={handleConfirmDeleteReview}
               />
             </TabsContent>
             <TabsContent value="shipping" className="mt-6">
@@ -746,6 +992,85 @@ export default function ProductDetailsPage() {
         </motion.div>
       </div>
       <Footer />
+
+      <OrderReviewDialog
+        open={isEditDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleCloseEditDialog();
+          } else {
+            setIsEditDialogOpen(true);
+          }
+        }}
+        reviewItem={null}
+        reviewForm={editReviewForm}
+        reviewFilePreviews={editReviewFilePreviews}
+        reviewLoading={false}
+        existingReview={null}
+        reviewError={null}
+        reviewSubmitting={editSubmitting}
+        isSubmitDisabled={isEditSubmitDisabled}
+        reviewDetailsMaxLength={REVIEW_DETAILS_MAX_LENGTH}
+        reviewMaxFiles={REVIEW_MAX_FILES}
+        reviewMaxFileSizeMb={REVIEW_MAX_FILE_SIZE_MB}
+        formatOrderDate={() => ""}
+        onClose={handleCloseEditDialog}
+        onSubmit={handleEditReviewSubmit}
+        onRatingChange={handleEditRatingChange}
+        onDetailsChange={handleEditDetailsChange}
+        onFilesChange={handleEditFilesChange}
+        onRemoveFile={handleRemoveEditFile}
+        mode="edit"
+        title="Chỉnh sửa đánh giá"
+        description="Cập nhật nội dung đánh giá của bạn."
+        submitButtonLabel="Lưu thay đổi"
+        cancelButtonLabel="Hủy"
+        existingMediaPreviews={(editExistingMedia ?? []).map((media) => ({
+          id: media.id,
+          type: media.type,
+          url: media.url,
+          thumbnailUrl: media.thumbnailUrl,
+        }))}
+      />
+
+      <Dialog
+        open={isDeleteDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleCloseDeleteDialog();
+          } else {
+            setIsDeleteDialogOpen(true);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Xóa đánh giá</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn xóa đánh giá này không? Hành động này không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCloseDeleteDialog}
+              disabled={isDeletingReview}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDeleteReview}
+              disabled={isDeletingReview}
+            >
+              {isDeletingReview ? "Đang xóa..." : "Xóa"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

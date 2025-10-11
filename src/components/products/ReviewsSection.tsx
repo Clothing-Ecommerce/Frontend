@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Star, MessageSquare, UserRound } from "lucide-react";
+import { Star, MessageSquare, UserRound, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { Review } from "@/types/productType";
@@ -8,6 +8,9 @@ interface ReviewsSectionProps {
   reviews?: Review[] | null;
   isLoading?: boolean;
   highlightedReviewId?: number | null;
+  currentUserId?: number | null;
+  onEditReview?: (review: Review) => void;
+  onDeleteReview?: (review: Review) => void;
 }
 
 const ratingFilters = [5, 4, 3, 2, 1] as const;
@@ -50,6 +53,9 @@ export const ReviewsSection = ({
   reviews = [],
   isLoading = false,
   highlightedReviewId = null,
+  currentUserId = null,
+  onEditReview,
+  onDeleteReview,
 }: ReviewsSectionProps) => {
   const safeReviews = reviews ?? [];
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
@@ -266,56 +272,79 @@ export const ReviewsSection = ({
                 const reviewerName =
                   username.length > 0 ? username : "Khách hàng";
                 const avatarUrl = review.user?.avatar ?? null;
+                const isOwnReview =
+                  currentUserId != null &&
+                  (review.userId === currentUserId || review.user?.id === currentUserId);
                 return (
-                <article
-                  key={review.id}
-                  className={`rounded-2xl border bg-white p-6 shadow-sm transition-shadow hover:shadow-md ${
-                    isHighlighted
-                      ? "border-amber-300 ring-2 ring-amber-200"
-                      : ""
-                  }`}
-                >
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100">
-                      {avatarUrl ? (
-                        <img
-                          src={avatarUrl}
-                          alt={`Ảnh đại diện của ${reviewerName}`}
-                          className="h-full w-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <UserRound className="h-5 w-5 text-gray-500" />
-                      )}
-                    </div>
-                    <div className="flex-1 space-y-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-semibold text-gray-900">
-                          {reviewerName}
-                        </span>
-                        <RatingStars rating={review.rating} />
-                        {isHighlighted && (
-                          <Badge variant="default" className="rounded-full bg-amber-100 text-amber-700">
-                            Đánh giá của bạn
-                          </Badge>
-                        )}
-                        {review.isPublished === false && (
-                          <Badge variant="outline" className="rounded-full">
-                            Chờ duyệt
-                          </Badge>
+                  <article
+                    key={review.id}
+                    className={`rounded-2xl border bg-white p-6 shadow-sm transition-shadow hover:shadow-md ${
+                      isHighlighted
+                        ? "border-amber-300 ring-2 ring-amber-200"
+                        : ""
+                    }`}
+                  >
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-gray-100">
+                        {avatarUrl ? (
+                          <img
+                            src={avatarUrl}
+                            alt={`Ảnh đại diện của ${reviewerName}`}
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <UserRound className="h-5 w-5 text-gray-500" />
                         )}
                       </div>
-                      {review.content && (
-                        <p className="text-sm leading-relaxed text-gray-600">
-                          {review.content}
-                        </p>
-                      )}
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                        {formatReviewDate(review.createdAt) && (
-                          <span>Đăng ngày {formatReviewDate(review.createdAt)}</span>
+                      <div className="flex-1 space-y-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-semibold text-gray-900">
+                            {reviewerName}
+                          </span>
+                          <RatingStars rating={review.rating} />
+                          {isHighlighted && (
+                            <Badge variant="default" className="rounded-full bg-amber-100 text-amber-700">
+                              Đánh giá của bạn
+                            </Badge>
+                          )}
+                          {review.isPublished === false && (
+                            <Badge variant="outline" className="rounded-full">
+                              Chờ duyệt
+                            </Badge>
+                          )}
+                        </div>
+                        {review.content && (
+                          <p className="text-sm leading-relaxed text-gray-600">
+                            {review.content}
+                          </p>
                         )}
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
+                          {formatReviewDate(review.createdAt) && (
+                            <span>Đăng ngày {formatReviewDate(review.createdAt)}</span>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                      {isOwnReview && (
+                      <div className="mt-2 flex items-center gap-2 sm:mt-0">
+                        <button
+                          type="button"
+                          onClick={() => onEditReview?.(review)}
+                          className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition hover:border-amber-200 hover:text-amber-600"
+                          aria-label="Chỉnh sửa đánh giá"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onDeleteReview?.(review)}
+                          className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition hover:border-red-200 hover:text-red-600"
+                          aria-label="Xóa đánh giá"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </article>
                 );
