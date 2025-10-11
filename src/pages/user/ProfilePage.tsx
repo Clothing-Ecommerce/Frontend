@@ -4,7 +4,6 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -38,9 +37,8 @@ import {
   Camera,
   Upload,
   CalendarDays,
-  Star,
   ChevronDown,
-  Film,
+  Star,
 } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -51,7 +49,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Pagination,
@@ -77,6 +74,7 @@ import type {
   OrderSummaryResponse,
   OrderItemReview,
 } from "@/types/orderType";
+import { OrderReviewDialog } from "@/components/review/OrderReviewDialog";
 import axios from "axios";
 
 const emptyUser: UserProfile = {
@@ -2069,246 +2067,32 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
-      <Dialog
+      <OrderReviewDialog
         open={reviewDialogOpen}
+        reviewItem={reviewItem}
+        reviewForm={reviewForm}
+        reviewFilePreviews={reviewFilePreviews}
+        reviewLoading={reviewLoading}
+        existingReview={existingReview}
+        reviewError={reviewError}
+        reviewSubmitting={reviewSubmitting}
+        isSubmitDisabled={isReviewSubmitDisabled}
+        reviewDetailsMaxLength={REVIEW_DETAILS_MAX_LENGTH}
+        reviewMaxFiles={REVIEW_MAX_FILES}
+        reviewMaxFileSizeMb={REVIEW_MAX_FILE_SIZE_MB}
+        formatOrderDate={formatOrderDate}
         onOpenChange={(open) => {
           if (!open) {
             handleCloseReviewDialog();
           }
         }}
-      >
-        <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto overflow-x-hidden px-6 pt-4 pb-0 scrollbar-hide bg-white">
-          <DialogHeader className="space-y-1">
-            <DialogTitle className="text-xl font-semibold">
-              Viết đánh giá
-            </DialogTitle>
-            <DialogDescription>
-              Chia sẻ cảm nhận của bạn về sản phẩm để giúp người mua khác.
-            </DialogDescription>
-          </DialogHeader>
-
-          {reviewItem && (
-            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
-              <div className="flex gap-4">
-                <div className="h-20 w-20 overflow-hidden rounded-lg border border-gray-200 bg-white">
-                  <img
-                    src={reviewItem.imageUrl || "/placeholder.svg"}
-                    alt={reviewItem.name}
-                    className="h-full w-full object-cover"
-                  />
-                </div>
-                <div className="flex-1 space-y-2">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900">
-                      {reviewItem.name}
-                    </p>
-                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-600">
-                      {reviewItem.color && <span>Màu: {reviewItem.color}</span>}
-                      {reviewItem.size && (
-                        <span className="rounded-full border border-gray-200 bg-white px-2 py-0.5 font-medium">
-                          Size {reviewItem.size}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    <span className="font-medium text-gray-700">
-                      Đơn hàng #{reviewItem.orderCode}
-                    </span>
-                    {reviewItem.deliveredAt && (
-                      <span>
-                        {" "}
-                        - đã giao ngày {formatOrderDate(reviewItem.deliveredAt)}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {reviewLoading && (
-            <p className="mt-3 text-sm text-gray-500">
-              Đang kiểm tra đánh giá trước đó...
-            </p>
-          )}
-          {reviewError && (
-            <p className="mt-3 text-sm text-red-600">{reviewError}</p>
-          )}
-          {existingReview && (
-            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
-              <p className="font-semibold">Bạn đã đánh giá sản phẩm này</p>
-              <p className="mt-2">
-                Đánh giá {existingReview.rating}/5
-                {existingReview.content
-                  ? ` – ${existingReview.content}`
-                  : " – Không có nội dung chi tiết."}
-              </p>
-            </div>
-          )}
-
-          <form className="space-y-5" onSubmit={handleReviewSubmit}>
-            <div>
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-medium text-gray-900">
-                  Đánh giá
-                </Label>
-                <span className="text-xs text-gray-500">
-                  {reviewForm.rating > 0
-                    ? `${reviewForm.rating}/5`
-                    : "Chọn số sao"}
-                </span>
-              </div>
-              <div className="mt-3 flex items-center gap-2">
-                {Array.from({ length: 5 }).map((_, index) => {
-                  const value = index + 1;
-                  const isActive = reviewForm.rating >= value;
-                  return (
-                    <button
-                      key={`rating-${value}`}
-                      type="button"
-                      onClick={() => handleReviewRatingChange(value)}
-                      className="rounded-full p-1 transition hover:-translate-y-0.5 hover:text-amber-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
-                      disabled={reviewLoading || !!existingReview}
-                      aria-label={`Chọn ${value} sao`}
-                    >
-                      <Star
-                        className={`h-7 w-7 ${
-                          isActive ? "text-amber-400" : "text-gray-300"
-                        }`}
-                        fill={isActive ? "currentColor" : "none"}
-                        strokeWidth={isActive ? 1.5 : 1.25}
-                      />
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between">
-                <Label
-                  htmlFor="review-details"
-                  className="text-sm font-medium text-gray-900"
-                >
-                  Nội dung đánh giá
-                </Label>
-                <span className="text-xs text-gray-500">
-                  {reviewForm.details.length}/{REVIEW_DETAILS_MAX_LENGTH}
-                </span>
-              </div>
-              <Textarea
-                id="review-details"
-                placeholder="Chia sẻ chi tiết hơn về chất lượng, kích thước hoặc trải nghiệm sử dụng sản phẩm"
-                value={reviewForm.details}
-                maxLength={REVIEW_DETAILS_MAX_LENGTH}
-                onChange={(event) =>
-                  handleReviewDetailsChange(event.target.value)
-                }
-                className="mt-2 min-h-[120px] resize-none"
-                disabled={reviewLoading || !!existingReview}
-              />
-            </div>
-
-            <div>
-              <Label className="text-sm font-medium text-gray-900">
-                Hình ảnh hoặc video{" "}
-                <span className="text-gray-400">(Không bắt buộc)</span>
-              </Label>
-              <p className="mt-1 text-xs text-gray-500">
-                Tối đa {REVIEW_MAX_FILES} tệp, mỗi tệp {REVIEW_MAX_FILE_SIZE_MB}
-                MB
-              </p>
-              <div className="mt-3">
-                <label
-                  htmlFor="review-media-upload"
-                  className={`flex h-28 w-full flex-col items-center justify-center rounded-xl border border-dashed border-[#E8D7BF] bg-[#F8F3ED] text-center transition hover:border-[#D1A679] hover:bg-[#F3E9DC] ${
-                    reviewLoading || existingReview ? "cursor-not-allowed opacity-60" : "cursor-pointer"
-                  }`}
-                  aria-disabled={reviewLoading || !!existingReview}
-                >
-                  <Upload className="h-8 w-8 text-[#C59660]" />
-                  <span className="mt-2 text-sm font-medium text-[#A97B50]">
-                    Nhấn để tải ảnh hoặc video
-                  </span>
-                  <span className="mt-1 text-xs text-gray-500">
-                    Hỗ trợ định dạng JPG, PNG, MP4
-                  </span>
-                </label>
-                <Input
-                  id="review-media-upload"
-                  type="file"
-                  className="sr-only"
-                  accept="image/*,video/*"
-                  multiple
-                  onChange={handleReviewFilesChange}
-                  disabled={reviewLoading || !!existingReview}
-                />
-              </div>
-
-              {reviewForm.files.length > 0 && (
-                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {reviewForm.files.map((file, index) => {
-                    const isImage = file.type.startsWith("image/");
-                    const preview = reviewFilePreviews[index];
-
-                    return (
-                      <div
-                        key={`${file.name}-${index}`}
-                        className="group relative overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
-                      >
-                        {isImage && preview ? (
-                          <img
-                            src={preview}
-                            alt={file.name}
-                            className="h-28 w-full object-cover"
-                          />
-                        ) : (
-                          <div className="flex h-28 w-full flex-col items-center justify-center gap-2 bg-gray-50 text-center text-xs text-gray-600">
-                            <Film className="h-8 w-8 text-gray-400" />
-                            <span className="px-2 text-[11px] font-medium">
-                              {file.name}
-                            </span>
-                          </div>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveReviewFile(index)}
-                          className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 text-gray-600 shadow transition hover:bg-white hover:text-gray-900"
-                          aria-label={`Xóa ${file.name}`}
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            <div className="sticky bottom-0 py-4 bg-white">
-              <DialogFooter className="gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleCloseReviewDialog}
-                  disabled={reviewSubmitting}
-                  className="w-1/2"
-                >
-                  Hủy
-                </Button>
-                <Button
-                  type="submit"
-                  className="w-1/2 bg-[#D1A679] text-white hover:bg-[#C59660]"
-                  disabled={isReviewSubmitDisabled}
-                >
-                  {reviewSubmitting ? "Đang gửi..." : "Gửi đánh giá"}
-                </Button>
-              </DialogFooter>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+        onClose={handleCloseReviewDialog}
+        onSubmit={handleReviewSubmit}
+        onRatingChange={handleReviewRatingChange}
+        onDetailsChange={handleReviewDetailsChange}
+        onFilesChange={handleReviewFilesChange}
+        onRemoveFile={handleRemoveReviewFile}
+      />
       <Footer />
 
       {/* Address Form Dialog */}
