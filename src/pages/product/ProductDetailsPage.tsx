@@ -2,6 +2,7 @@ import {
   useState,
   useEffect,
   useMemo,
+  useCallback,
   type ChangeEvent,
   type FormEvent,
 } from "react";
@@ -32,7 +33,13 @@ import { ToastContainer } from "@/components/ui/toast";
 import { useToast } from "@/hooks/useToast";
 import axios from "axios";
 import { formatPrice } from "@/utils/formatPrice";
-import type { Product, ProductVariant, ColorOption, Review } from "@/types/productType";
+import type {
+  Product,
+  ProductVariant,
+  ColorOption,
+  Review,
+  ReviewVariant,
+} from "@/types/productType";
 import type { ProductListResponse } from "@/types/productType";
 import type { OrderItemReview } from "@/types/orderType";
 import { MediaGallery } from "@/components/products/MediaGallery";
@@ -82,6 +89,66 @@ export default function ProductDetailsPage() {
   const REVIEW_MAX_FILES = 5;
   const REVIEW_MAX_FILE_SIZE_MB = 5;
 
+  const mapReviewVariant = useCallback(
+    (variant: unknown): ReviewVariant | null => {
+      if (!variant || typeof variant !== "object") return null;
+      const raw = variant as {
+        id?: number | string;
+        sku?: string | null;
+        size?: {
+          id: number;
+          name: string;
+          note?: string | null;
+        } | null;
+        color?: {
+          id: number;
+          name: string;
+          hex?: string | null;
+        } | null;
+      };
+
+      if (raw.id == null) {
+        return null;
+      }
+
+      const parsedId =
+        typeof raw.id === "number" ? raw.id : Number(raw.id);
+      if (!Number.isFinite(parsedId)) {
+        return null;
+      }
+      return {
+        id: parsedId,
+        sku: typeof raw.sku === "string" ? raw.sku ?? null : null,
+        size: raw.size
+          ? {
+              id: raw.size.id,
+              name: raw.size.name,
+              note: raw.size.note ?? null,
+            }
+          : null,
+        color: raw.color
+          ? {
+              id: raw.color.id,
+              name: raw.color.name,
+              hex: raw.color.hex ?? null,
+            }
+          : null,
+      };
+    },
+    []
+  );
+
+  type RawReview = {
+    [key: string]: unknown;
+    rating?: number | string | null;
+    user?: {
+      id?: number;
+      username?: string;
+      avatar?: string | null;
+    } | null;
+    variant?: unknown;
+  };
+
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingReview, setEditingReview] = useState<Review | null>(null);
   const [editReviewForm, setEditReviewForm] = useState({
@@ -114,20 +181,34 @@ export default function ProductDetailsPage() {
         const res = await api.get(`/products/${id}`);
 
         const reviews = Array.isArray(res.data.reviews)
-          ? res.data.reviews.map((review: any) => ({
-              ...review,
-              rating:
-                typeof review.rating === "number"
-                  ? review.rating
-                  : Number.parseFloat(review.rating ?? "0") || 0,
-              user: review.user
+          ? (res.data.reviews as RawReview[]).map((review) => {
+              const ratingRaw = review.rating;
+              const ratingValue =
+                typeof ratingRaw === "number"
+                  ? ratingRaw
+                  : Number.parseFloat(String(ratingRaw ?? "0")) || 0;
+              const userRaw = review.user;
+              const normalizedUser = userRaw
                 ? {
-                    id: review.user.id,
-                    username: review.user.username,
-                    avatar: review.user.avatar ?? null,
+                    id:
+                      typeof userRaw.id === "number"
+                        ? userRaw.id
+                        : Number.parseInt(String(userRaw.id ?? "0"), 10) || 0,
+                    username:
+                      typeof userRaw.username === "string"
+                        ? userRaw.username
+                        : "",
+                    avatar: userRaw.avatar ?? null,
                   }
-                : review.user ?? null,
-            }))
+                : userRaw ?? null;
+
+              return {
+                ...review,
+                rating: ratingValue,
+                user: normalizedUser,
+                variant: mapReviewVariant(review.variant),
+              };
+            })
           : [];
 
         const data: Product = {
@@ -173,7 +254,7 @@ export default function ProductDetailsPage() {
     if (id) {
       fetchProduct();
     }
-  }, [id]);
+  }, [id, mapReviewVariant]);
 
   // Fetch related products
   useEffect(() => {
@@ -189,8 +270,8 @@ export default function ProductDetailsPage() {
           params: { category: String(product.categoryId), pageSize: 4 },
         });
         const productsData: Product[] = res.data.products
-          .filter((p: any) => p.id !== product.id)
-          .map((p: any) => ({
+          .filter((p) => p.id !== product.id)
+          .map((p) => ({
             id: p.id,
             name: p.name,
             slug: p.slug,
@@ -277,6 +358,7 @@ export default function ProductDetailsPage() {
           createdAt: data.createdAt,
           updatedAt: data.updatedAt,
           media: data.media,
+          variant: mapReviewVariant(data.variant),
         });
       })
       .catch((error) => {
@@ -298,7 +380,7 @@ export default function ProductDetailsPage() {
     return () => {
       isMounted = false;
     };
-  }, [orderIdParam, orderItemIdParam, isAuthenticated, toast]);
+  }, [orderIdParam, orderItemIdParam, isAuthenticated, toast, mapReviewVariant]);
 
   // helpers for active SALE & effective price
   const nowActive = (startAt?: string | null, endAt?: string | null) => {
@@ -460,6 +542,7 @@ export default function ProductDetailsPage() {
         isPublished: data.isPublished,
         updatedAt: data.updatedAt,
         media: data.media,
+        variant: mapReviewVariant(data.variant) ?? editingReview.variant ?? null,
       };
 
       setProduct((prev) => {

@@ -50,6 +50,12 @@ export interface OrderItemReview {
   createdAt: string;
   updatedAt: string;
   media: OrderItemReviewMedia[];
+  variant?: {
+    id: number;
+    sku: string | null;
+    size: { id: number; name: string; note: string | null } | null;
+    color: { id: number; name: string; hex: string | null } | null;
+  } | null;
 }
 
 

@@ -91,6 +91,13 @@ export interface Product {
   reviews?: Review[];
 }
 
+export interface ReviewVariant {
+  id: number;
+  sku?: string | null;
+  size?: Size | null;
+  color?: Color | null;
+}
+
 export interface Review {
   id: number;
   productId: number;
@@ -118,6 +125,7 @@ export interface Review {
     fileSize: number | null;
     createdAt: string;
   }[];
+  variant?: ReviewVariant | null;
 }
 
 

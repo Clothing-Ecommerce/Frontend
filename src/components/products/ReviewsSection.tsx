@@ -270,12 +270,23 @@ export const ReviewsSection = ({
                   ? review.user.username.trim()
                   : "";
                 const reviewerName =
-                  username.length > 0 ? username : "Khách hàng";
-                const avatarUrl = review.user?.avatar ?? null;
-                const isOwnReview =
-                  currentUserId != null &&
+                username.length > 0 ? username : "Khách hàng";
+              const avatarUrl = review.user?.avatar ?? null;
+              const isOwnReview =
+                currentUserId != null &&
                   (review.userId === currentUserId || review.user?.id === currentUserId);
-                return (
+              const variantLabelParts: string[] = [];
+              if (review.variant?.color?.name) {
+                variantLabelParts.push(review.variant.color.name);
+              }
+              if (review.variant?.size?.name) {
+                variantLabelParts.push(review.variant.size.name);
+              }
+              const variantLabel =
+                variantLabelParts.length > 0
+                  ? `Phân loại: ${variantLabelParts.join(" / ")}`
+                  : null;
+              return (
                   <article
                     key={review.id}
                     className={`rounded-2xl border bg-white p-6 shadow-sm transition-shadow hover:shadow-md ${
@@ -314,6 +325,12 @@ export const ReviewsSection = ({
                             </Badge>
                           )}
                         </div>
+                        {/* {variantLabel && <span>{variantLabel}</span>} */}
+                        {variantLabel && (
+                          <p className="text-sm leading-relaxed text-gray-600">
+                            {variantLabel}
+                          </p>
+                        )}
                         {review.content && (
                           <p className="text-sm leading-relaxed text-gray-600">
                             {review.content}
