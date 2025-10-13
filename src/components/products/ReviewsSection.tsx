@@ -26,7 +26,9 @@ const RatingStars = ({ rating }: { rating: number }) => {
         return (
           <Star
             key={starValue}
-            className={`h-4 w-4 ${isFilled ? "text-yellow-400" : "text-gray-300"}`}
+            className={`h-4 w-4 ${
+              isFilled ? "text-yellow-400" : "text-gray-300"
+            }`}
             fill={isFilled || isHalf ? "currentColor" : "none"}
             strokeWidth={1.5}
           />
@@ -57,7 +59,7 @@ export const ReviewsSection = ({
   onEditReview,
   onDeleteReview,
 }: ReviewsSectionProps) => {
-  const safeReviews = reviews ?? [];
+  const safeReviews = useMemo(() => reviews ?? [], [reviews]);
   const [selectedRating, setSelectedRating] = useState<number | null>(null);
 
   const totalReviews = safeReviews.length;
@@ -144,7 +146,9 @@ export const ReviewsSection = ({
         {totalReviews > 0 ? (
           <div className="flex flex-col gap-8 lg:flex-row">
             <div className="lg:w-1/4">
-              <p className="text-sm font-medium text-gray-500">Điểm trung bình</p>
+              <p className="text-sm font-medium text-gray-500">
+                Điểm trung bình
+              </p>
               <div className="mt-3 flex items-end gap-2">
                 <span className="text-4xl font-semibold text-gray-900">
                   {averageRating.toFixed(1)}
@@ -248,9 +252,7 @@ export const ReviewsSection = ({
                     }
                     disabled={count === 0}
                     className={
-                      count === 0
-                        ? "pointer-events-none opacity-50"
-                        : undefined
+                      count === 0 ? "pointer-events-none opacity-50" : undefined
                     }
                   >
                     {rating} sao ({count})
@@ -270,23 +272,24 @@ export const ReviewsSection = ({
                   ? review.user.username.trim()
                   : "";
                 const reviewerName =
-                username.length > 0 ? username : "Khách hàng";
-              const avatarUrl = review.user?.avatar ?? null;
-              const isOwnReview =
-                currentUserId != null &&
-                  (review.userId === currentUserId || review.user?.id === currentUserId);
-              const variantLabelParts: string[] = [];
-              if (review.variant?.color?.name) {
-                variantLabelParts.push(review.variant.color.name);
-              }
-              if (review.variant?.size?.name) {
-                variantLabelParts.push(review.variant.size.name);
-              }
-              const variantLabel =
-                variantLabelParts.length > 0
-                  ? `Phân loại: ${variantLabelParts.join(" / ")}`
-                  : null;
-              return (
+                  username.length > 0 ? username : "Khách hàng";
+                const avatarUrl = review.user?.avatar ?? null;
+                const isOwnReview =
+                  currentUserId != null &&
+                  (review.userId === currentUserId ||
+                    review.user?.id === currentUserId);
+                const variantLabelParts: string[] = [];
+                if (review.variant?.color?.name) {
+                  variantLabelParts.push(review.variant.color.name);
+                }
+                if (review.variant?.size?.name) {
+                  variantLabelParts.push(review.variant.size.name);
+                }
+                const variantLabel =
+                  variantLabelParts.length > 0
+                    ? `Phân loại: ${variantLabelParts.join(" / ")}`
+                    : null;
+                return (
                   <article
                     key={review.id}
                     className={`rounded-2xl border bg-white p-6 shadow-sm transition-shadow hover:shadow-md ${
@@ -315,7 +318,10 @@ export const ReviewsSection = ({
                           </span>
                           <RatingStars rating={review.rating} />
                           {isHighlighted && (
-                            <Badge variant="default" className="rounded-full bg-amber-100 text-amber-700">
+                            <Badge
+                              variant="default"
+                              className="rounded-full bg-amber-100 text-amber-700"
+                            >
                               Đánh giá của bạn
                             </Badge>
                           )}
@@ -338,32 +344,34 @@ export const ReviewsSection = ({
                         )}
                         <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
                           {formatReviewDate(review.createdAt) && (
-                            <span>Đăng ngày {formatReviewDate(review.createdAt)}</span>
+                            <span>
+                              Đăng ngày {formatReviewDate(review.createdAt)}
+                            </span>
                           )}
                         </div>
                       </div>
                       {isOwnReview && (
-                      <div className="mt-2 flex items-center gap-2 sm:mt-0">
-                        <button
-                          type="button"
-                          onClick={() => onEditReview?.(review)}
-                          className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition hover:border-amber-200 hover:text-amber-600"
-                          aria-label="Chỉnh sửa đánh giá"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onDeleteReview?.(review)}
-                          className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition hover:border-red-200 hover:text-red-600"
-                          aria-label="Xóa đánh giá"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </article>
+                        <div className="mt-2 flex items-center gap-2 sm:mt-0">
+                          <button
+                            type="button"
+                            onClick={() => onEditReview?.(review)}
+                            className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition hover:border-amber-200 hover:text-amber-600"
+                            aria-label="Chỉnh sửa đánh giá"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onDeleteReview?.(review)}
+                            className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition hover:border-red-200 hover:text-red-600"
+                            aria-label="Xóa đánh giá"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </article>
                 );
               })}
             </div>

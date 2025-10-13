@@ -44,7 +44,10 @@ import type { ProductListResponse } from "@/types/productType";
 import type { OrderItemReview } from "@/types/orderType";
 import { MediaGallery } from "@/components/products/MediaGallery";
 import { ReviewsSection } from "@/components/products/ReviewsSection";
-import { OrderReviewDialog } from "@/components/review/OrderReviewDialog";
+import {
+  OrderReviewDialog,
+  type ReviewableOrderItem,
+} from "@/components/review/OrderReviewDialog";
 import {
   Dialog,
   DialogContent,
@@ -412,6 +415,70 @@ export default function ProductDetailsPage() {
     selectedVariant
   );
   const stockCount = selectedVariant?.stock ?? 0;
+
+  const editDialogReviewItem: ReviewableOrderItem = (() => {
+    if (!product || !editingReview) {
+      return null;
+    }
+
+    const variantFromReview = editingReview.variant ?? null;
+    const resolvedVariant =
+      variantFromReview?.id && product.variants
+        ? product.variants.find((variant) => variant.id === variantFromReview.id) ?? null
+        : null;
+    const fallbackVariant = resolvedVariant ?? product.variants?.[0] ?? null;
+
+    const primaryImage =
+      product.images?.find((image) => image.isPrimary)?.url ??
+      product.images?.[0]?.url ??
+      null;
+
+    const variantColor =
+      variantFromReview?.color?.name ??
+      resolvedVariant?.color?.name ??
+      fallbackVariant?.color?.name ??
+      null;
+
+    const variantSize =
+      variantFromReview?.size?.name ??
+      resolvedVariant?.size?.name ??
+      fallbackVariant?.size?.name ??
+      null;
+
+    const variantId =
+      resolvedVariant?.id ??
+      variantFromReview?.id ??
+      fallbackVariant?.id ??
+      editingReview.orderItemId ??
+      editingReview.productId;
+
+    const variantForPrice = resolvedVariant ?? fallbackVariant ?? null;
+    const basePrice = product.basePrice ?? 0;
+    const unitPrice = variantForPrice
+      ? getVariantEffectivePrice(basePrice, variantForPrice)
+      : basePrice;
+
+    const summary: NonNullable<ReviewableOrderItem> = {
+      id: editingReview.orderItemId ?? variantId ?? editingReview.id,
+      variantId,
+      productId: editingReview.productId,
+      name: product.name,
+      quantity: 1,
+      unitPrice,
+      lineTotal: unitPrice,
+      imageUrl: primaryImage,
+      color: variantColor,
+      size: variantSize,
+      taxAmount: 0,
+      deliveredAt: null,
+    };
+
+    if (editingReview.orderItemId != null) {
+      summary.orderId = editingReview.orderItemId;
+    }
+
+    return summary;
+  })();
 
   const combinedReviews = useMemo<Review[]>(() => {
     const base = product?.reviews ?? [];
@@ -1085,7 +1152,7 @@ export default function ProductDetailsPage() {
             setIsEditDialogOpen(true);
           }
         }}
-        reviewItem={null}
+        reviewItem={editDialogReviewItem}
         reviewForm={editReviewForm}
         reviewFilePreviews={editReviewFilePreviews}
         reviewLoading={false}

@@ -17,9 +17,9 @@ import type { ReviewMediaType } from "@/types/orderType";
 
 export type ReviewableOrderItem =
   | (OrderItemSummary & {
-      orderId: number;
-      orderCode: string;
-      deliveredAt: string | null;
+      orderId?: number;
+      orderCode?: string;
+      deliveredAt?: string | null;
     })
   | null;
 
@@ -89,23 +89,30 @@ export function OrderReviewDialog({
   cancelButtonLabel,
   existingMediaPreviews = [],
 }: OrderReviewDialogProps) {
-    const isEditMode = mode === "edit";
-    const effectiveTitle = title ?? (isEditMode ? "Chỉnh sửa đánh giá" : "Viết đánh giá");
-    const effectiveDescription =
-        description ??
-        (isEditMode
-        ? "Cập nhật chia sẻ của bạn về sản phẩm."
-        : "Chia sẻ cảm nhận của bạn về sản phẩm để giúp người mua khác.");
-    const effectiveCancelLabel = cancelButtonLabel ?? "Hủy";
-    const effectiveSubmitLabel = submitButtonLabel ?? (isEditMode ? "Lưu thay đổi" : "Gửi đánh giá");
-    const shouldDisableInputs = reviewLoading || (!isEditMode && !!existingReview);
+  const isEditMode = mode === "edit";
+  const effectiveTitle =
+    title ?? (isEditMode ? "Chỉnh sửa đánh giá" : "Viết đánh giá");
+  const effectiveDescription =
+    description ??
+    (isEditMode
+      ? "Cập nhật chia sẻ của bạn về sản phẩm."
+      : "Chia sẻ cảm nhận của bạn về sản phẩm để giúp người mua khác.");
+  const effectiveCancelLabel = cancelButtonLabel ?? "Hủy";
+  const effectiveSubmitLabel =
+    submitButtonLabel ?? (isEditMode ? "Lưu thay đổi" : "Gửi đánh giá");
+  const shouldDisableInputs =
+    reviewLoading || (!isEditMode && !!existingReview);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto overflow-x-hidden px-6 pt-4 pb-0 scrollbar-hide bg-white">
         <DialogHeader className="space-y-1">
-          <DialogTitle className="text-xl font-semibold">{effectiveTitle}</DialogTitle>
-          {effectiveDescription && <DialogDescription>{effectiveDescription}</DialogDescription>}
+          <DialogTitle className="text-xl font-semibold">
+            {effectiveTitle}
+          </DialogTitle>
+          {effectiveDescription && (
+            <DialogDescription>{effectiveDescription}</DialogDescription>
+          )}
         </DialogHeader>
 
         {reviewItem && (
@@ -120,7 +127,9 @@ export function OrderReviewDialog({
               </div>
               <div className="flex-1 space-y-2">
                 <div>
-                  <p className="text-sm font-semibold text-gray-900">{reviewItem.name}</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {reviewItem.name}
+                  </p>
                   <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-600">
                     {reviewItem.color && <span>Màu: {reviewItem.color}</span>}
                     {reviewItem.size && (
@@ -130,23 +139,34 @@ export function OrderReviewDialog({
                     )}
                   </div>
                 </div>
-                <div className="text-xs text-gray-500">
-                  <span className="font-medium text-gray-700">Đơn hàng #{reviewItem.orderCode}</span>
-                  {reviewItem.deliveredAt && (
-                    <span>
-                      {" "}- đã giao ngày {formatOrderDate(reviewItem.deliveredAt)}
-                    </span>
-                  )}
-                </div>
+                {(reviewItem.orderCode || reviewItem.deliveredAt) && (
+                  <div className="text-xs text-gray-500">
+                    {reviewItem.orderCode && (
+                      <span className="font-medium text-gray-700">
+                        Đơn hàng #{reviewItem.orderCode}
+                      </span>
+                    )}
+                    {reviewItem.deliveredAt && (
+                      <span>
+                        {reviewItem.orderCode ? " – " : ""}
+                        Đã giao ngày {formatOrderDate(reviewItem.deliveredAt)}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
         )}
 
         {reviewLoading && (
-          <p className="mt-3 text-sm text-gray-500">Đang kiểm tra đánh giá trước đó...</p>
+          <p className="mt-3 text-sm text-gray-500">
+            Đang kiểm tra đánh giá trước đó...
+          </p>
         )}
-        {reviewError && <p className="mt-3 text-sm text-red-600">{reviewError}</p>}
+        {reviewError && (
+          <p className="mt-3 text-sm text-red-600">{reviewError}</p>
+        )}
         {!isEditMode && existingReview && (
           <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
             <p className="font-semibold">Bạn đã đánh giá sản phẩm này</p>
@@ -162,9 +182,13 @@ export function OrderReviewDialog({
         <form className="space-y-5" onSubmit={onSubmit}>
           <div>
             <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium text-gray-900">Đánh giá</Label>
+              <Label className="text-sm font-medium text-gray-900">
+                Đánh giá
+              </Label>
               <span className="text-xs text-gray-500">
-                {reviewForm.rating > 0 ? `${reviewForm.rating}/5` : "Chọn số sao"}
+                {reviewForm.rating > 0
+                  ? `${reviewForm.rating}/5`
+                  : "Chọn số sao"}
               </span>
             </div>
             <div className="mt-3 flex items-center gap-2">
@@ -181,7 +205,9 @@ export function OrderReviewDialog({
                     aria-label={`Chọn ${value} sao`}
                   >
                     <Star
-                      className={`h-7 w-7 ${isActive ? "text-amber-400" : "text-gray-300"}`}
+                      className={`h-7 w-7 ${
+                        isActive ? "text-amber-400" : "text-gray-300"
+                      }`}
                       fill={isActive ? "currentColor" : "none"}
                       strokeWidth={isActive ? 1.5 : 1.25}
                     />
@@ -193,7 +219,10 @@ export function OrderReviewDialog({
 
           <div>
             <div className="flex items-center justify-between">
-              <Label htmlFor="review-details" className="text-sm font-medium text-gray-900">
+              <Label
+                htmlFor="review-details"
+                className="text-sm font-medium text-gray-900"
+              >
                 Nội dung đánh giá
               </Label>
               <span className="text-xs text-gray-500">
@@ -213,7 +242,8 @@ export function OrderReviewDialog({
 
           <div>
             <Label className="text-sm font-medium text-gray-900">
-              Hình ảnh hoặc video <span className="text-gray-400">(Không bắt buộc)</span>
+              Hình ảnh hoặc video{" "}
+              <span className="text-gray-400">(Không bắt buộc)</span>
             </Label>
             <p className="mt-1 text-xs text-gray-500">
               Tối đa {reviewMaxFiles} tệp, mỗi tệp {reviewMaxFileSizeMb}MB
@@ -222,7 +252,9 @@ export function OrderReviewDialog({
               <label
                 htmlFor="review-media-upload"
                 className={`flex h-28 w-full flex-col items-center justify-center rounded-xl border border-dashed border-[#E8D7BF] bg-[#F8F3ED] text-center transition hover:border-[#D1A679] hover:bg-[#F3E9DC] ${
-                  shouldDisableInputs ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+                  shouldDisableInputs
+                    ? "cursor-not-allowed opacity-60"
+                    : "cursor-pointer"
                 }`}
                 aria-disabled={shouldDisableInputs}
               >
@@ -230,7 +262,9 @@ export function OrderReviewDialog({
                 <span className="mt-2 text-sm font-medium text-[#A97B50]">
                   Nhấn để tải ảnh hoặc video
                 </span>
-                <span className="mt-1 text-xs text-gray-500">Hỗ trợ định dạng JPG, PNG, MP4</span>
+                <span className="mt-1 text-xs text-gray-500">
+                  Hỗ trợ định dạng JPG, PNG, MP4
+                </span>
               </label>
               <Input
                 id="review-media-upload"
@@ -262,7 +296,9 @@ export function OrderReviewDialog({
                       ) : (
                         <div className="flex h-28 w-full flex-col items-center justify-center gap-2 bg-gray-50 text-center text-xs text-gray-600">
                           <Film className="h-8 w-8 text-gray-400" />
-                          <span className="px-2 text-[11px] font-medium">Video đã tải</span>
+                          <span className="px-2 text-[11px] font-medium">
+                            Video đã tải
+                          </span>
                         </div>
                       )}
                       <div className="absolute inset-x-0 bottom-0 bg-black/40 p-1 text-center text-[11px] font-medium text-white">
@@ -286,11 +322,17 @@ export function OrderReviewDialog({
                       className="group relative overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm"
                     >
                       {isImage && preview ? (
-                        <img src={preview} alt={file.name} className="h-28 w-full object-cover" />
+                        <img
+                          src={preview}
+                          alt={file.name}
+                          className="h-28 w-full object-cover"
+                        />
                       ) : (
                         <div className="flex h-28 w-full flex-col items-center justify-center gap-2 bg-gray-50 text-center text-xs text-gray-600">
                           <Film className="h-8 w-8 text-gray-400" />
-                          <span className="px-2 text-[11px] font-medium">{file.name}</span>
+                          <span className="px-2 text-[11px] font-medium">
+                            {file.name}
+                          </span>
                         </div>
                       )}
                       <button
