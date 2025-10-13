@@ -51,6 +51,16 @@ const formatReviewDate = (value?: string | null) => {
   }).format(parsed);
 };
 
+const getValidTimestamp = (value?: string | null) => {
+  if (!value) return null;
+  const parsed = new Date(value);
+  const timestamp = parsed.getTime();
+  if (Number.isNaN(timestamp)) {
+    return null;
+  }
+  return timestamp;
+};
+
 export const ReviewsSection = ({
   reviews = [],
   isLoading = false,
@@ -278,6 +288,14 @@ export const ReviewsSection = ({
                   currentUserId != null &&
                   (review.userId === currentUserId ||
                     review.user?.id === currentUserId);
+                const createdAtLabel = formatReviewDate(review.createdAt);
+                const updatedAtLabel = formatReviewDate(review.updatedAt);
+                const createdTimestamp = getValidTimestamp(review.createdAt);
+                const updatedTimestamp = getValidTimestamp(review.updatedAt);
+                const hasEditedDate =
+                  createdTimestamp != null &&
+                  updatedTimestamp != null &&
+                  createdTimestamp !== updatedTimestamp;
                 const variantLabelParts: string[] = [];
                 if (review.variant?.color?.name) {
                   variantLabelParts.push(review.variant.color.name);
@@ -343,9 +361,15 @@ export const ReviewsSection = ({
                           </p>
                         )}
                         <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
-                          {formatReviewDate(review.createdAt) && (
+                          {createdAtLabel && (
                             <span>
-                              Đăng ngày {formatReviewDate(review.createdAt)}
+                              Đăng ngày {createdAtLabel}
+                              {hasEditedDate && updatedAtLabel && (
+                                <>
+                                  {" "}
+                                  • Chỉnh sửa ngày {updatedAtLabel}
+                                </>
+                              )}
                             </span>
                           )}
                         </div>
