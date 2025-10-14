@@ -34,10 +34,12 @@ import type {
   CartSummary,
   VariantOption,
 } from "@/types/cartType";
+import { useCartCount } from "@/hooks/useCartCount";
 
 export default function CartPage() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [summary, setSummary] = useState<CartSummary | null>(null);
+  const { setCartQuantity } = useCartCount();
 
   // // Lưu appliedPromo từ server (giúp hiển thị "FREE (promo)" nếu mã có freeship)
   // const [appliedPromo, setAppliedPromo] = useState<CartResponse["appliedPromo"] | undefined>(undefined);
@@ -61,15 +63,14 @@ export default function CartPage() {
     const fetchCart = async () => {
       try {
         const res = await api.get<CartResponse>("/cart");
-        setCartItems(sortCartItems(res.data.items));
-        setSummary(res.data.summary);
-        // setAppliedPromo(res.data.appliedPromo);
+        refreshCartFromResponse(res);
       } catch (error) {
         console.error("Error fetching cart:", error);
+        setCartQuantity(0);
       }
     };
     fetchCart();
-  }, []);
+  }, [setCartQuantity]);
 
   const subtotal = summary?.subtotal ?? 0;
   const shipping = summary?.shipping ?? 0;
@@ -79,8 +80,14 @@ export default function CartPage() {
 
   // ==== Helpers ====
   const refreshCartFromResponse = (res: { data: CartResponse }) => {
-    setCartItems(sortCartItems(res.data.items));
+    const sortedItems = sortCartItems(res.data.items);
+    setCartItems(sortedItems);
     setSummary(res.data.summary);
+    const totalQuantity = sortedItems.reduce(
+      (acc, item) => acc + item.quantity,
+      0
+    );
+    setCartQuantity(totalQuantity);
     // setAppliedPromo(res.data.appliedPromo);
   };
 

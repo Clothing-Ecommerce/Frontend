@@ -1,342 +1,3 @@
-// import { useState } from "react";
-// import { Link } from "react-router-dom";
-// import { Button } from "@/components/ui/button";
-// import {
-//   User,
-//   ChevronDown,
-//   Phone,
-//   Search,
-//   Heart,
-//   ShoppingBag,
-//   Zap,
-//   Crown,
-// } from "lucide-react";
-// import { useAuth } from "@/hooks/useAuth";
-// import { useToast } from "@/hooks/useToast";
-// import { Input } from "../ui/input";
-
-// type HeaderProps = {
-//   cartCount?: number;
-//   wishlistCount?: number;
-// };
-
-// export default function Header({
-//   cartCount = 0,
-//   wishlistCount = 0,
-// }: HeaderProps) {
-//   const { isAuthenticated, logout } = useAuth();
-//   const { toast } = useToast();
-//   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-//   const [searchQuery, setSearchQuery] = useState("");
-
-//   const handleLogout = () => {
-//     logout();
-//     toast.success("Logged out", "You have been successfully logged out");
-//     setIsDropdownOpen(false);
-//   };
-
-//   return (
-//     <div>
-//       {/* Top Bar */}
-//       <div className="bg-gradient-to-r from-amber-400 to-yellow-500 px-4 py-2">
-//         <div className="max-w-7xl mx-auto flex items-center justify-between">
-//           <div className="flex items-center gap-2 text-sm text-gray-600">
-//             <Phone className="w-4 h-4" />
-//             <span>(123) 456 7890</span>
-//           </div>
-//           <div className="flex items-center gap-3" />
-//           <div className="flex items-center gap-4">
-//             {isAuthenticated ? (
-//               <div className="relative">
-//                 <div
-//                   className="flex items-center gap-2 text-white text-sm cursor-pointer hover:text-yellow-200 transition-colors"
-//                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-//                 >
-//                   <User className="w-4 h-4" />
-//                   <span>My Account</span>
-//                   <ChevronDown
-//                     className={`w-3 h-3 transition-transform ${
-//                       isDropdownOpen ? "rotate-180" : ""
-//                     }`}
-//                   />
-//                 </div>
-//                 {isDropdownOpen && (
-//                   <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-md shadow-lg py-2 z-50">
-//                     <Link
-//                       to="/user/profile"
-//                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-//                     >
-//                       Profile
-//                     </Link>
-//                     <Link
-//                       to="#"
-//                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-//                     >
-//                       Orders
-//                     </Link>
-//                     <Link
-//                       to="#"
-//                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-//                     >
-//                       Settings
-//                     </Link>
-//                     <hr className="my-1" />
-//                     <button
-//                       onClick={handleLogout}
-//                       className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
-//                     >
-//                       Logout
-//                     </button>
-//                   </div>
-//                 )}
-//               </div>
-//             ) : (
-//               <div className="flex items-center gap-3">
-//                 <Link to="/auth/login">
-//                   <Button
-//                     variant="ghost"
-//                     size="sm"
-//                     className="hidden md:flex hover:scale-105 transition-transform duration-200"
-//                   >
-//                     <User className="w-5 h-5 mr-2" />
-//                     Sign In
-//                   </Button>
-//                 </Link>
-//                 <Link to="/auth/register">
-//                   <Button
-//                     variant="outline"
-//                     size="sm"
-//                     className="hidden md:flex bg-transparent hover:scale-105 transition-transform duration-200"
-//                   >
-//                     Sign Up
-//                   </Button>
-//                 </Link>
-//               </div>
-//             )}
-//           </div>
-//         </div>
-//       </div>
-
-//       {/* Header */}
-//       <header className="bg-gradient-to-r from-amber-50 to-amber-100 px-4 py-4 border-b border-amber-200">
-//         <div className="max-w-7xl mx-auto grid grid-cols-[1fr_auto_1fr] items-center">
-//           {/* Search Input */}
-//           <div className="max-w-sm w-full justify-self-start">
-//             <div className="relative">
-//               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-//               <Input
-//                 type="text"
-//                 placeholder="Search products..."
-//                 value={searchQuery}
-//                 onChange={(e) => setSearchQuery(e.target.value)}
-//                 className="pl-10 pr-4 py-2 w-full bg-white/80 border-gray-200 rounded-full focus:bg-white focus:border-amber-300 focus:ring-amber-200 text-sm"
-//               />
-//             </div>
-//           </div>
-
-//           {/* Logo */}
-//           <Link to="/" className="justify-self-center">
-//             <div className="flex items-center gap-3">
-//               <div className="w-12 h-12 bg-gradient-to-br from-amber-600 to-yellow-700 rounded-full flex items-center justify-center shadow-md">
-//                 <span className="text-white font-bold text-xl">F</span>
-//               </div>
-//               <div className="text-center">
-//                 <div className="text-xl font-bold text-gray-700 tracking-widest">
-//                   FASHION STORE
-//                 </div>
-//               </div>
-//             </div>
-//           </Link>
-
-//           {/* Icons */}
-//           <div className="flex items-center gap-4 justify-self-end">
-//             <div className="relative">
-//               <Heart className="w-5 h-5 text-gray-600 hover:text-amber-600 cursor-pointer transition-colors" />
-//               <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-//                 {wishlistCount}
-//               </span>
-//             </div>
-//             <div className="relative">
-//               <Link to="/cart">
-//                 <ShoppingBag className="w-5 h-5 text-gray-600 hover:text-amber-600 cursor-pointer transition-colors" />
-//               </Link>
-//               <span className="absolute -top-2 -right-2 bg-amber-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-//                 {cartCount}
-//               </span>
-//             </div>
-//           </div>
-//         </div>
-//       </header>
-
-//       {/* Navigation */}
-//       <nav className="bg-white border-b border-gray-200 px-4 py-4 relative">
-//         <div className="max-w-7xl mx-auto">
-//           <ul className="flex items-center justify-center gap-8 text-sm font-medium text-gray-600">
-//             <li>
-//               <Link to="/" className="hover:text-gray-900 py-4">
-//                 HOME
-//               </Link>
-//             </li>
-//             <li>
-//               <Link to="#" className="hover:text-gray-900 py-4">
-//                 NEW ARRIVALS
-//               </Link>
-//             </li>
-//             <li>
-//               <Link to="#" className="hover:text-gray-900 py-4">
-//                 SALE
-//               </Link>
-//             </li>
-//             <li className="relative group">
-//               <Link
-//                 to="/products"
-//                 className="hover:text-gray-900 py-4 flex items-center gap-1"
-//               >
-//                 MEN
-//                 <svg
-//                   className="w-4 h-4 transition-transform group-hover:rotate-180"
-//                   fill="none"
-//                   stroke="currentColor"
-//                   viewBox="0 0 24 24"
-//                 >
-//                   <path
-//                     strokeLinecap="round"
-//                     strokeLinejoin="round"
-//                     strokeWidth={2}
-//                     d="M19 9l-7 7-7-7"
-//                   />
-//                 </svg>
-//               </Link>
-//               {/* Men's Dropdown */}
-//               <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-96 bg-white border border-gray-100 rounded-2xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 overflow-hidden">
-//                 <div className="p-6">
-//                   <div className="mb-4">
-//                     <div className="grid grid-cols-2 gap-2">
-//                       {[
-//                         { name: "Shirts", icon: "👔" },
-//                         { name: "T-Shirts", icon: "👕" },
-//                         { name: "Blazers", icon: "🧥" },
-//                         { name: "Suits", icon: "🤵" },
-//                         { name: "Pants", icon: "👖" },
-//                         { name: "Jeans", icon: "👖" },
-//                         { name: "Sweaters", icon: "🧶" },
-//                         { name: "Jackets", icon: "🧥" },
-//                       ].map((item, index) => (
-//                         <Link
-//                           key={index}
-//                           to={`/products?category=${item.name.toLowerCase()}`}
-//                           className="group/item flex items-center gap-3 p-3 rounded-xl hover:bg-gradient-to-r hover:from-amber-50 hover:to-orange-50 transition-all duration-200 border border-transparent hover:border-amber-200"
-//                         >
-//                           <span className="text-lg">{item.icon}</span>
-//                           <span className="text-gray-700 group-hover/item:text-amber-700 font-medium text-sm">
-//                             {item.name}
-//                           </span>
-//                         </Link>
-//                       ))}
-//                     </div>
-//                   </div>
-//                   <div className="pt-4 border-t border-gray-100">
-//                     <div className="grid grid-cols-2 gap-3">
-//                       <Link
-//                         to="/products?gender=men&featured=true"
-//                         className="group/cta flex items-center justify-center gap-2 p-3 bg-gradient-to-r from-amber-600 to-amber-500 text-white rounded-xl hover:from-amber-700 hover:to-amber-600 transition-all duration-200 shadow-lg hover:shadow-xl"
-//                       >
-//                         <Crown className="w-4 h-4" />
-//                         <span className="font-semibold text-sm">View All</span>
-//                       </Link>
-//                       <Link
-//                         to="/products?gender=men&sale=true"
-//                         className="group/cta flex items-center justify-center gap-2 p-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl hover:from-red-600 hover:to-pink-600 transition-all duration-200 shadow-lg hover:shadow-xl"
-//                       >
-//                         <Zap className="w-4 h-4" />
-//                         <span className="font-semibold text-sm">Sale</span>
-//                       </Link>
-//                     </div>
-//                   </div>
-//                 </div>
-//               </div>
-//             </li>
-//             <li className="relative group">
-//               <Link
-//                 to="/products?gender=women"
-//                 className="hover:text-gray-900 py-4 flex items-center gap-1"
-//               >
-//                 WOMEN
-//                 <svg
-//                   className="w-4 h-4 transition-transform group-hover:rotate-180"
-//                   fill="none"
-//                   stroke="currentColor"
-//                   viewBox="0 0 24 24"
-//                 >
-//                   <path
-//                     strokeLinecap="round"
-//                     strokeLinejoin="round"
-//                     strokeWidth={2}
-//                     d="M19 9l-7 7-7-7"
-//                   />
-//                 </svg>
-//               </Link>
-//               {/* Women's Dropdown */}
-//               <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-96 bg-white border border-gray-100 rounded-2xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50 overflow-hidden">
-//                 <div className="p-6">
-//                   <div className="mb-4">
-//                     <div className="grid grid-cols-2 gap-2">
-//                       {[
-//                         { name: "Blouses", icon: "👚" },
-//                         { name: "Dresses", icon: "👗" },
-//                         { name: "Skirts", icon: "👗" },
-//                         { name: "Blazers", icon: "🧥" },
-//                         { name: "Pants", icon: "👖" },
-//                         { name: "Jeans", icon: "👖" },
-//                         { name: "Sweaters", icon: "🧶" },
-//                         { name: "Jackets", icon: "🧥" },
-//                       ].map((item, index) => (
-//                         <Link
-//                           key={index}
-//                           to={`/products?category=${item.name.toLowerCase()}`}
-//                           className="group/item flex items-center gap-3 p-3 rounded-xl hover:bg-gradient-to-r hover:from-rose-50 hover:to-pink-50 transition-all duration-200 border border-transparent hover:border-rose-200"
-//                         >
-//                           <span className="text-lg">{item.icon}</span>
-//                           <span className="text-gray-700 group-hover/item:text-rose-700 font-medium text-sm">
-//                             {item.name}
-//                           </span>
-//                         </Link>
-//                       ))}
-//                     </div>
-//                   </div>
-//                   <div className="pt-4 border-t border-gray-100">
-//                     <div className="grid grid-cols-2 gap-3">
-//                       <Link
-//                         to="/products?gender=women&featured=true"
-//                         className="group/cta flex items-center justify-center gap-2 p-3 bg-gradient-to-r from-rose-600 to-pink-500 text-white rounded-xl hover:from-rose-700 hover:to-pink-600 transition-all duration-200 shadow-lg hover:shadow-xl"
-//                       >
-//                         <Crown className="w-4 h-4" />
-//                         <span className="font-semibold text-sm">View All</span>
-//                       </Link>
-//                       <Link
-//                         to="/products?gender=women&sale=true"
-//                         className="group/cta flex items-center justify-center gap-2 p-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-xl hover:from-red-600 hover:to-pink-600 transition-all duration-200 shadow-lg hover:shadow-xl"
-//                       >
-//                         <Zap className="w-4 h-4" />
-//                         <span className="font-semibold text-sm">Sale</span>
-//                       </Link>
-//                     </div>
-//                   </div>
-//                 </div>
-//               </div>
-//             </li>
-//             <li>
-//               <Link to="#" className="hover:text-gray-900">
-//                 ABOUT US
-//               </Link>
-//             </li>
-//           </ul>
-//         </div>
-//       </nav>
-//     </div>
-//   );
-// }
-
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -352,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/useToast";
 import { Input } from "../ui/input";
 import api from "@/utils/axios";
+import { useCartCount } from "@/hooks/useCartCount";
 
 type HeaderProps = {
   cartCount?: number; // fallback khi chưa fetch kịp
@@ -359,7 +21,6 @@ type HeaderProps = {
 };
 
 /** ====== API Types ====== */
-type CartCountResponse = { itemCount: number; quantity: number };
 type WishlistCountResponse = { count: number };
 
 export type CategoryNode = {
@@ -402,14 +63,14 @@ export default function Header({
   cartCount: cartCountFallback = 0,
   wishlistCount: wishlistCountFallback = 0,
 }: HeaderProps) {
-  const { isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
   const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
 
   // ==== Counts =====
-  const [cartQty, setCartQty] = useState<number>(cartCountFallback);
+  const { quantity: cartQty, refreshCartCount, setCartQuantity } = useCartCount();
   const [wishlistCount, setWishlistCount] = useState<number>(
     wishlistCountFallback
   );
@@ -440,15 +101,16 @@ export default function Header({
 
   /** ====== Effects: fetch counts ====== */
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await api.get<CartCountResponse>("/cart/count");
-        setCartQty(res.data.quantity);
-      } catch {
-        setCartQty(cartCountFallback);
-      }
-    })();
-  }, [cartCountFallback]);
+    setCartQuantity(cartCountFallback);
+  }, [cartCountFallback, setCartQuantity]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      void refreshCartCount();
+    } else {
+      setCartQuantity(0);
+    }
+  }, [isAuthenticated, refreshCartCount, setCartQuantity]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -507,6 +169,20 @@ export default function Header({
     setIsAccountDropdownOpen(false);
   };
 
+  const accountName = useMemo(() => {
+    const rawName = user?.username ?? "";
+    const trimmed = rawName.trim();
+    return trimmed.length > 0 ? trimmed : "Tài khoản";
+  }, [user?.username]);
+
+  const accountInitial = useMemo(() => {
+    return accountName.charAt(0).toUpperCase() || "T";
+  }, [accountName]);
+
+  const avatarUrl = user?.avatar && user.avatar.trim().length > 0
+    ? user.avatar
+    : null;
+
   const handleSubmitSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const q = searchQuery.trim();
@@ -559,8 +235,20 @@ export default function Header({
                     setIsAccountDropdownOpen(!isAccountDropdownOpen)
                   }
                 >
-                  <User className="w-4 h-4" />
-                  <span>My Account</span>
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={accountName}
+                      className="w-7 h-7 rounded-full object-cover border border-white/50"
+                    />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center text-xs font-semibold">
+                      {accountInitial}
+                    </div>
+                  )}
+                  <span className="max-w-[120px] truncate font-medium">
+                    {accountName}
+                  </span>
                   <ChevronDown
                     className={`w-3 h-3 transition-transform ${
                       isAccountDropdownOpen ? "rotate-180" : ""
@@ -573,26 +261,20 @@ export default function Header({
                       to="/user/profile"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
-                      Profile
-                    </Link>
-                    <Link
-                      to="/orders"
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      Orders
+                      Hồ Sơ Của Tôi
                     </Link>
                     <Link
                       to="/settings"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
-                      Settings
+                      Cài Đặt
                     </Link>
                     <hr className="my-1" />
                     <button
                       onClick={handleLogout}
                       className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                     >
-                      Logout
+                      Đăng Xuất
                     </button>
                   </div>
                 )}

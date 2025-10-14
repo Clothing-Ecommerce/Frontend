@@ -21,6 +21,7 @@ import type { Address } from "@/types/addressType";
 import { formatPrice } from "@/utils/formatPrice";
 import type { AvailableCoupon, CartItem, CartResponse, CartSummary } from "@/types/cartType";
 import { saveLatestMomoAttempt } from "@/utils/paymentStorage";
+import { useCartCount } from "@/hooks/useCartCount";
 
 type CheckoutAddress = Address & { addressId: number };
 
@@ -130,6 +131,7 @@ export default function CheckoutPage() {
   const [showPromoDialog, setShowPromoDialog] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
+  const { setCartQuantity } = useCartCount();
 
   const sortCartItems = (items: CartItem[]) => [...items].sort((a, b) => a.id - b.id);
 
@@ -173,12 +175,18 @@ export default function CheckoutPage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [setCartQuantity]);
 
   const refreshCartFromResponse = (res: { data: CartResponse }) => {
-    setCartItems(sortCartItems(res.data.items));
+    const sortedItems = sortCartItems(res.data.items);
+    setCartItems(sortedItems);
     setSummary(res.data.summary);
     setAppliedPromo(res.data.appliedPromo);
+    const totalQuantity = sortedItems.reduce(
+      (acc, item) => acc + item.quantity,
+      0
+    );
+    setCartQuantity(totalQuantity);
   };
 
   useEffect(() => {
@@ -196,6 +204,7 @@ export default function CheckoutPage() {
           setCartItems([]);
           setSummary(null);
           setAppliedPromo(undefined);
+          setCartQuantity(0);
         }
       } finally {
         if (isMounted) {

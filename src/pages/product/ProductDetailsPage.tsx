@@ -57,6 +57,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
+import { useCartCount } from "@/hooks/useCartCount";
 
 export default function ProductDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -75,6 +76,7 @@ export default function ProductDetailsPage() {
   const orderIdParam = searchParams.get("orderId");
   const orderItemIdParam = searchParams.get("orderItemId");
   const { isAuthenticated, user } = useAuth();
+  const { refreshCartCount } = useCartCount();  
   const [userReview, setUserReview] = useState<Review | null>(null);
   const [isLoadingUserReview, setIsLoadingUserReview] = useState(false);
   const [userReviewError, setUserReviewError] = useState<string | null>(null);
@@ -706,6 +708,7 @@ export default function ProductDetailsPage() {
         quantity,
       });
       toast.success("Added to Cart", "Product added to your cart");
+      await refreshCartCount();
     } catch (error: unknown) {
       if (axios.isAxiosError(error) && error.response?.data?.message) {
         toast.error("Error", error.response.data.message);
@@ -749,7 +752,7 @@ export default function ProductDetailsPage() {
       />
 
       {/* Header */}
-      <Header />
+      <Header /> 
 
       {/* Breadcrumb */}
       <div className="bg-gray-50 px-4 py-3">

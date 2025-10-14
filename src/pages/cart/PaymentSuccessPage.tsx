@@ -11,6 +11,7 @@ import {
   loadLatestMomoAttempt,
 } from "@/utils/paymentStorage";
 import { cn } from "@/lib/utils";
+import { useCartCount } from "@/hooks/useCartCount";
 
 type PaymentDetail = {
   id: number;
@@ -38,6 +39,11 @@ export default function PaymentSuccessPage() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [paymentDetail, setPaymentDetail] = useState<PaymentDetail | null>(null);
   const hasSyncedRef = useRef(false);
+  const { refreshCartCount } = useCartCount();
+
+  useEffect(() => {
+    void refreshCartCount();
+  }, [refreshCartCount]);
 
   useEffect(() => {
     if (hasSyncedRef.current) return;
