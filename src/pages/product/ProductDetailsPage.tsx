@@ -58,6 +58,8 @@ import {
 } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useCartCount } from "@/hooks/useCartCount";
+import { useWishlistCount } from "@/hooks/useWishlistCount";
+import type { WishlistItemsResponse, WishlistMutationResponse } from "@/types/wishlistType";
 
 export default function ProductDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -77,6 +79,7 @@ export default function ProductDetailsPage() {
   const orderItemIdParam = searchParams.get("orderItemId");
   const { isAuthenticated, user } = useAuth();
   const { refreshCartCount } = useCartCount();  
+  const { refreshWishlistCount } = useWishlistCount();
   const [userReview, setUserReview] = useState<Review | null>(null);
   const [isLoadingUserReview, setIsLoadingUserReview] = useState(false);
   const [userReviewError, setUserReviewError] = useState<string | null>(null);
@@ -88,6 +91,7 @@ export default function ProductDetailsPage() {
   const [selectedSize, setSelectedSize] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isWishlistActionLoading, setIsWishlistActionLoading] = useState(false);
   const { toasts, toast, removeToast } = useToast();
 
   const REVIEW_DETAILS_MAX_LENGTH = 500;
@@ -260,6 +264,31 @@ export default function ProductDetailsPage() {
       fetchProduct();
     }
   }, [id, mapReviewVariant]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !product?.id) {
+      setIsWishlisted(false);
+      return;
+    }
+
+    let isCancelled = false;
+
+    (async () => {
+      try {
+        const res = await api.get<WishlistItemsResponse>("/wishlist");
+        if (isCancelled) return;
+        const items = Array.isArray(res.data.items) ? res.data.items : [];
+        const exists = items.some((item) => item.productId === product.id);
+        setIsWishlisted(exists);
+      } catch (error) {
+        console.error("Failed to fetch wishlist status", error);
+      }
+    })();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isAuthenticated, product?.id]);
 
   // Fetch related products
   useEffect(() => {
@@ -693,6 +722,59 @@ export default function ProductDetailsPage() {
   const isEditSubmitDisabled =
     editSubmitting || editReviewForm.rating === 0 || !editingReview;
 
+  const productId = product?.id ?? null;
+
+  const handleToggleWishlist = useCallback(async () => {
+    if (!productId) return;
+    if (!isAuthenticated) {
+      toast.error(
+        "Bạn chưa đăng nhập",
+        "Hãy đăng nhập để thêm sản phẩm vào danh sách yêu thích."
+      );
+      return;
+    }
+
+    setIsWishlistActionLoading(true);
+    try {
+      if (isWishlisted) {
+        await api.delete(`/wishlist/${productId}`);
+        setIsWishlisted(false);
+        toast.success(
+          "Đã xoá khỏi wishlist",
+          "Sản phẩm đã được xoá khỏi danh sách yêu thích của bạn."
+        );
+      } else {
+        await api.post<WishlistMutationResponse>("/wishlist", { productId });
+        setIsWishlisted(true);
+        toast.success(
+          "Đã thêm vào wishlist",
+          "Sản phẩm đã được thêm vào danh sách yêu thích của bạn."
+        );
+      }
+      void refreshWishlistCount();
+    } catch (error) {
+      console.error("Failed to toggle wishlist", error);
+      let message = isWishlisted
+        ? "Không thể xoá sản phẩm khỏi wishlist."
+        : "Không thể thêm sản phẩm vào wishlist.";
+      if (axios.isAxiosError(error)) {
+        const responseMessage = error.response?.data?.message;
+        if (typeof responseMessage === "string" && responseMessage.trim()) {
+          message = responseMessage;
+        }
+      }
+      toast.error("Thao tác không thành công", message);
+    } finally {
+      setIsWishlistActionLoading(false);
+    }
+  }, [
+    isAuthenticated,
+    isWishlisted,
+    productId,
+    refreshWishlistCount,
+    toast,
+  ]);
+
   const handleAddToCart = async () => {
     if (!selectedSize) {
       toast.error("Selection required", "Please select a size");
@@ -913,13 +995,28 @@ export default function ProductDetailsPage() {
                   variant="outline"
                   size="icon"
                   className="h-12 w-12 bg-transparent"
-                  onClick={() => setIsWishlisted(!isWishlisted)}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    void handleToggleWishlist();
+                  }}
+                  disabled={isWishlistActionLoading}
+                  aria-pressed={isWishlisted}
+                  aria-label={
+                    isWishlisted
+                      ? "Xoá khỏi wishlist"
+                      : "Thêm vào wishlist"
+                  }
                 >
-                  <Heart
-                    className={`h-5 w-5 ${
-                      isWishlisted ? "fill-current text-red-500" : ""
-                    }`}
-                  />
+                  {isWishlistActionLoading ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Heart
+                      className={`h-5 w-5 ${
+                        isWishlisted ? "fill-current text-red-500" : ""
+                      }`}
+                    />
+                  )}
                 </Button>
                 <Button
                   variant="outline"

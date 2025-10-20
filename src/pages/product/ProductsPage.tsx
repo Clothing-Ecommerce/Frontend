@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Heart, Filter, Grid, List } from "lucide-react";
+import { Heart, Filter, Grid, List, Loader2 } from "lucide-react";
+import axios from "axios";
 import api from "@/utils/axios";
 import type { BrandOption, CategoryOption, Product } from "@/types/productType";
 import type { ProductListResponse } from "@/types/productType";
@@ -19,6 +20,11 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { formatPrice } from "@/utils/formatPrice";
 import CategoryTreeFilter from "@/components/products/CategoryTreeFilter";
+import { ToastContainer } from "@/components/ui/toast";
+import { useToast } from "@/hooks/useToast";
+import { useAuth } from "@/hooks/useAuth";
+import { useWishlistCount } from "@/hooks/useWishlistCount";
+import type { WishlistItemsResponse, WishlistMutationResponse } from "@/types/wishlistType";
 
 // ---------- helpers (URL <-> array) ----------
 function readInitialCategories(sp: URLSearchParams): string[] {
@@ -36,6 +42,14 @@ function writeCategoriesToParams(sp: URLSearchParams, slugs: string[]) {
 
 export default function ProductsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { isAuthenticated } = useAuth();
+  const { toasts, toast, removeToast } = useToast();
+  const { refreshWishlistCount } = useWishlistCount();
+
+  const [wishlistIds, setWishlistIds] = useState<Set<number>>(() => new Set());
+  const [wishlistActionIds, setWishlistActionIds] = useState<Set<number>>(
+    () => new Set()
+  );
 
   // ========== Category (MULTI-SELECT) ==========
   const [selectedCategories, setSelectedCategories] = useState<string[]>(
@@ -87,6 +101,77 @@ export default function ProductsPage() {
     setSearchParams(p, { replace: true });
   };
 
+  const handleToggleWishlist = useCallback(
+    async (productId: number) => {
+      if (!isAuthenticated) {
+        toast.error(
+          "Bạn chưa đăng nhập",
+          "Hãy đăng nhập để thêm sản phẩm vào danh sách yêu thích."
+        );
+        return;
+      }
+
+      setWishlistActionIds((prev) => {
+        const next = new Set(prev);
+        next.add(productId);
+        return next;
+      });
+
+      const alreadyWishlisted = wishlistIds.has(productId);
+
+      try {
+        if (alreadyWishlisted) {
+          await api.delete(`/wishlist/${productId}`);
+          setWishlistIds((prev) => {
+            const next = new Set(prev);
+            next.delete(productId);
+            return next;
+          });
+          toast.success(
+            "Đã xoá khỏi wishlist",
+            "Sản phẩm đã được xoá khỏi danh sách yêu thích của bạn."
+          );
+        } else {
+          await api.post<WishlistMutationResponse>("/wishlist", { productId });
+          setWishlistIds((prev) => {
+            const next = new Set(prev);
+            next.add(productId);
+            return next;
+          });
+          toast.success(
+            "Đã thêm vào wishlist",
+            "Sản phẩm đã được thêm vào danh sách yêu thích của bạn."
+          );
+        }
+        void refreshWishlistCount();
+      } catch (error) {
+        console.error("Failed to toggle wishlist item", error);
+        let message = alreadyWishlisted
+          ? "Không thể xoá sản phẩm khỏi wishlist."
+          : "Không thể thêm sản phẩm vào wishlist.";
+        if (axios.isAxiosError(error)) {
+          const responseMessage = error.response?.data?.message;
+          if (typeof responseMessage === "string" && responseMessage.trim()) {
+            message = responseMessage;
+          }
+        }
+        toast.error("Thao tác không thành công", message);
+      } finally {
+        setWishlistActionIds((prev) => {
+          const next = new Set(prev);
+          next.delete(productId);
+          return next;
+        });
+      }
+    },
+    [
+      isAuthenticated,
+      refreshWishlistCount,
+      toast,
+      wishlistIds,
+    ]
+  );
+
   // Sync state khi URL đổi (ví dụ user click link ở Header)
   useEffect(() => {
     const next = readInitialCategories(searchParams);
@@ -98,6 +183,31 @@ export default function ProductsPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setWishlistIds(new Set());
+      setWishlistActionIds(new Set());
+      return;
+    }
+
+    let isCancelled = false;
+
+    (async () => {
+      try {
+        const res = await api.get<WishlistItemsResponse>("/wishlist");
+        if (isCancelled) return;
+        const items = Array.isArray(res.data.items) ? res.data.items : [];
+        setWishlistIds(new Set(items.map((item) => item.productId)));
+      } catch (error) {
+        console.error("Failed to fetch wishlist items", error);
+      }
+    })();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [isAuthenticated]);
 
   // Fetch categories + brands
   useEffect(() => {
@@ -493,56 +603,88 @@ export default function ProductsPage() {
                     : "space-y-4"
                 }
               >
-                {products.map((product) => (
-                  <div
-                    key={product.id}
-                    className={
-                      viewMode === "grid"
-                        ? "bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300"
-                        : "bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300 flex"
-                    }
-                  >
+                {products.map((product) => {
+                  const isProductWishlisted = wishlistIds.has(product.id);
+                  const isWishlistProcessing = wishlistActionIds.has(
+                    product.id
+                  );
+
+                  return (
                     <div
+                      key={product.id}
                       className={
                         viewMode === "grid"
-                          ? "relative"
-                          : "relative w-48 flex-shrink-0"
+                          ? "bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300"
+                          : "bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300 flex"
                       }
                     >
-                      <Link to={`/products/${product.id}`}>
-                        <img
-                          src={product.images[0]?.url || "/placeholder.svg"}
-                          alt={product.name}
-                          width={300}
-                          height={400}
-                          className={
-                            viewMode === "grid"
-                              ? "w-full h-64 object-cover hover:scale-105 transition-transform duration-300"
-                              : "w-full h-48 object-cover hover:scale-105 transition-transform duration-300"
+                      <div
+                        className={
+                          viewMode === "grid"
+                            ? "relative"
+                            : "relative w-48 flex-shrink-0"
+                        }
+                      >
+                        <Link to={`/products/${product.id}`}>
+                          <img
+                            src={product.images[0]?.url || "/placeholder.svg"}
+                            alt={product.name}
+                            width={300}
+                            height={400}
+                            className={
+                              viewMode === "grid"
+                                ? "w-full h-64 object-cover hover:scale-105 transition-transform duration-300"
+                                : "w-full h-48 object-cover hover:scale-105 transition-transform duration-300"
+                            }
+                          />
+                        </Link>
+                        <button
+                          type="button"
+                          className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-md hover:bg-gray-50"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            void handleToggleWishlist(product.id);
+                          }}
+                          disabled={isWishlistProcessing}
+                          aria-pressed={isProductWishlisted}
+                          aria-label={
+                            isProductWishlisted
+                              ? "Xoá khỏi wishlist"
+                              : "Thêm vào wishlist"
                           }
-                        />
-                      </Link>
-                      <button className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-md hover:bg-gray-50">
-                        <Heart className="w-4 h-4 text-gray-600" />
-                      </button>
-                    </div>
-                    <div className={viewMode === "grid" ? "p-4" : "p-4 flex-1"}>
-                      <Link to={`/products/${product.id}`}>
-                        <h3 className="font-semibold text-gray-900 mb-2 hover:text-amber-600">
-                          {product.name}
-                        </h3>
-                      </Link>
-                      <p className="text-sm text-gray-600 mb-2">
-                        {product.brand?.name}
-                      </p>
-                      <div className="flex items-center gap-2 mb-3">
-                        <span className="text-lg font-bold text-gray-900">
-                          {formatPrice(product.basePrice)}
-                        </span>
+                        >
+                          {isWishlistProcessing ? (
+                            <Loader2 className="w-4 h-4 animate-spin text-gray-600" />
+                          ) : (
+                            <Heart
+                              className={`w-4 h-4 ${
+                                isProductWishlisted
+                                  ? "fill-current text-red-500"
+                                  : "text-gray-600"
+                              }`}
+                            />
+                          )}
+                        </button>
+                      </div>
+                      <div className={viewMode === "grid" ? "p-4" : "p-4 flex-1"}>
+                        <Link to={`/products/${product.id}`}>
+                          <h3 className="font-semibold text-gray-900 mb-2 hover:text-amber-600">
+                            {product.name}
+                          </h3>
+                        </Link>
+                        <p className="text-sm text-gray-600 mb-2">
+                          {product.brand?.name}
+                        </p>
+                        <div className="flex items-center gap-2 mb-3">
+                          <span className="text-lg font-bold text-gray-900">
+                            {formatPrice(product.basePrice)}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 
@@ -574,6 +716,11 @@ export default function ProductsPage() {
         </div>
       </div>
       <Footer />
+
+      <ToastContainer
+        toasts={toasts.map((item) => ({ ...item, onClose: removeToast }))}
+        onClose={removeToast}
+      />
     </div>
   );
 }

@@ -249,7 +249,7 @@ export default function WishlistPage() {
                     </div>
                   </CardContent>
 
-                  <CardFooter className="pt-0 pb-6 flex-col gap-3">
+                  {/* <CardFooter className="pt-0 pb-6 flex-col gap-3">
                     <Button
                       variant="outline"
                       className="w-full"
@@ -271,7 +271,7 @@ export default function WishlistPage() {
                       <ShoppingBag className="w-4 h-4" />
                       Xem giỏ hàng
                     </Button>
-                  </CardFooter>
+                  </CardFooter> */}
                 </Card>
               );
             })}
