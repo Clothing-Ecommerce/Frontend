@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -14,7 +16,7 @@ import {
 import { Heart, Filter, Grid, List, Loader2 } from "lucide-react";
 import axios from "axios";
 import api from "@/utils/axios";
-import type { BrandOption, CategoryOption, Product } from "@/types/productType";
+import type { BrandOption, Product } from "@/types/productType";
 import type { ProductListResponse } from "@/types/productType";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -24,7 +26,10 @@ import { ToastContainer } from "@/components/ui/toast";
 import { useToast } from "@/hooks/useToast";
 import { useAuth } from "@/hooks/useAuth";
 import { useWishlistCount } from "@/hooks/useWishlistCount";
-import type { WishlistItemsResponse, WishlistMutationResponse } from "@/types/wishlistType";
+import type {
+  WishlistItemsResponse,
+  WishlistMutationResponse,
+} from "@/types/wishlistType";
 
 // ---------- helpers (URL <-> array) ----------
 function readInitialCategories(sp: URLSearchParams): string[] {
@@ -33,11 +38,6 @@ function readInitialCategories(sp: URLSearchParams): string[] {
   if (multi.length) return multi.filter((c) => c !== "all");
   const single = sp.get("category");
   return single && single !== "all" ? [single] : [];
-}
-function writeCategoriesToParams(sp: URLSearchParams, slugs: string[]) {
-  sp.delete("category");
-  sp.delete("categories");
-  for (const s of slugs) sp.append("categories", s);
 }
 
 export default function ProductsPage() {
@@ -73,7 +73,6 @@ export default function ProductsPage() {
 
   // Data
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [brands, setBrands] = useState<BrandOption[]>([]);
   const [totalProducts, setTotalProducts] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -164,12 +163,7 @@ export default function ProductsPage() {
         });
       }
     },
-    [
-      isAuthenticated,
-      refreshWishlistCount,
-      toast,
-      wishlistIds,
-    ]
+    [isAuthenticated, refreshWishlistCount, toast, wishlistIds]
   );
 
   // Sync state khi URL đổi (ví dụ user click link ở Header)
@@ -209,25 +203,11 @@ export default function ProductsPage() {
     };
   }, [isAuthenticated]);
 
-  // Fetch categories + brands
+  // Fetch brands
   useEffect(() => {
-    const fetchCategoriesAndBrands = async () => {
+    const fetchBrands = async () => {
       try {
-        const [categoriesRes, brandsRes] = await Promise.all([
-          api.get("/categories/"),
-          api.get("/brands/"),
-        ]);
-
-        const cats: CategoryOption[] = (categoriesRes.data as any[])
-          .map((c) => ({
-            slug: c.slug,
-            name: c.name,
-            count: c.count ?? 0,
-          }))
-          .filter((c) => c.slug !== "all");
-        setCategories(cats);
-
-        const raw = brandsRes.data as any[];
+        const raw = (await api.get("/brands/")).data as any[];
         const mapped: BrandOption[] = raw.map((b: any) =>
           typeof b === "string"
             ? { id: b, name: b }
@@ -235,10 +215,10 @@ export default function ProductsPage() {
         );
         setBrands([{ id: "all", name: "All Brands" }, ...mapped]);
       } catch (error) {
-        console.error("Error fetching categories or brands:", error);
+        console.error("Error fetching brands:", error);
       }
     };
-    fetchCategoriesAndBrands();
+    fetchBrands();
   }, []);
 
   // Fetch products khi filters đổi
@@ -321,11 +301,11 @@ export default function ProductsPage() {
   ]);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gradient-to-b from-amber-50 via-white to-white">
       <Header />
 
       {/* Breadcrumb */}
-      <div className="bg-gray-50 px-4 py-3">
+      <div className="bg-white/70 backdrop-blur px-4 py-3 border-b border-amber-100">
         <div className="max-w-7xl mx-auto">
           <nav className="text-sm text-gray-600">
             <Link to="/" className="hover:text-gray-900">
@@ -343,7 +323,7 @@ export default function ProductsPage() {
           <div
             className={`lg:w-64 ${showFilters ? "block" : "hidden lg:block"}`}
           >
-            <div className="bg-white border border-gray-200 rounded-lg p-6 sticky top-4">
+            <div className="bg-white/90 backdrop-blur border border-amber-100 rounded-2xl p-6 shadow-sm sticky top-4">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Filters
               </h3>
@@ -387,7 +367,7 @@ export default function ProductsPage() {
                   </div>
 
                   {/* Men tree */}
-                  <div className="rounded-2xl border p-2">
+                  <div className="rounded-2xl border border-amber-100 p-2 bg-white/60">
                     <CategoryTreeFilter
                       root="men"
                       selectedSlugs={selectedCategories}
@@ -399,7 +379,7 @@ export default function ProductsPage() {
                   </div>
 
                   {/* Women tree */}
-                  <div className="rounded-2xl border p-2">
+                  <div className="rounded-2xl border border-amber-100 p-2 bg-white/60">
                     <CategoryTreeFilter
                       root="women"
                       selectedSlugs={selectedCategories}
@@ -569,12 +549,12 @@ export default function ProductsPage() {
                   </SelectContent>
                 </Select>
 
-                <div className="flex border border-gray-300 rounded-md">
+                <div className="flex border border-amber-200 rounded-md overflow-hidden bg-white/80">
                   <Button
                     variant={viewMode === "grid" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("grid")}
-                    className="rounded-r-none"
+                    className="rounded-none"
                   >
                     <Grid className="w-4 h-4" />
                   </Button>
@@ -582,7 +562,7 @@ export default function ProductsPage() {
                     variant={viewMode === "list" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("list")}
-                    className="rounded-l-none"
+                    className="rounded-none border-l border-amber-200"
                   >
                     <List className="w-4 h-4" />
                   </Button>
@@ -592,8 +572,9 @@ export default function ProductsPage() {
 
             {/* Products List */}
             {loading ? (
-              <div className="text-center py-12">
-                <p className="text-gray-600 text-lg">Loading products...</p>
+              <div className="text-center py-12 text-gray-600">
+                <Loader2 className="w-6 h-6 animate-spin mx-auto mb-4" />
+                Đang tải sản phẩm...
               </div>
             ) : (
               <div
@@ -608,39 +589,98 @@ export default function ProductsPage() {
                   const isWishlistProcessing = wishlistActionIds.has(
                     product.id
                   );
+                  const productImage =
+                    product.images[0]?.url ?? "/placeholder.svg";
+                  const productAlt = product.images[0]?.alt ?? product.name;
+                  const brandName = product.brand?.name ?? "";
+
+                  if (viewMode === "grid") {
+                    return (
+                      <Card
+                        key={product.id}
+                        className="group relative cursor-pointer overflow-hidden border-amber-100/70 hover:border-amber-200 hover:shadow-lg transition-all"
+                      >
+                        <div className="relative aspect-[4/5] overflow-hidden mx-6 mt-6 rounded-xl bg-amber-50/60">
+                          <Link to={`/products/${product.id}`} className="block h-full">
+                            <img
+                              src={productImage}
+                              alt={productAlt}
+                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            />
+                          </Link>
+                          <button
+                            type="button"
+                            className="absolute top-3 right-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-600 shadow-sm ring-1 ring-black/5 transition hover:bg-red-50 hover:text-red-500"
+                            onClick={(event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                              void handleToggleWishlist(product.id);
+                            }}
+                            disabled={isWishlistProcessing}
+                            aria-pressed={isProductWishlisted}
+                            aria-label={
+                              isProductWishlisted
+                                ? "Xoá khỏi wishlist"
+                                : "Thêm vào wishlist"
+                            }
+                          >
+                            {isWishlistProcessing ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Heart
+                                className={`w-4 h-4 ${
+                                  isProductWishlisted
+                                    ? "fill-current text-red-500"
+                                    : "text-gray-600"
+                                }`}
+                              />
+                            )}
+                          </button>
+                        </div>
+                        <CardContent className="px-6 pb-6 pt-4 space-y-3">
+                          <div className="space-y-1">
+                            {brandName && (
+                              <p className="text-xs uppercase tracking-wide text-amber-500">
+                                {brandName}
+                              </p>
+                            )}
+                            <Link to={`/products/${product.id}`} className="block">
+                              <h3 className="text-lg font-semibold text-gray-900 group-hover:text-amber-600 transition-colors">
+                                {product.name}
+                              </h3>
+                            </Link>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg font-semibold text-amber-600">
+                              {formatPrice(product.basePrice)}
+                            </span>
+                          </div>
+                          {product.category?.name && (
+                            <Badge variant="secondary" className="bg-amber-50 text-amber-700">
+                              {product.category.name}
+                            </Badge>
+                          )}
+                        </CardContent>
+                      </Card>
+                    );
+                  }
 
                   return (
-                    <div
+                    <Card
                       key={product.id}
-                      className={
-                        viewMode === "grid"
-                          ? "bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300"
-                          : "bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow duration-300 flex"
-                      }
+                      className="group flex flex-col sm:flex-row overflow-hidden border-amber-100/70 hover:border-amber-200 hover:shadow-lg transition-all"
                     >
-                      <div
-                        className={
-                          viewMode === "grid"
-                            ? "relative"
-                            : "relative w-48 flex-shrink-0"
-                        }
-                      >
-                        <Link to={`/products/${product.id}`}>
+                      <div className="relative sm:w-56 flex-shrink-0 bg-amber-50/60">
+                        <Link to={`/products/${product.id}`} className="block h-full">
                           <img
-                            src={product.images[0]?.url || "/placeholder.svg"}
-                            alt={product.name}
-                            width={300}
-                            height={400}
-                            className={
-                              viewMode === "grid"
-                                ? "w-full h-64 object-cover hover:scale-105 transition-transform duration-300"
-                                : "w-full h-48 object-cover hover:scale-105 transition-transform duration-300"
-                            }
+                            src={productImage}
+                            alt={productAlt}
+                            className="h-56 w-full object-cover transition-transform duration-300 group-hover:scale-105"
                           />
                         </Link>
                         <button
                           type="button"
-                          className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-md hover:bg-gray-50"
+                          className="absolute top-3 right-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-600 shadow-sm ring-1 ring-black/5 transition hover:bg-red-50 hover:text-red-500"
                           onClick={(event) => {
                             event.preventDefault();
                             event.stopPropagation();
@@ -655,7 +695,7 @@ export default function ProductsPage() {
                           }
                         >
                           {isWishlistProcessing ? (
-                            <Loader2 className="w-4 h-4 animate-spin text-gray-600" />
+                            <Loader2 className="w-4 h-4 animate-spin" />
                           ) : (
                             <Heart
                               className={`w-4 h-4 ${
@@ -667,22 +707,36 @@ export default function ProductsPage() {
                           )}
                         </button>
                       </div>
-                      <div className={viewMode === "grid" ? "p-4" : "p-4 flex-1"}>
-                        <Link to={`/products/${product.id}`}>
-                          <h3 className="font-semibold text-gray-900 mb-2 hover:text-amber-600">
-                            {product.name}
-                          </h3>
-                        </Link>
-                        <p className="text-sm text-gray-600 mb-2">
-                          {product.brand?.name}
-                        </p>
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className="text-lg font-bold text-gray-900">
+                      <CardContent className="flex-1 p-6 space-y-4">
+                        <div className="space-y-2">
+                          {brandName && (
+                            <p className="text-xs uppercase tracking-wide text-amber-500">
+                              {brandName}
+                            </p>
+                          )}
+                          <Link to={`/products/${product.id}`} className="block">
+                            <h3 className="text-xl font-semibold text-gray-900 group-hover:text-amber-600 transition-colors">
+                              {product.name}
+                            </h3>
+                          </Link>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl font-semibold text-amber-600">
                             {formatPrice(product.basePrice)}
                           </span>
+                          {product.category?.name && (
+                            <Badge variant="secondary" className="bg-amber-50 text-amber-700">
+                              {product.category.name}
+                            </Badge>
+                          )}
                         </div>
-                      </div>
-                    </div>
+                        {product.description && (
+                          <p className="text-sm text-gray-600 line-clamp-2">
+                            {product.description}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
                   );
                 })}
               </div>
