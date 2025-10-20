@@ -604,7 +604,7 @@ export default function ProductsPage() {
                         key={product.id}
                         className="group relative cursor-pointer overflow-hidden border-amber-100/70 hover:border-amber-200 hover:shadow-lg transition-all"
                       >
-                        <div className="relative aspect-[4/5] overflow-hidden mx-6 mt-6 rounded-xl bg-amber-50/60">
+                        <div className="relative aspect-[4/5] overflow-hidden mx-4 mt-2 rounded-xl bg-amber-50/60">
                           <Link to={`/products/${product.id}`} className="block h-full">
                             <img
                               src={productImage}
@@ -641,7 +641,7 @@ export default function ProductsPage() {
                             )}
                           </button>
                         </div>
-                        <CardContent className="px-6 pb-6 pt-4 space-y-3">
+                        <CardContent className="px-6 pb-1 space-y-1">
                           <div className="space-y-1">
                             {brandName && (
                               <p className="text-xs uppercase tracking-wide text-amber-500">

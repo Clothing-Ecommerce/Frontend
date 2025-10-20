@@ -243,8 +243,18 @@ export default function WishlistPage() {
                       )}
                     </div>
                     <div>
-                      <Badge variant={product.inStock ? "secondary" : "outline"}>
+                      {/* <Badge variant={product.inStock ? "secondary" : "outline"}>
                         {product.inStock ? "Còn hàng" : "Liên hệ để đặt trước"}
+                      </Badge> */}
+                      <Badge
+                            variant="secondary"
+                            className={
+                              product.inStock
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                                : "bg-rose-50 text-rose-700 border border-rose-100"
+                            }
+                          >
+                            {product.inStock ? "Còn hàng" : "Hết hàng"}
                       </Badge>
                     </div>
                   </CardContent>
