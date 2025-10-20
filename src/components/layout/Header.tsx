@@ -14,14 +14,13 @@ import { useToast } from "@/hooks/useToast";
 import { Input } from "../ui/input";
 import api from "@/utils/axios";
 import { useCartCount } from "@/hooks/useCartCount";
+import { useWishlistCount } from "@/hooks/useWishlistCount";
 
 type HeaderProps = {
   cartCount?: number; // fallback khi chưa fetch kịp
   wishlistCount?: number; // fallback khi chưa fetch kịp
 };
 
-/** ====== API Types ====== */
-type WishlistCountResponse = { count: number };
 
 export type CategoryNode = {
   id: number;
@@ -71,9 +70,12 @@ export default function Header({
 
   // ==== Counts =====
   const { quantity: cartQty, refreshCartCount, setCartQuantity } = useCartCount();
-  const [wishlistCount, setWishlistCount] = useState<number>(
-    wishlistCountFallback
-  );
+
+  const {
+    count: wishlistCount,
+    refreshWishlistCount,
+    setWishlistCount,
+  } = useWishlistCount();
 
   // ==== Categories (MEN/WOMEN) =====
   const [menTree, setMenTree] = useState<CategoryNode | null>(null);
@@ -105,27 +107,23 @@ export default function Header({
   }, [cartCountFallback, setCartQuantity]);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      void refreshCartCount();
-    } else {
-      setCartQuantity(0);
-    }
-  }, [isAuthenticated, refreshCartCount, setCartQuantity]);
+    setWishlistCount(wishlistCountFallback);
+  }, [setWishlistCount, wishlistCountFallback]);
 
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (isAuthenticated) {
+      void Promise.all([refreshCartCount(), refreshWishlistCount()]);
+    } else {
+      setCartQuantity(0);
       setWishlistCount(0);
-      return;
     }
-    (async () => {
-      try {
-        const res = await api.get<WishlistCountResponse>("/wishlist/count");
-        setWishlistCount(res.data.count);
-      } catch {
-        setWishlistCount(wishlistCountFallback);
-      }
-    })();
-  }, [isAuthenticated, wishlistCountFallback]);
+  }, [
+    isAuthenticated,
+    refreshCartCount,
+    refreshWishlistCount,
+    setCartQuantity,
+    setWishlistCount,
+  ]);
 
   /** ====== Effects: fetch category trees ====== */
   useEffect(() => {
