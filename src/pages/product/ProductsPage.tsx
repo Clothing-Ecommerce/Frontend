@@ -260,6 +260,8 @@ export default function ProductsPage() {
           basePrice: Number(p.effectivePrice),
           categoryId: p.category?.id ?? 0,
           brandId: p.brand?.id ?? null,
+          inStock: Boolean(p.inStock),
+          totalStock: typeof p.totalStock === "number" ? p.totalStock : 0,
           createdAt: "",
           updatedAt: "",
           category: p.category
@@ -593,6 +595,8 @@ export default function ProductsPage() {
                     product.images[0]?.url ?? "/placeholder.svg";
                   const productAlt = product.images[0]?.alt ?? product.name;
                   const brandName = product.brand?.name ?? "";
+                  const isInStock =
+                    product.inStock ?? ((product.totalStock ?? 0) > 0);
 
                   if (viewMode === "grid") {
                     return (
@@ -655,11 +659,16 @@ export default function ProductsPage() {
                               {formatPrice(product.basePrice)}
                             </span>
                           </div>
-                          {product.category?.name && (
-                            <Badge variant="secondary" className="bg-amber-50 text-amber-700">
-                              {product.category.name}
-                            </Badge>
-                          )}
+                          <Badge
+                            variant="secondary"
+                            className={
+                              isInStock
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                                : "bg-rose-50 text-rose-700 border border-rose-100"
+                            }
+                          >
+                            {isInStock ? "Còn hàng" : "Hết hàng"}
+                          </Badge>
                         </CardContent>
                       </Card>
                     );
@@ -724,11 +733,16 @@ export default function ProductsPage() {
                           <span className="text-xl font-semibold text-amber-600">
                             {formatPrice(product.basePrice)}
                           </span>
-                          {product.category?.name && (
-                            <Badge variant="secondary" className="bg-amber-50 text-amber-700">
-                              {product.category.name}
-                            </Badge>
-                          )}
+                          <Badge
+                            variant="secondary"
+                            className={
+                              isInStock
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                                : "bg-rose-50 text-rose-700 border border-rose-100"
+                            }
+                          >
+                            {isInStock ? "Còn hàng" : "Hết hàng"}
+                          </Badge>
                         </div>
                         {product.description && (
                           <p className="text-sm text-gray-600 line-clamp-2">

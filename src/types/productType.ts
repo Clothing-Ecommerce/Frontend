@@ -78,6 +78,8 @@ export interface Product {
   basePrice: number; // FE converts string -> number when mapping response
   categoryId: number;
   brandId?: number | null;
+  inStock?: boolean;
+  totalStock?: number;
   features?: Record<string, unknown> | null;
   specifications?: Record<string, unknown> | null;
   createdAt: string;
@@ -139,6 +141,8 @@ export interface ProductCard {
   image?: { id: number; url: string; alt?: string | null } | null;
   effectivePrice: number;
   compareAtPrice?: number | null;
+  totalStock: number;
+  inStock: boolean;
 }
 
 export interface ProductListResponse {
