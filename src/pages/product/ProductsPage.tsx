@@ -4,8 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -20,7 +18,6 @@ import type { BrandOption, Product } from "@/types/productType";
 import type { ProductListResponse } from "@/types/productType";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import { formatPrice } from "@/utils/formatPrice";
 import CategoryTreeFilter from "@/components/products/CategoryTreeFilter";
 import { ToastContainer } from "@/components/ui/toast";
 import { useToast } from "@/hooks/useToast";
@@ -30,6 +27,7 @@ import type {
   WishlistItemsResponse,
   WishlistMutationResponse,
 } from "@/types/wishlistType";
+import ProductCard from "@/components/products/ProductCard";
 
 // ---------- helpers (URL <-> array) ----------
 function readInitialCategories(sp: URLSearchParams): string[] {
@@ -600,21 +598,75 @@ export default function ProductsPage() {
 
                   if (viewMode === "grid") {
                     return (
-                      <Card
+                      <ProductCard
                         key={product.id}
-                        className="group relative cursor-pointer overflow-hidden border-amber-100/70 hover:border-amber-200 hover:shadow-lg transition-all"
-                      >
-                        <div className="relative aspect-[4/5] overflow-hidden mx-4 mt-2 rounded-xl bg-amber-50/60">
-                          <Link to={`/products/${product.id}`} className="block h-full">
-                            <img
-                              src={productImage}
-                              alt={productAlt}
-                              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                            />
-                          </Link>
+                        viewMode="grid"
+                        product={{
+                          id: product.id,
+                          name: product.name,
+                          brandName,
+                          price: product.basePrice,
+                          imageUrl: productImage,
+                          imageAlt: productAlt,
+                          inStock: isInStock,
+                        }}
+                        to={`/products/${product.id}`}
+                        overlays={{
+                          topRight: (
+                            <button
+                              type="button"
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-600 shadow-sm ring-1 ring-black/5 transition hover:bg-red-50 hover:text-red-500"
+                              onClick={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                void handleToggleWishlist(product.id);
+                              }}
+                              disabled={isWishlistProcessing}
+                              aria-pressed={isProductWishlisted}
+                              aria-label={
+                                isProductWishlisted
+                                  ? "Xoá khỏi wishlist"
+                                  : "Thêm vào wishlist"
+                              }
+                            >
+                              {isWishlistProcessing ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Heart
+                                  className={`w-4 h-4 ${
+                                    isProductWishlisted
+                                      ? "fill-current text-red-500"
+                                      : "text-gray-600"
+                                  }`}
+                                />
+                              )}
+                            </button>
+                          ),
+                        }}
+                      />
+                    );
+                  }
+
+                  return (
+                    <ProductCard
+                      key={product.id}
+                      viewMode="list"
+                      product={{
+                        id: product.id,
+                        name: product.name,
+                        brandName,
+                        price: product.basePrice,
+                        imageUrl: productImage,
+                        imageAlt: productAlt,
+                        inStock: isInStock,
+                        description: product.description,
+                      }}
+                      to={`/products/${product.id}`}
+                      overlays={{
+                        topRight: (
                           <button
                             type="button"
-                            className="absolute top-3 right-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-600 shadow-sm ring-1 ring-black/5 transition hover:bg-red-50 hover:text-red-500"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-600 shadow-sm ring-1 ring-black/5 transition hover:bg-red-50 hover:text-red-500"
                             onClick={(event) => {
                               event.preventDefault();
                               event.stopPropagation();
@@ -640,117 +692,9 @@ export default function ProductsPage() {
                               />
                             )}
                           </button>
-                        </div>
-                        <CardContent className="px-6 pb-1 space-y-1">
-                          <div className="space-y-1">
-                            {brandName && (
-                              <p className="text-xs uppercase tracking-wide text-amber-500">
-                                {brandName}
-                              </p>
-                            )}
-                            <Link to={`/products/${product.id}`} className="block">
-                              <h3 className="text-lg font-semibold text-gray-900 group-hover:text-amber-600 transition-colors">
-                                {product.name}
-                              </h3>
-                            </Link>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-lg font-semibold text-amber-600">
-                              {formatPrice(product.basePrice)}
-                            </span>
-                          </div>
-                          <Badge
-                            variant="secondary"
-                            className={
-                              isInStock
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                                : "bg-rose-50 text-rose-700 border border-rose-100"
-                            }
-                          >
-                            {isInStock ? "Còn hàng" : "Hết hàng"}
-                          </Badge>
-                        </CardContent>
-                      </Card>
-                    );
-                  }
-
-                  return (
-                    <Card
-                      key={product.id}
-                      className="group flex flex-col sm:flex-row overflow-hidden border-amber-100/70 hover:border-amber-200 hover:shadow-lg transition-all"
-                    >
-                      <div className="relative sm:w-56 flex-shrink-0 bg-amber-50/60">
-                        <Link to={`/products/${product.id}`} className="block h-full">
-                          <img
-                            src={productImage}
-                            alt={productAlt}
-                            className="h-56 w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          />
-                        </Link>
-                        <button
-                          type="button"
-                          className="absolute top-3 right-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-600 shadow-sm ring-1 ring-black/5 transition hover:bg-red-50 hover:text-red-500"
-                          onClick={(event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            void handleToggleWishlist(product.id);
-                          }}
-                          disabled={isWishlistProcessing}
-                          aria-pressed={isProductWishlisted}
-                          aria-label={
-                            isProductWishlisted
-                              ? "Xoá khỏi wishlist"
-                              : "Thêm vào wishlist"
-                          }
-                        >
-                          {isWishlistProcessing ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Heart
-                              className={`w-4 h-4 ${
-                                isProductWishlisted
-                                  ? "fill-current text-red-500"
-                                  : "text-gray-600"
-                              }`}
-                            />
-                          )}
-                        </button>
-                      </div>
-                      <CardContent className="flex-1 p-6 space-y-4">
-                        <div className="space-y-2">
-                          {brandName && (
-                            <p className="text-xs uppercase tracking-wide text-amber-500">
-                              {brandName}
-                            </p>
-                          )}
-                          <Link to={`/products/${product.id}`} className="block">
-                            <h3 className="text-xl font-semibold text-gray-900 group-hover:text-amber-600 transition-colors">
-                              {product.name}
-                            </h3>
-                          </Link>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-xl font-semibold text-amber-600">
-                            {formatPrice(product.basePrice)}
-                          </span>
-                          <Badge
-                            variant="secondary"
-                            className={
-                              isInStock
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                                : "bg-rose-50 text-rose-700 border border-rose-100"
-                            }
-                          >
-                            {isInStock ? "Còn hàng" : "Hết hàng"}
-                          </Badge>
-                        </div>
-                        {product.description && (
-                          <p className="text-sm text-gray-600 line-clamp-2">
-                            {product.description}
-                          </p>
-                        )}
-                      </CardContent>
-                    </Card>
+                        ),
+                      }}
+                    />
                   );
                 })}
               </div>

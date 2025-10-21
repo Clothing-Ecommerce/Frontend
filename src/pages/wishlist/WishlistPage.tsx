@@ -4,16 +4,14 @@ import axios from "axios";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { ToastContainer } from "@/components/ui/toast";
 import { useToast } from "@/hooks/useToast";
 import { useWishlistCount } from "@/hooks/useWishlistCount";
 import { useAuth } from "@/hooks/useAuth";
 import api from "@/utils/axios";
-import { formatPrice } from "@/utils/formatPrice";
 import type { WishlistItem, WishlistItemsResponse } from "@/types/wishlistType";
 import { Heart, Loader2, Package, ShoppingBag, Trash2 } from "lucide-react";
+import ProductCard from "@/components/products/ProductCard";
 
 function formatAddedDate(date: string) {
   const parsed = new Date(date);
@@ -182,107 +180,56 @@ export default function WishlistPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {items.map((item) => {
               const { product } = item;
-              const productImage = product.image?.url ?? "/placeholder.svg";
               const hasDiscount =
-                product.effectivePrice > 0 && product.basePrice > 0 && product.effectivePrice < product.basePrice;
-              const displayPrice = product.effectivePrice > 0 ? product.effectivePrice : product.basePrice;
+                product.effectivePrice > 0 &&
+                product.basePrice > 0 &&
+                product.effectivePrice < product.basePrice;
+              const displayPrice =
+                product.effectivePrice > 0 ? product.effectivePrice : product.basePrice;
               const addedDate = formatAddedDate(item.addedAt);
 
               return (
-                <Card
+                <ProductCard
                   key={item.id}
-                  className="group cursor-pointer overflow-hidden border-amber-100/70 hover:border-amber-200 hover:shadow-lg transition-all"
-                  onClick={() => navigate(`/products/${product.id}`)}
-                >
-                  <div className="relative aspect-[4/5] overflow-hidden mx-6 rounded-xl bg-amber-50/50">
-                    <img
-                      src={productImage}
-                      alt={product.image?.alt ?? product.name}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    />
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        void handleRemove(product.id);
-                      }}
-                      className="absolute top-3 right-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-600 shadow-sm ring-1 ring-black/5 transition hover:bg-red-50 hover:text-red-500"
-                      aria-label="Xoá khỏi wishlist"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                    {!product.inStock && (
-                      <span className="absolute left-3 top-3 rounded-full bg-gray-900/80 px-3 py-1 text-xs font-medium text-white">
+                  product={{
+                    id: product.id,
+                    name: product.name,
+                    brandName: product.brand?.name,
+                    price: displayPrice,
+                    originalPrice: hasDiscount ? product.basePrice : null,
+                    imageUrl: product.image?.url,
+                    imageAlt: product.image?.alt ?? product.name,
+                    inStock: product.inStock,
+                  }}
+                  onCardClick={() => navigate(`/products/${product.id}`)}
+                  imageClassName="mx-6 mt-0 rounded-xl"
+                  contentClassName="mt-4 space-y-3 pt-0 pb-4"
+                  overlays={{
+                    topRight: (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleRemove(product.id);
+                        }}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-600 shadow-sm ring-1 ring-black/5 transition hover:bg-red-50 hover:text-red-500"
+                        aria-label="Xoá khỏi wishlist"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    ),
+                    topLeft: !product.inStock ? (
+                      <span className="rounded-full bg-gray-900/80 px-3 py-1 text-xs font-medium text-white">
                         Tạm hết hàng
                       </span>
-                    )}
-                    {addedDate && (
-                      <span className="absolute left-3 bottom-3 rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-gray-600">
+                    ) : undefined,
+                    bottomLeft: addedDate ? (
+                      <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-gray-600">
                         Đã thêm: {addedDate}
                       </span>
-                    )}
-                  </div>
-
-                  <CardContent className="mt-4 space-y-3">
-                    <div className="space-y-1">
-                      {product.brand?.name && (
-                        <p className="text-xs uppercase tracking-wide text-amber-500">{product.brand.name}</p>
-                      )}
-                      <h3 className="text-lg font-semibold text-gray-900 group-hover:text-amber-600 transition-colors">
-                        {product.name}
-                      </h3>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg font-semibold text-amber-600">
-                        {formatPrice(displayPrice)}
-                      </span>
-                      {hasDiscount && (
-                        <span className="text-sm text-gray-500 line-through">
-                          {formatPrice(product.basePrice)}
-                        </span>
-                      )}
-                    </div>
-                    <div>
-                      {/* <Badge variant={product.inStock ? "secondary" : "outline"}>
-                        {product.inStock ? "Còn hàng" : "Liên hệ để đặt trước"}
-                      </Badge> */}
-                      <Badge
-                            variant="secondary"
-                            className={
-                              product.inStock
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                                : "bg-rose-50 text-rose-700 border border-rose-100"
-                            }
-                          >
-                            {product.inStock ? "Còn hàng" : "Hết hàng"}
-                      </Badge>
-                    </div>
-                  </CardContent>
-
-                  {/* <CardFooter className="pt-0 pb-6 flex-col gap-3">
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        navigate(`/products/${product.id}`);
-                      }}
-                    >
-                      <Heart className="w-4 h-4" />
-                      Xem chi tiết sản phẩm
-                    </Button>
-                    <Button
-                      className="w-full"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        navigate(`/cart`);
-                      }}
-                    >
-                      <ShoppingBag className="w-4 h-4" />
-                      Xem giỏ hàng
-                    </Button>
-                  </CardFooter> */}
-                </Card>
+                    ) : undefined,
+                  }}
+                />
               );
             })}
           </div>
