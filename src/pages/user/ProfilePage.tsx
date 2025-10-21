@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import type { ChangeEvent, FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,6 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import type { LucideIcon } from "lucide-react";
 import {
   User,
   MapPin,
@@ -76,6 +77,89 @@ import type {
 } from "@/types/orderType";
 import { OrderReviewDialog } from "@/components/review/OrderReviewDialog";
 import axios from "axios";
+
+type ProfileSection = "profile" | "addresses" | "orders" | "settings";
+
+type ProfileLocationState = Partial<{
+  section: ProfileSection;
+  tab: ProfileSection;
+  defaultSection: ProfileSection;
+  activeSection: ProfileSection;
+  expandOrderId: number;
+  orderId: number;
+}>;
+
+const PROFILE_SECTIONS: readonly ProfileSection[] = [
+  "profile",
+  "addresses",
+  "orders",
+  "settings",
+] as const;
+
+const parseProfileSection = (value: unknown): ProfileSection | null => {
+  if (typeof value !== "string") return null;
+  const normalized = value.toLowerCase() as ProfileSection;
+  return PROFILE_SECTIONS.includes(normalized) ? normalized : null;
+};
+
+const parseOrderIdValue = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+  return null;
+};
+
+const parseSectionFromLocation = (
+  search: string,
+  state: ProfileLocationState
+): ProfileSection => {
+  const searchParams = new URLSearchParams(search);
+  const candidates: Array<unknown> = [
+    state.section,
+    state.tab,
+    state.defaultSection,
+    state.activeSection,
+    searchParams.get("section"),
+    searchParams.get("tab"),
+  ];
+
+  for (const candidate of candidates) {
+    const section = parseProfileSection(candidate);
+    if (section) {
+      return section;
+    }
+  }
+
+  return "profile";
+};
+
+const parseExpandedOrderFromLocation = (
+  search: string,
+  state: ProfileLocationState
+): number | null => {
+  const searchParams = new URLSearchParams(search);
+  const candidates: Array<unknown> = [
+    state.expandOrderId,
+    state.orderId,
+    searchParams.get("orderId"),
+    searchParams.get("expandOrderId"),
+  ];
+
+  for (const candidate of candidates) {
+    const parsed = parseOrderIdValue(candidate);
+    if (parsed != null) {
+      return parsed;
+    }
+  }
+
+  return null;
+};
 
 const emptyUser: UserProfile = {
   userId: 0,
@@ -152,7 +236,13 @@ const getLabelText = (label: string) => {
 };
 
 export default function ProfilePage() {
-  const [activeSection, setActiveSection] = useState("profile");
+  const location = useLocation();
+  const [activeSection, setActiveSection] = useState<ProfileSection>(() =>
+    parseSectionFromLocation(
+      location.search,
+      (location.state ?? {}) as ProfileLocationState
+    )
+  );
   const [isEditing, setIsEditing] = useState(false);
   // const [editingAddress, setEditingAddress] = useState<number | null>(null);
   const [formData, setFormData] = useState<UserProfile>(emptyUser); // dữ liệu hiển thị đã “lưu”
@@ -188,7 +278,25 @@ export default function ProfilePage() {
     Record<number, string>
   >({});
   const [loadingDetailId, setLoadingDetailId] = useState<number | null>(null);
-  const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
+  const [expandedOrderId, setExpandedOrderId] = useState<number | null>(() =>
+    parseExpandedOrderFromLocation(
+      location.search,
+      (location.state ?? {}) as ProfileLocationState
+    )
+  );
+  useEffect(() => {
+    const state = (location.state ?? {}) as ProfileLocationState;
+    const nextSection = parseSectionFromLocation(location.search, state);
+    setActiveSection((current) =>
+      current === nextSection ? current : nextSection
+    );
+
+    const nextExpanded = parseExpandedOrderFromLocation(
+      location.search,
+      state
+    );
+    setExpandedOrderId(nextExpanded);
+  }, [location]);
   const [cancelingOrderId, setCancelingOrderId] = useState<number | null>(null);
   const [reorderingOrderId, setReorderingOrderId] = useState<number | null>(
     null
@@ -1005,7 +1113,11 @@ export default function ProfilePage() {
     reviewForm.rating === 0 ||
     !!existingReview;
 
-  const sidebarItems = [
+  const sidebarItems: Array<{
+    id: ProfileSection;
+    label: string;
+    icon: LucideIcon;
+  }> = [
     { id: "profile", label: "Hồ Sơ", icon: User },
     { id: "addresses", label: "Địa Chỉ", icon: MapPin },
     { id: "orders", label: "Đơn Hàng", icon: Package },

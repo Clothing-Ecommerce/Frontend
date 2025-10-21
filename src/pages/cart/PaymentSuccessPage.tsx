@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle, ArrowRight, ExternalLink, Loader2, ShieldCheck, TriangleAlert } from "lucide-react";
@@ -35,6 +35,7 @@ const isSucceededStatus = (status?: string) => {
 
 export default function PaymentSuccessPage() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [syncState, setSyncState] = useState<SyncState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [paymentDetail, setPaymentDetail] = useState<PaymentDetail | null>(null);
@@ -239,7 +240,26 @@ export default function PaymentSuccessPage() {
 
               {/* Action Buttons */}
               <div className="space-y-3">
-                <Button className="w-full bg-gray-900 text-white hover:bg-gray-800 py-6 text-base font-medium rounded-lg">
+                <Button
+                  className="w-full bg-gray-900 text-white hover:bg-gray-800 py-6 text-base font-medium rounded-lg"
+                  onClick={() => {
+                    const searchParams = new URLSearchParams();
+                    searchParams.set("tab", "orders");
+                    if (paymentDetail?.orderId) {
+                      searchParams.set("orderId", String(paymentDetail.orderId));
+                    }
+
+                    navigate({
+                      pathname: "/user/profile",
+                      search: `?${searchParams.toString()}`,
+                    }, {
+                      state: {
+                        section: "orders",
+                        expandOrderId: paymentDetail?.orderId ?? undefined,
+                      },
+                    });
+                  }}
+                >
                   View Order Details
                   <ExternalLink className="w-4 h-4 ml-2" />
                 </Button>
