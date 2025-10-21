@@ -76,6 +76,10 @@ import type {
   OrderItemReview,
 } from "@/types/orderType";
 import { OrderReviewDialog } from "@/components/review/OrderReviewDialog";
+import {
+  OrderCancelDialog,
+  type CancelReasonOption,
+} from "@/components/order/OrderCancelDialog";
 import axios from "axios";
 
 type ProfileSection = "profile" | "addresses" | "orders" | "settings";
@@ -114,6 +118,50 @@ const parseOrderIdValue = (value: unknown): number | null => {
   }
   return null;
 };
+
+const CANCEL_REASON_OTHER_VALUE = "other" as const;
+
+const ORDER_CANCEL_REASON_OPTIONS: CancelReasonOption[] = [
+  {
+    value: "change_of_mind",
+    label: "Tôi đổi ý, không muốn mua nữa",
+  },
+  {
+    value: "found_better_price",
+    label: "Tôi tìm được giá tốt hơn ở nơi khác",
+  },
+  {
+    value: "shipping_delay",
+    label: "Thời gian giao hàng dự kiến quá lâu",
+  },
+  {
+    value: "incorrect_order",
+    label: "Tôi đặt nhầm sản phẩm hoặc số lượng",
+  },
+  {
+    value: CANCEL_REASON_OTHER_VALUE,
+    label: "Lý do khác",
+    description: "Vui lòng chia sẻ chi tiết để chúng tôi phục vụ tốt hơn",
+    requiresDetails: true,
+  },
+];
+
+const DEFAULT_ORDER_CANCEL_REASON =
+  ORDER_CANCEL_REASON_OPTIONS[0]?.value ?? CANCEL_REASON_OTHER_VALUE;
+
+interface CancelDialogState {
+  orderId: number | null;
+  open: boolean;
+  selectedReason: string;
+  customReason: string;
+}
+
+const createInitialCancelDialogState = (): CancelDialogState => ({
+  orderId: null,
+  open: false,
+  selectedReason: DEFAULT_ORDER_CANCEL_REASON,
+  customReason: "",
+});
 
 const parseSectionFromLocation = (
   search: string,
@@ -298,6 +346,11 @@ export default function ProfilePage() {
     setExpandedOrderId(nextExpanded);
   }, [location]);
   const [cancelingOrderId, setCancelingOrderId] = useState<number | null>(null);
+  const [cancelDialogState, setCancelDialogState] =
+    useState<CancelDialogState>(createInitialCancelDialogState);
+  const [cancelDialogError, setCancelDialogError] = useState<string | null>(
+    null
+  );
   const [reorderingOrderId, setReorderingOrderId] = useState<number | null>(
     null
   );
@@ -683,12 +736,48 @@ export default function ProfilePage() {
     void fetchOrderDetail(expandedOrderId);
   }, [expandedOrderId, orderDetails, fetchOrderDetail]);
 
+  const openCancelDialog = useCallback((orderId: number) => {
+    setCancelDialogState({
+      orderId,
+      open: true,
+      selectedReason: DEFAULT_ORDER_CANCEL_REASON,
+      customReason: "",
+    });
+    setCancelDialogError(null);
+  }, []);
+
+  const handleCancelDialogOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      setCancelDialogState(createInitialCancelDialogState());
+      setCancelDialogError(null);
+      return;
+    }
+    setCancelDialogState((prev) => ({ ...prev, open }));
+  }, []);
+
+  const handleSelectCancelReason = useCallback((value: string) => {
+    setCancelDialogState((prev) => ({
+      ...prev,
+      selectedReason: value,
+      customReason:
+        value === CANCEL_REASON_OTHER_VALUE ? prev.customReason : "",
+    }));
+    setCancelDialogError(null);
+  }, []);
+
+  const handleCustomCancelReasonChange = useCallback((value: string) => {
+    setCancelDialogState((prev) => ({ ...prev, customReason: value }));
+    setCancelDialogError(null);
+  }, []);
+
   const handleCancelOrder = useCallback(
-    async (orderId: number) => {
+    async (orderId: number, reason?: string) => {
       setCancelingOrderId(orderId);
+      let wasSuccessful = false;
       try {
         const { data } = await api.post<OrderDetailResponse>(
-          `/order/${orderId}/cancel`
+          `/order/${orderId}/cancel`,
+          reason ? { reason } : undefined
         );
 
         const summary: OrderSummaryResponse = {
@@ -715,6 +804,7 @@ export default function ProfilePage() {
           return rest;
         });
         toast.success("Thành công", "Đơn hàng đã được hủy");
+        wasSuccessful = true;
       } catch (err: any) {
         const message =
           err?.response?.data?.message ?? "Không thể hủy đơn hàng lúc này";
@@ -724,8 +814,47 @@ export default function ProfilePage() {
           current === orderId ? null : current
         );
       }
+      return wasSuccessful;
     },
     [toast]
+  );
+
+  const handleConfirmCancelOrder = useCallback(async () => {
+    const { orderId, selectedReason, customReason } = cancelDialogState;
+    if (!orderId) return;
+
+    const selectedOption = ORDER_CANCEL_REASON_OPTIONS.find(
+      (option) => option.value === selectedReason
+    );
+
+    const requiresDetails = selectedOption?.requiresDetails ?? false;
+    const trimmedCustomReason = customReason.trim();
+    const reasonMessage = requiresDetails
+      ? trimmedCustomReason
+      : selectedOption?.label ?? selectedReason;
+
+    if (!reasonMessage) {
+      setCancelDialogError(
+        requiresDetails
+          ? "Vui lòng nhập lý do hủy đơn hàng."
+          : "Vui lòng chọn lý do hủy đơn hàng."
+      );
+      return;
+    }
+
+    const wasCancelled = await handleCancelOrder(orderId, reasonMessage);
+    if (wasCancelled) {
+      setCancelDialogState(createInitialCancelDialogState());
+      setCancelDialogError(null);
+    }
+  }, [cancelDialogState, handleCancelOrder]);
+
+  const handleCancelDialogSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      await handleConfirmCancelOrder();
+    },
+    [handleConfirmCancelOrder]
   );
 
   const handleReorder = useCallback(
@@ -1933,9 +2062,7 @@ export default function ProfilePage() {
                                           variant="outline"
                                           size="sm"
                                           className="border-red-200 text-red-600 hover:bg-red-50"
-                                          onClick={() =>
-                                            handleCancelOrder(order.id)
-                                          }
+                                          onClick={() => openCancelDialog(order.id)}
                                           disabled={
                                             cancelingOrderId === order.id ||
                                             reorderingOrderId === order.id
@@ -2179,6 +2306,23 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      <OrderCancelDialog
+        open={cancelDialogState.open}
+        reasons={ORDER_CANCEL_REASON_OPTIONS}
+        selectedReason={cancelDialogState.selectedReason}
+        customReason={cancelDialogState.customReason}
+        submitting={
+          cancelDialogState.orderId != null &&
+          cancelingOrderId === cancelDialogState.orderId
+        }
+        errorMessage={cancelDialogError}
+        onOpenChange={handleCancelDialogOpenChange}
+        onSelectReason={handleSelectCancelReason}
+        onCustomReasonChange={handleCustomCancelReasonChange}
+        onSubmit={handleCancelDialogSubmit}
+      />
+
       <OrderReviewDialog
         open={reviewDialogOpen}
         reviewItem={reviewItem}
