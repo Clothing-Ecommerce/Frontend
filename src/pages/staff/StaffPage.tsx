@@ -1716,9 +1716,18 @@ export default function StaffAdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f4f1ea]">
+    <div className="min-h-screen bg-[#f4f1ea] lg:p-4">
+      {/* Container chính */}
       <div className="mx-auto flex min-h-screen max-w-[1600px] flex-col lg:flex-row">
-        <aside className="w-full border-b border-[#2a2620]/30 bg-[#1c1a16] text-stone-200 lg:w-72 lg:min-h-screen lg:border-r lg:border-b-0">
+        {/* Sidebar */}
+        <aside
+          className={cn(
+            "w-full border-b border-[#2a2620]/30 bg-[#1c1a16] text-stone-200", // Class gốc
+            "lg:w-72 lg:min-h-screen lg:border-r lg:border-b-0", // Class gốc cho layout lớn
+            "lg:rounded-3xl lg:overflow-hidden" // ---> THÊM CÁC CLASS NÀY <---
+          )}
+        >
+          {/* Header Sidebar */}
           <div className="flex items-center justify-between border-b border-[#2a2620]/50 px-7 py-6">
             <div>
               <div className="text-xs uppercase tracking-[0.3em] text-[#d1c4a7]">ProfitPulse</div>
@@ -1728,6 +1737,7 @@ export default function StaffAdminPage() {
               <Bell className="h-4 w-4" /> 4
             </Badge>
           </div>
+          {/* Navigation */}
           <nav className="space-y-1 px-4 py-6">
             {navItems.map((item) => {
               const Icon = item.icon
@@ -1750,7 +1760,7 @@ export default function StaffAdminPage() {
           </nav>
         </aside>
 
-        <main className="flex-1 overflow-y-auto bg-[#f4f1ea] p-6 lg:p-10">
+        <main className="flex-1 overflow-y-auto bg-[#f4f1ea] p-6 lg:p-10 lg:ml-4">
           <div className="mx-auto max-w-6xl space-y-8">
             <header className="flex flex-col gap-4 rounded-3xl border border-[#ead7b9] bg-[#fdfbf7] p-6 shadow-[0_24px_60px_rgba(23,20,16,0.08)] md:flex-row md:items-center md:justify-between">
               <div>
