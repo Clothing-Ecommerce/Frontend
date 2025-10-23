@@ -1,4 +1,4 @@
-import { useMemo, useState, type JSX } from "react"
+import { useEffect, useMemo, useState, type JSX } from "react"
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -14,10 +14,12 @@ import {
   Inbox,
   LayoutDashboard,
   LifeBuoy,
+  MapPin,
   Mail,
   Package,
   PackageCheck,
   Phone,
+  Search,
   Settings,
   Tag,
   User,
@@ -105,16 +107,23 @@ const orderStatusLabel: Record<OrderStatus, string> = {
 }
 
 const orderStatusBadge: Record<OrderStatus, string> = {
-  new: "bg-blue-50 text-blue-700 border-blue-100",
-  processing: "bg-amber-50 text-amber-700 border-amber-100",
-  delivered: "bg-emerald-50 text-emerald-700 border-emerald-100",
-  returned: "bg-rose-50 text-rose-700 border-rose-100",
+  new: "bg-[#dfe7ff] text-[#1b3a7a] border-[#c2d4ff]",
+  processing: "bg-[#ffe8c7] text-[#8b4a00] border-[#ffd6a1]",
+  delivered: "bg-[#dff6dd] text-[#276749] border-[#b7e4c7]",
+  returned: "bg-[#ffe0e0] text-[#b42318] border-[#ffc2c2]",
 }
 
-const ticketPriorityBadge: Record<SupportTicket["priority"], string> = {
-  high: "bg-rose-100 text-rose-700 border-rose-200",
-  medium: "bg-amber-100 text-amber-700 border-amber-200",
-  low: "bg-blue-100 text-blue-700 border-blue-200",
+const orderStatusAccent: Record<OrderStatus, string> = {
+  new: "bg-[#4c6ef5]",
+  processing: "bg-[#f59f00]",
+  delivered: "bg-[#2f9e44]",
+  returned: "bg-[#e03131]",
+}
+
+const ticketPriorityBadge: Record<SupportTicket['priority'], string> = {
+  high: "bg-[#ffe0e0] text-[#b42318] border-[#ffc2c2]",
+  medium: "bg-[#ffe8c7] text-[#8b4a00] border-[#ffd6a1]",
+  low: "bg-[#dfe7ff] text-[#1b3a7a] border-[#c2d4ff]",
 }
 
 const ticketStatusLabel: Record<SupportTicket["status"], string> = {
@@ -148,12 +157,25 @@ function formatDateTime(iso: string) {
 function formatCurrency(value: number) {
   return currencyFormatter.format(value)
 }
+
+function getInitials(name: string) {
+  const initials = name
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("")
+    .slice(0, 2)
+
+  return initials || "ST"
+}
 export default function StaffAdminPage() {
   const [activeSection, setActiveSection] = useState<SectionKey>("dashboard")
   const [orders, setOrders] = useState<Order[]>(staffMockData.orders)
   const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatus | "all">("all")
   const [orderSearchTerm, setOrderSearchTerm] = useState("")
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(
+    staffMockData.orders[0]?.id ?? null
+  )
   const [orderDialogOpen, setOrderDialogOpen] = useState(false)
   const [orderNoteDraft, setOrderNoteDraft] = useState("")
 
@@ -238,6 +260,17 @@ export default function StaffAdminPage() {
     })
   }, [orders, orderStatusFilter, orderSearchTerm])
 
+   useEffect(() => {
+    if (filteredOrders.length === 0) {
+      setSelectedOrderId(null)
+      return
+    }
+
+    if (!filteredOrders.some((order) => order.id === selectedOrderId)) {
+      setSelectedOrderId(filteredOrders[0]?.id ?? null)
+    }
+  }, [filteredOrders, selectedOrderId])
+
   const filteredProducts = useMemo(() => {
     const keyword = productSearch.trim().toLowerCase()
     return products.filter((product) => {
@@ -280,10 +313,12 @@ export default function StaffAdminPage() {
     }
   }
 
-  const openOrderDetail = (order: Order) => {
+  const openOrderDetail = (order: Order, options?: { openDialog?: boolean }) => {
     setSelectedOrderId(order.id)
     setOrderNoteDraft("")
-    setOrderDialogOpen(true)
+    if (options?.openDialog) {
+      setOrderDialogOpen(true)
+    }
   }
 
   const updateOrderStatus = (status: OrderStatus) => {
@@ -763,73 +798,242 @@ export default function StaffAdminPage() {
     </div>
   )
   const renderOrders = () => (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h2 className="text-xl font-semibold text-slate-900">Quản lý đơn hàng</h2>
-          <p className="text-sm text-slate-500">Theo dõi, cập nhật trạng thái và ghi chú xử lý.</p>
+    <div className="space-y-8">
+      <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div className="space-y-1">
+          <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[#b8a47a]">Orders</p>
+          <h2 className="text-2xl font-semibold text-[#1f1b16]">Quản lý đơn hàng</h2>
+          <p className="text-sm text-[#7a6f60]">
+            Hiển thị nhanh tình trạng đơn và truy cập thông tin chi tiết ở bảng điều khiển bên phải.
+          </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {(["all", "new", "processing", "delivered", "returned"] as const).map((status) => (
-            <Button
-              key={status}
-              variant={orderStatusFilter === status ? "default" : "outline"}
-              size="sm"
-              onClick={() => setOrderStatusFilter(status)}
-            >
-              {status === "all" ? "Tất cả" : orderStatusLabel[status]}
-            </Button>
-          ))}
+          {(["all", "new", "processing", "delivered", "returned"] as const).map((status) => {
+            const isActive = orderStatusFilter === status
+            return (
+              <Button
+                key={status}
+                variant="outline"
+                className={cn(
+                  "rounded-full border-[#ead7b9] bg-white/70 text-[#6c6252] backdrop-blur transition hover:bg-[#efe2c6]",
+                  isActive &&
+                    "border-transparent bg-[#1f1b16] text-white shadow-[0_12px_30px_rgba(23,20,16,0.25)] hover:bg-[#1f1b16]"
+                )}
+                onClick={() => setOrderStatusFilter(status)}
+              >
+                {status === "all" ? "Tất cả" : orderStatusLabel[status]}
+              </Button>
+            )
+          })}
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="flex w-full gap-2 md:max-w-sm">
-          <Input
-            value={orderSearchTerm}
-            onChange={(event) => setOrderSearchTerm(event.target.value)}
-            placeholder="Tìm mã đơn, khách hàng, thời gian"
-          />
-          <Button variant="secondary" size="icon">
-            <Filter className="h-4 w-4" />
-          </Button>
-        </div>
-        <div className="text-xs text-slate-500">
-          {filteredOrders.length} / {orders.length} đơn hiển thị
-        </div>
-      </div>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <Card className="overflow-hidden border-none bg-[#fdfbf7] shadow-[0_24px_60px_rgba(23,20,16,0.12)]">
+          <CardHeader className="space-y-4 border-b border-[#ead7b9] bg-[#f7efe1]/70 p-6">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="relative w-full lg:max-w-sm">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#c87d2f]" />
+                <Input
+                  value={orderSearchTerm}
+                  onChange={(event) => setOrderSearchTerm(event.target.value)}
+                  placeholder="Tìm mã đơn, khách hàng, thời gian"
+                  className="h-11 rounded-xl border-[#ead7b9] bg-white/70 pl-10 text-sm text-[#1f1b16] placeholder:text-[#b8a47a]"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-[#7a6f60]">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-2 rounded-full border border-[#ead7b9] bg-white/70 px-4 text-[#6c6252] hover:bg-[#efe2c6]"
+                >
+                  <Filter className="h-4 w-4" /> Bộ lọc nâng cao
+                </Button>
+                <span className="hidden lg:inline">•</span>
+                <span>
+                  {filteredOrders.length} / {orders.length} đơn hiển thị
+                </span>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="min-w-full border-separate border-spacing-0">
+                <thead>
+                  <tr className="text-[11px] uppercase tracking-[0.28em] text-[#b8a47a]">
+                    <th className="px-6 py-4 text-left font-medium">Đơn</th>
+                    <th className="px-6 py-4 text-left font-medium">Khách hàng</th>
+                    <th className="px-6 py-4 text-left font-medium">Ngày tạo</th>
+                    <th className="px-6 py-4 text-left font-medium">Tổng tiền</th>
+                    <th className="px-6 py-4 text-left font-medium">Trạng thái</th>
+                    <th className="px-6 py-4 text-right font-medium"> </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredOrders.map((order) => {
+                    const isSelected = order.id === selectedOrderId
+                    return (
+                      <tr
+                        key={order.id}
+                        onClick={() => openOrderDetail(order)}
+                        className={cn(
+                          "cursor-pointer border-b border-[#f0e4cc] text-sm transition-colors",
+                          isSelected ? "bg-[#f7efe1]" : "hover:bg-[#f9f4ea]"
+                        )}
+                      >
+                        <td className="px-6 py-4 text-sm font-semibold text-[#1f1b16]">
+                          <div className="flex items-center gap-3">
+                            <span className={cn("h-2.5 w-2.5 rounded-full", orderStatusAccent[order.status])} />
+                            {order.id}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-[#6c6252]">{order.customerName}</td>
+                        <td className="px-6 py-4 text-sm text-[#6c6252]">{formatDateTime(order.createdAt)}</td>
+                        <td className="px-6 py-4 text-sm font-medium text-[#1f1b16]">{formatCurrency(order.total)}</td>
+                        <td className="px-6 py-4">
+                          <Badge className={cn("border", orderStatusBadge[order.status])}>{orderStatusLabel[order.status]}</Badge>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 rounded-full border border-transparent bg-[#efe2c6]/60 text-[#1f1b16] hover:bg-[#1f1b16] hover:text-white"
+                            onClick={(event) => {
+                              event.stopPropagation()
+                              openOrderDetail(order, { openDialog: true })
+                            }}
+                            aria-label={`Mở chi tiết ${order.id}`}
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
 
-      <div className="overflow-hidden rounded-xl border">
-        <table className="min-w-full divide-y">
-          <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
-            <tr>
-              <th className="px-4 py-3">Mã đơn</th>
-              <th className="px-4 py-3">Khách hàng</th>
-              <th className="px-4 py-3">Ngày tạo</th>
-              <th className="px-4 py-3">Tổng tiền</th>
-              <th className="px-4 py-3">Trạng thái</th>
-              <th className="px-4 py-3 text-right">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y bg-white">
-            {filteredOrders.map((order) => (
-              <tr key={order.id} className="hover:bg-slate-50">
-                <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-900">{order.id}</td>
-                <td className="px-4 py-3 text-sm text-slate-700">{order.customerName}</td>
-                <td className="px-4 py-3 text-sm text-slate-500">{formatDateTime(order.createdAt)}</td>
-                <td className="px-4 py-3 text-sm text-slate-700">{formatCurrency(order.total)}</td>
-                <td className="px-4 py-3">
-                  <Badge className={cn("border", orderStatusBadge[order.status])}>{orderStatusLabel[order.status]}</Badge>
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <Button size="sm" variant="link" className="text-blue-600" onClick={() => openOrderDetail(order)}>
-                    Xem chi tiết
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        {selectedOrder ? (
+          <div className="flex h-full flex-col justify-between gap-6 rounded-3xl border border-[#ead7b9] bg-white/80 p-6 shadow-[0_20px_50px_rgba(23,20,16,0.1)]">
+            <div className="space-y-5">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#b8a47a]">Order #{selectedOrder.id}</p>
+                  <h3 className="mt-2 text-xl font-semibold text-[#1f1b16]">{selectedOrder.customerName}</h3>
+                  <p className="text-sm text-[#7a6f60]">{formatDateTime(selectedOrder.createdAt)}</p>
+                </div>
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#f7efe1] text-lg font-semibold text-[#c87d2f]">
+                  {getInitials(selectedOrder.customerName)}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge className={cn("border", orderStatusBadge[selectedOrder.status])}>
+                  {orderStatusLabel[selectedOrder.status]}
+                </Badge>
+                <span className="text-sm font-medium text-[#1f1b16]">{formatCurrency(selectedOrder.total)}</span>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-[#1f1b16]">Thông tin giao nhận</h4>
+                <div className="rounded-2xl border border-[#ead7b9] bg-white/60 p-4 text-sm text-[#6c6252]">
+                  <div className="flex items-start gap-2">
+                    <MapPin className="mt-0.5 h-4 w-4 text-[#c87d2f]" />
+                    <span>{selectedOrder.address}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-[#1f1b16]">Sản phẩm</h4>
+                <div className="space-y-2">
+                  {selectedOrder.items.map((item) => (
+                    <div
+                      key={item.sku}
+                      className="flex items-center justify-between rounded-2xl border border-[#ead7b9] bg-white/60 px-4 py-3 text-sm text-[#6c6252]"
+                    >
+                      <div>
+                        <div className="font-medium text-[#1f1b16]">{item.name}</div>
+                        <div className="text-xs text-[#9a8f7f]">SKU: {item.sku}</div>
+                      </div>
+                      <div className="text-right text-sm font-medium text-[#1f1b16]">
+                        x{item.quantity} • {formatCurrency(item.price)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="text-sm font-semibold text-[#1f1b16]">Tiến trình đơn</h4>
+                <ol className="space-y-2">
+                  {selectedOrder.timeline.map((step, index) => (
+                    <li
+                      key={`${step.label}-${index}`}
+                      className="flex items-center justify-between rounded-2xl border border-[#ead7b9]/70 bg-white/60 px-4 py-2 text-xs text-[#6c6252]"
+                    >
+                      <div className="flex items-center gap-3">
+                        <span className="h-2.5 w-2.5 rounded-full bg-[#c87d2f]/70" />
+                        <span className="font-medium text-[#1f1b16]">{step.label}</span>
+                      </div>
+                      <span className="font-mono text-[#9a8f7f]">{step.time}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="text-sm font-semibold text-[#1f1b16]">Ghi chú gần đây</h4>
+                <div className="space-y-2 text-xs text-[#6c6252]">
+                  {selectedOrder.notes.length === 0 ? (
+                    <p className="rounded-2xl border border-dashed border-[#ead7b9] bg-white/40 p-3 text-center">
+                      Chưa có ghi chú nội bộ.
+                    </p>
+                  ) : (
+                    selectedOrder.notes.slice(-3).map((note, index) => (
+                      <div
+                        key={`${note}-${index}`}
+                        className="rounded-2xl border border-[#ead7b9] bg-white/60 p-3"
+                      >
+                        {note}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <Button
+                className="w-full gap-2 rounded-full bg-[#1f1b16] text-white hover:bg-[#332b22]"
+                onClick={() => openOrderDetail(selectedOrder, { openDialog: true })}
+              >
+                <Package className="h-4 w-4" /> Cập nhật đơn hàng
+              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  className="flex-1 rounded-full border-[#ead7b9] bg-white/70 text-[#1f1b16] hover:bg-[#efe2c6]"
+                >
+                  Theo dõi vận đơn
+                </Button>
+                <Button
+                  variant="outline"
+                  className="flex-1 rounded-full border-[#ead7b9] bg-white/70 text-[#1f1b16] hover:bg-[#ffe0e0]"
+                >
+                  Tạo hoàn tiền
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex h-full items-center justify-center rounded-3xl border border-dashed border-[#ead7b9] bg-white/60 p-6 text-sm text-[#7a6f60]">
+            Chọn một đơn ở bảng bên trái để xem chi tiết.
+          </div>
+        )}
       </div>
     </div>
   )
@@ -1512,19 +1716,19 @@ export default function StaffAdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <div className="mx-auto flex min-h-screen max-w-[1440px] flex-col lg:flex-row">
-        <aside className="w-full border-b bg-white lg:w-64 lg:border-r lg:border-b-0">
-          <div className="flex items-center justify-between px-6 py-5">
+    <div className="min-h-screen bg-[#f4f1ea]">
+      <div className="mx-auto flex min-h-screen max-w-[1600px] flex-col lg:flex-row">
+        <aside className="w-full border-b border-[#2a2620]/30 bg-[#1c1a16] text-stone-200 lg:w-72 lg:min-h-screen lg:border-r lg:border-b-0">
+          <div className="flex items-center justify-between border-b border-[#2a2620]/50 px-7 py-6">
             <div>
-              <div className="text-sm font-semibold text-blue-600">Staff Control</div>
-              {/* <div className="text-lg font-bold text-slate-900">Operational Hub</div> */}
+              <div className="text-xs uppercase tracking-[0.3em] text-[#d1c4a7]">ProfitPulse</div>
+              <div className="mt-1 text-lg font-semibold text-white">Staff Console</div>
             </div>
-            <Badge variant="outline" className="flex items-center gap-1">
+            <Badge className="flex items-center gap-1 border-[#f5c162]/40 bg-[#f5c162]/20 text-[#f5c162]">
               <Bell className="h-4 w-4" /> 4
             </Badge>
           </div>
-          <nav className="space-y-1 px-3 pb-6">
+          <nav className="space-y-1 px-4 py-6">
             {navItems.map((item) => {
               const Icon = item.icon
               const isActive = activeSection === item.key
@@ -1532,43 +1736,43 @@ export default function StaffAdminPage() {
                 <button
                   key={item.key}
                   className={cn(
-                    "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition",
+                    "flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition",
                     isActive
-                      ? "bg-blue-50 text-blue-700"
-                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                      ? "bg-[#efe2c6] text-[#1f1b16] shadow-[0_8px_24px_rgba(0,0,0,0.2)]"
+                      : "text-stone-300 hover:bg-[#2a2620] hover:text-white"
                   )}
                   onClick={() => setActiveSection(item.key)}
                 >
-                  <Icon className="h-4 w-4" /> {item.label}
+                  <Icon className={cn("h-4 w-4", isActive ? "text-[#c87d2f]" : "text-[#d1c4a7]")} /> {item.label}
                 </button>
               )
             })}
           </nav>
         </aside>
 
-        <main className="flex-1 overflow-y-auto p-6">
-          <div className="mx-auto max-w-6xl space-y-6">
-            <header className="flex flex-col gap-4 rounded-xl border bg-white p-4 shadow-sm md:flex-row md:items-center md:justify-between">
+        <main className="flex-1 overflow-y-auto bg-[#f4f1ea] p-6 lg:p-10">
+          <div className="mx-auto max-w-6xl space-y-8">
+            <header className="flex flex-col gap-4 rounded-3xl border border-[#ead7b9] bg-[#fdfbf7] p-6 shadow-[0_24px_60px_rgba(23,20,16,0.08)] md:flex-row md:items-center md:justify-between">
               <div>
-                <div className="text-sm uppercase tracking-wide text-slate-500">Bảng điều khiển Staff</div>
-                <h1 className="text-2xl font-semibold text-slate-900">
+                <div className="text-xs font-semibold uppercase tracking-[0.32em] text-[#b8a47a]">Staff Dashboard</div>
+                <h1 className="mt-2 text-3xl font-semibold text-[#1f1b16]">
                   {navItems.find((item) => item.key === activeSection)?.label}
                 </h1>
               </div>
-              <div className="flex flex-wrap gap-2 text-sm text-slate-500">
-                <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1">
-                  <User className="h-4 w-4" /> {profile.name}
+              <div className="flex flex-wrap gap-2 text-sm text-[#6c6252]">
+                <div className="inline-flex items-center gap-2 rounded-full border border-[#ead7b9] bg-white/60 px-4 py-1.5">
+                  <User className="h-4 w-4 text-[#c87d2f]" /> {profile.name}
                 </div>
-                <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1">
-                  <ClipboardList className="h-4 w-4" /> {orders.length} đơn
+                <div className="inline-flex items-center gap-2 rounded-full border border-[#ead7b9] bg-white/60 px-4 py-1.5">
+                  <Mail className="h-4 w-4 text-[#c87d2f]" /> {profile.email}
                 </div>
-                <div className="inline-flex items-center gap-2 rounded-full border px-3 py-1">
-                  <LifeBuoy className="h-4 w-4" /> {tickets.length} vé hỗ trợ
+                <div className="inline-flex items-center gap-2 rounded-full border border-[#ead7b9] bg-white/60 px-4 py-1.5">
+                  <Phone className="h-4 w-4 text-[#c87d2f]" /> {profile.phone}
                 </div>
               </div>
             </header>
 
-            <section className="space-y-6">{sectionContent[activeSection]}</section>
+            <section className="space-y-8">{sectionContent[activeSection]}</section>
           </div>
         </main>
       </div>
