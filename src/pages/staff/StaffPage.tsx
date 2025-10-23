@@ -25,6 +25,7 @@ import {
   User,
   UserCog,
   Users,
+  LogOut,
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
@@ -1717,7 +1718,6 @@ export default function StaffAdminPage() {
 
   return (
     <div className="min-h-screen bg-[#f4f1ea] h-screen overflow-hidden p-4">
-      {/* Container chính */}
       <div className="mx-auto flex h-full max-w-[1600px] flex-col lg:flex-row">
         {/* Sidebar */}
         <aside
@@ -1729,37 +1729,54 @@ export default function StaffAdminPage() {
           )}
           style={{ scrollbarGutter: 'stable' }}
         >
-          <div className="p-6">
+          <div className="p-4">
             {/* Header Sidebar */}
             <div className="flex items-center justify-between border-b border-[#2a2620]/50 px-7 py-6">
               <div>
-                <div className="text-xs uppercase tracking-[0.3em] text-[#d1c4a7]">ProfitPulse</div>
+                <div className="text-xs uppercase tracking-[0.2em] text-[#d1c4a7]">Fashion Store</div>
                 <div className="mt-1 text-lg font-semibold text-white">Staff Console</div>
               </div>
               <Badge className="flex items-center gap-1 border-[#f5c162]/40 bg-[#f5c162]/20 text-[#f5c162]">
                 <Bell className="h-4 w-4" /> 4
               </Badge>
             </div>
+
             {/* Navigation */}
-            <nav className="space-y-1 px-4 py-6">
-              {navItems.map((item) => {
-                const Icon = item.icon
-                const isActive = activeSection === item.key
-                return (
-                  <button
-                    key={item.key}
-                    className={cn(
-                      "flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition",
-                      isActive
-                        ? "bg-[#efe2c6] text-[#1f1b16] shadow-[0_8px_24px_rgba(0,0,0,0.2)]"
-                        : "text-stone-300 hover:bg-[#2a2620] hover:text-white"
-                    )}
-                    onClick={() => setActiveSection(item.key)}
-                  >
-                    <Icon className={cn("h-4 w-4", isActive ? "text-[#c87d2f]" : "text-[#d1c4a7]")} /> {item.label}
-                  </button>
-                )
-              })}
+            <nav className="space-y-1 flex-grow overflow-y-auto flex flex-col">
+              <div className="flex-grow">
+                {navItems.map((item) => {
+                  const Icon = item.icon
+                  const isActive = activeSection === item.key
+                  return (
+                    <button
+                      key={item.key}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-xl px-5 py-4 text-base font-medium transition",
+                        isActive
+                          ? "bg-[#efe2c6] text-[#1f1b16] shadow-[0_8px_24px_rgba(0,0,0,0.2)]"
+                          : "text-stone-300 hover:bg-[#2a2620] hover:text-white"
+                      )}
+                      onClick={() => setActiveSection(item.key)}
+                    >
+                      <Icon className={cn("h-5 w-5", isActive ? "text-[#c87d2f]" : "text-[#d1c4a7]")} />
+                      {item.label}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Separator Line */}
+              <hr className="border-t border-[#2a2620]/50 my-4" />
+
+              <button
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-xl px-5 py-4 text-base font-medium transition text-stone-400 hover:bg-red-900/50 hover:text-red-300",
+                  "mt-2"
+                )}
+              >
+                <LogOut className="h-5 w-5 text-red-400" />
+                Đăng xuất
+              </button>
             </nav>
           </div>
         </aside>
