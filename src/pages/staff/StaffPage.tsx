@@ -1716,51 +1716,55 @@ export default function StaffAdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f4f1ea] lg:p-4">
+    <div className="min-h-screen bg-[#f4f1ea] h-screen overflow-hidden p-4">
       {/* Container chính */}
-      <div className="mx-auto flex min-h-screen max-w-[1600px] flex-col lg:flex-row">
+      <div className="mx-auto flex h-full max-w-[1600px] flex-col lg:flex-row">
         {/* Sidebar */}
         <aside
           className={cn(
-            "w-full border-b border-[#2a2620]/30 bg-[#1c1a16] text-stone-200", // Class gốc
-            "lg:w-72 lg:min-h-screen lg:border-r lg:border-b-0", // Class gốc cho layout lớn
-            "lg:rounded-3xl lg:overflow-hidden" // ---> THÊM CÁC CLASS NÀY <---
+            "w-full border-b border-[#2a2620]/30 bg-[#1c1a16] text-stone-200",
+            "lg:w-72 lg:min-h-screen lg:border-r lg:border-b-0",
+            "lg:sticky lg:top-0 lg:h-full lg:rounded-3xl lg:overflow-hidden",
+            "lg:overflow-y-auto"
           )}
+          style={{ scrollbarGutter: 'stable' }}
         >
-          {/* Header Sidebar */}
-          <div className="flex items-center justify-between border-b border-[#2a2620]/50 px-7 py-6">
-            <div>
-              <div className="text-xs uppercase tracking-[0.3em] text-[#d1c4a7]">ProfitPulse</div>
-              <div className="mt-1 text-lg font-semibold text-white">Staff Console</div>
+          <div className="p-6">
+            {/* Header Sidebar */}
+            <div className="flex items-center justify-between border-b border-[#2a2620]/50 px-7 py-6">
+              <div>
+                <div className="text-xs uppercase tracking-[0.3em] text-[#d1c4a7]">ProfitPulse</div>
+                <div className="mt-1 text-lg font-semibold text-white">Staff Console</div>
+              </div>
+              <Badge className="flex items-center gap-1 border-[#f5c162]/40 bg-[#f5c162]/20 text-[#f5c162]">
+                <Bell className="h-4 w-4" /> 4
+              </Badge>
             </div>
-            <Badge className="flex items-center gap-1 border-[#f5c162]/40 bg-[#f5c162]/20 text-[#f5c162]">
-              <Bell className="h-4 w-4" /> 4
-            </Badge>
+            {/* Navigation */}
+            <nav className="space-y-1 px-4 py-6">
+              {navItems.map((item) => {
+                const Icon = item.icon
+                const isActive = activeSection === item.key
+                return (
+                  <button
+                    key={item.key}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition",
+                      isActive
+                        ? "bg-[#efe2c6] text-[#1f1b16] shadow-[0_8px_24px_rgba(0,0,0,0.2)]"
+                        : "text-stone-300 hover:bg-[#2a2620] hover:text-white"
+                    )}
+                    onClick={() => setActiveSection(item.key)}
+                  >
+                    <Icon className={cn("h-4 w-4", isActive ? "text-[#c87d2f]" : "text-[#d1c4a7]")} /> {item.label}
+                  </button>
+                )
+              })}
+            </nav>
           </div>
-          {/* Navigation */}
-          <nav className="space-y-1 px-4 py-6">
-            {navItems.map((item) => {
-              const Icon = item.icon
-              const isActive = activeSection === item.key
-              return (
-                <button
-                  key={item.key}
-                  className={cn(
-                    "flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition",
-                    isActive
-                      ? "bg-[#efe2c6] text-[#1f1b16] shadow-[0_8px_24px_rgba(0,0,0,0.2)]"
-                      : "text-stone-300 hover:bg-[#2a2620] hover:text-white"
-                  )}
-                  onClick={() => setActiveSection(item.key)}
-                >
-                  <Icon className={cn("h-4 w-4", isActive ? "text-[#c87d2f]" : "text-[#d1c4a7]")} /> {item.label}
-                </button>
-              )
-            })}
-          </nav>
         </aside>
 
-        <main className="flex-1 overflow-y-auto bg-[#f4f1ea] p-6 lg:p-10 lg:ml-4">
+        <main className="flex-1 overflow-y-auto bg-[#f4f1ea] p-6 lg:p-10">
           <div className="mx-auto max-w-6xl space-y-8">
             <header className="flex flex-col gap-4 rounded-3xl border border-[#ead7b9] bg-[#fdfbf7] p-6 shadow-[0_24px_60px_rgba(23,20,16,0.08)] md:flex-row md:items-center md:justify-between">
               <div>
