@@ -1723,8 +1723,8 @@ export default function StaffAdminPage() {
         <aside
           className={cn(
             "w-full border-b border-[#2a2620]/30 bg-[#1c1a16] text-stone-200",
-            "lg:w-72 lg:min-h-screen lg:border-r lg:border-b-0",
-            "lg:sticky lg:top-0 lg:h-full lg:rounded-3xl lg:overflow-hidden",
+            "lg:w-72 lg:border-r lg:border-b-0",
+            "lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:rounded-3xl lg:overflow-hidden",
             "lg:overflow-y-auto"
           )}
           style={{ scrollbarGutter: 'stable' }}
