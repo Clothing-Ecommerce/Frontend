@@ -135,13 +135,13 @@ function getInitials(name: string) {
 
 const navItems: Array<{ key: StaffSectionKey; label: string; icon: React.ElementType; to: string }> = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, to: "/staff/dashboard" },
-  { key: "orders", label: "Đơn hàng", icon: ClipboardList, to: "/staff/orders" },
+  { key: "orders", label: "Đơn Hàng", icon: ClipboardList, to: "/staff/orders" },
   { key: "inventory", label: "Kho hàng (admin)", icon: Boxes, to: "/staff/inventory" },
-  { key: "products", label: "Sản phẩm", icon: Tag, to: "/staff/products" },
-  { key: "customers", label: "Khách hàng", icon: Users, to: "/staff/customers" },
-  { key: "support", label: "Hỗ trợ", icon: LifeBuoy, to: "/staff/support" },
-  { key: "reports", label: "Báo cáo", icon: BarChart3, to: "/staff/reports" },
-  { key: "profile", label: "Hồ sơ", icon: UserCog, to: "/staff/profile" },
+  { key: "products", label: "Sản Phẩm", icon: Tag, to: "/staff/products" },
+  { key: "customers", label: "Khách Hàng", icon: Users, to: "/staff/customers" },
+  { key: "support", label: "Hỗ Trợ", icon: LifeBuoy, to: "/staff/support" },
+  { key: "reports", label: "Báo Cáo", icon: BarChart3, to: "/staff/reports" },
+  { key: "profile", label: "Hồ Sơ", icon: UserCog, to: "/staff/profile" },
 ]
 
 const sectionRoutes: Record<StaffSectionKey, string> = navItems.reduce(

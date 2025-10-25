@@ -25,17 +25,17 @@ import { useMemo } from "react"
 
 const navItems = [
   { label: "Dashboard", to: "/admin/dashboard", icon: LayoutDashboard },
-  { label: "Orders", to: "/admin/orders", icon: ShoppingBag },
-  { label: "Products", to: "/admin/products", icon: PackageSearch },
-  { label: "Categories", to: "/admin/categories", icon: Layers },
+  { label: "Đơn Hàng", to: "/admin/orders", icon: ShoppingBag },
+  { label: "Sản Phẩm", to: "/admin/products", icon: PackageSearch },
+  { label: "Danh Mục", to: "/admin/categories", icon: Layers },
   { label: "Inventory & Shipping (bỏ)", to: "/admin/inventory", icon: Warehouse },
-  { label: "Customers", to: "/admin/customers", icon: Users },
-  { label: "Reports & Analytics (biểu đồ,thống kê năng suất của nhân viên)", to: "/admin/reports", icon: BarChart3 },
-  { label: "Users & Roles", to: "/admin/users", icon: ShieldCheck },
-  { label: "Settings", to: "/admin/settings", icon: Settings },
-  { label: "Support (Chỉnh sửa lại)", to: "/admin/support", icon: LifeBuoy },
-  { label: "Promotions", to: "/admin/marketing", icon: Megaphone },
-  { label: "Audit Logs", to: "/admin/audit", icon: History },
+  { label: "Khách Hàng", to: "/admin/customers", icon: Users },
+  { label: "Báo Cáo & Phân Tích (biểu đồ,thống kê năng suất của nhân viên)", to: "/admin/reports", icon: BarChart3 },
+  { label: "Người Dùng", to: "/admin/users", icon: ShieldCheck },
+  { label: "Cài Đặt", to: "/admin/settings", icon: Settings },
+  { label: "Hỗ Trợ (Chỉnh sửa lại)", to: "/admin/support", icon: LifeBuoy },
+  { label: "Khuyến Mãi", to: "/admin/marketing", icon: Megaphone },
+  { label: "Nhật Ký", to: "/admin/audit", icon: History },
 ] as const
 
 export default function AdminLayout() {
@@ -70,7 +70,7 @@ export default function AdminLayout() {
             <div className="flex-shrink-0 p-4">
               <div className="flex items-center justify-between border-b border-[#2a2620]/50 px-7 py-6">
                 <div>
-                  <div className="text-xs uppercase tracking-[0.2em] text-[#d1c4a7]">HyperCommerce</div>
+                  <div className="text-xs uppercase tracking-[0.2em] text-[#d1c4a7]">FASHION STORE</div>
                   <div className="mt-1 text-lg font-semibold text-white">Admin Console</div>
                 </div>
                 <Badge className="flex items-center gap-1 border-[#f5c162]/40 bg-[#f5c162]/20 text-[#f5c162]">

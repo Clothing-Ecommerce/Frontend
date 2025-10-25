@@ -200,13 +200,12 @@ export default function StaffOrdersPage() {
             <div className="overflow-x-auto">
               <table className="min-w-full border-separate border-spacing-0">
                 <thead>
-                  <tr className="text-[11px] uppercase tracking-[0.28em] text-[#b8a47a]">
-                    <th className="px-6 py-4 text-left font-medium">Đơn</th>
-                    <th className="px-6 py-4 text-left font-medium">Khách hàng</th>
-                    <th className="px-6 py-4 text-left font-medium">Ngày tạo</th>
-                    <th className="px-6 py-4 text-left font-medium">Tổng tiền</th>
-                    <th className="px-6 py-4 text-left font-medium">Trạng thái</th>
-                    <th className="px-6 py-4 text-right font-medium"> </th>
+                  <tr className="text-[10px] uppercase tracking-[0.28em] text-black">
+                    <th className="px-6 py-4 text-left font-bold">Đơn</th>
+                    <th className="px-6 py-4 text-left font-bold">Khách hàng</th>
+                    <th className="px-6 py-4 text-left font-bold">Ngày tạo</th>
+                    <th className="px-6 py-4 text-left font-bold">Tổng tiền</th>
+                    <th className="px-6 py-4 text-left font-bold">Trạng thái</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -234,19 +233,6 @@ export default function StaffOrdersPage() {
                           <Badge className={cn("border", orderStatusBadge[order.status])}>
                             {orderStatusLabel[order.status]}
                           </Badge>
-                        </td>
-                        <td className="px-6 py-4 text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="rounded-full border border-[#ead7b9] px-3 py-1 text-xs text-[#1f1b16] hover:bg-[#efe2c6]"
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              openOrderDetail(order, { openDialog: true })
-                            }}
-                          >
-                            Cập nhật
-                          </Button>
                         </td>
                       </tr>
                     )
