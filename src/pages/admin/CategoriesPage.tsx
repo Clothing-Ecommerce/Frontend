@@ -88,33 +88,6 @@ export default function CategoriesPage() {
       }))
   }
 
-  const reorder = (direction: "up" | "down") => {
-    if (!selectedCategory) return
-    setCategories((prev) => reorderTree(prev, selectedCategory, direction))
-  }
-
-  const reorderTree = (
-    nodes: EditableCategory[],
-    id: string,
-    direction: "up" | "down",
-  ): EditableCategory[] => {
-    const index = nodes.findIndex((node) => node.id === id)
-    if (index !== -1) {
-      const newNodes = [...nodes]
-      if (direction === "up" && index > 0) {
-        ;[newNodes[index - 1], newNodes[index]] = [newNodes[index], newNodes[index - 1]]
-      }
-      if (direction === "down" && index < nodes.length - 1) {
-        ;[newNodes[index + 1], newNodes[index]] = [newNodes[index], newNodes[index + 1]]
-      }
-      return newNodes
-    }
-    return nodes.map((node) => ({
-      ...node,
-      children: node.children ? reorderTree(node.children, id, direction) : undefined,
-    }))
-  }
-
   return (
     <div className="space-y-6">
       <Card>
