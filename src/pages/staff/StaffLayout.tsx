@@ -11,11 +11,13 @@ import {
   UserCog,
   Bell,
   LogOut,
+  Mail,
+  Phone,
+  User,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Separator } from "@/components/ui/separator"
+import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { ToastContainer, type ToastProps } from "@/components/ui/toast"
 import {
@@ -107,7 +109,7 @@ function formatCurrency(value: number) {
 function formatDate(iso: string) {
   try {
     return dateFormatter.format(new Date(iso))
-  } catch (error) {
+  } catch {
     return iso
   }
 }
@@ -115,7 +117,7 @@ function formatDate(iso: string) {
 function formatDateTime(iso: string) {
   try {
     return dateTimeFormatter.format(new Date(iso))
-  } catch (error) {
+  } catch {
     return iso
   }
 }
@@ -244,6 +246,18 @@ export default function StaffLayout() {
     return found?.label ?? "Staff"
   }, [location.pathname])
 
+  const pendingTickets = useMemo(
+    () => tickets.filter((ticket) => ticket.status !== "resolved").length,
+    [tickets],
+  )
+
+  const pendingNewOrders = useMemo(
+    () => orders.filter((order) => order.status === "new").length,
+    [orders],
+  )
+
+  const notificationCount = pendingTickets + pendingNewOrders
+
   const outletContext: StaffOutletContext = {
     orders,
     setOrders,
@@ -286,64 +300,94 @@ export default function StaffLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <div className="flex min-h-screen">
-        <aside className="hidden w-72 shrink-0 border-r bg-white/90 backdrop-blur md:flex md:flex-col">
-          <div className="flex items-center justify-between px-6 py-5">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-primary">HyperCommerce</p>
-              <h1 className="text-xl font-bold text-slate-900">Staff Console</h1>
-            </div>
-            <Button size="sm" variant="outline" onClick={() => navigate("/")}>
-              Về trang bán
-            </Button>
-          </div>
-          <Separator />
-          <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-            {navItems.map((item) => {
-              const Icon = item.icon
-              return (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  className={({ isActive }) =>
-                    cn(
-                      "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
-                      isActive || location.pathname.startsWith(item.to)
-                        ? "bg-slate-900 text-white shadow"
-                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900",
-                    )
-                  }
-                >
-                  <Icon className="h-4 w-4" />
-                  <span className="flex-1 truncate">{item.label}</span>
-                </NavLink>
-              )
-            })}
-          </nav>
-        </aside>
-        <main className="flex-1">
-          <header className="sticky top-0 z-10 border-b bg-white/80 backdrop-blur">
-            <div className="flex flex-wrap items-center justify-between gap-4 px-6 py-4">
+    <div className="min-h-screen bg-[#f4f1ea] p-4 text-[#1f1b16]">
+      <div className="mx-auto flex h-full max-w-[1600px] flex-col lg:flex-row">
+        <aside
+          className={cn(
+            "flex w-full flex-col border-b border-[#2a2620]/30 bg-[#1c1a16] text-stone-200",
+            "lg:w-72 lg:border-r lg:border-b-0",
+            "lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:rounded-3xl lg:overflow-hidden",
+            "lg:overflow-y-auto",
+          )}
+          style={{ scrollbarGutter: "stable" }}
+        >
+          <div className="p-4">
+            <div className="flex items-center justify-between border-b border-[#2a2620]/50 px-7 py-6">
               <div>
-                <p className="text-xs uppercase tracking-widest text-slate-500">Khu vực nhân viên</p>
-                <h2 className="text-2xl font-semibold text-slate-900">{currentTitle}</h2>
+                <div className="text-xs uppercase tracking-[0.2em] text-[#d1c4a7]">Fashion Store</div>
+                <div className="mt-1 text-lg font-semibold text-white">Staff Console</div>
               </div>
-              <div className="flex flex-1 items-center justify-end gap-3 md:max-w-xl">
-                <Input placeholder="Tìm kiếm nhanh" className="max-w-sm" />
-                <Button variant="ghost" size="icon" className="relative">
-                  <Bell className="h-4 w-4" />
-                  <span className="absolute right-1 top-1 inline-flex h-2 w-2 rounded-full bg-primary" />
-                </Button>
-                <Button variant="outline" size="icon">
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </div>
+              <Badge className="flex items-center gap-1 border-[#f5c162]/40 bg-[#f5c162]/20 text-[#f5c162]">
+                <Bell className="h-4 w-4" /> {notificationCount}
+              </Badge>
             </div>
-          </header>
-          <section className="space-y-6 px-4 pb-10 pt-6 md:px-6 lg:px-10">
-            <Outlet context={outletContext} />
-          </section>
+
+            <nav className="flex flex-1 flex-col space-y-1">
+              <div className="flex-1 space-y-1">
+                {navItems.map((item) => {
+                  const Icon = item.icon
+                  const isActive = location.pathname.startsWith(item.to)
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      className={cn(
+                        "flex w-full items-center gap-3 rounded-xl px-5 py-4 text-base font-medium transition",
+                        isActive
+                          ? "bg-[#efe2c6] text-[#1f1b16] shadow-[0_8px_24px_rgba(0,0,0,0.2)]"
+                          : "text-stone-300 hover:bg-[#2a2620] hover:text-white",
+                      )}
+                    >
+                      <Icon className={cn("h-5 w-5", isActive ? "text-[#c87d2f]" : "text-[#d1c4a7]")} />
+                      <span className="flex-1 truncate">{item.label}</span>
+                    </NavLink>
+                  )
+                })}
+              </div>
+
+              <hr className="my-4 border-t border-[#2a2620]/50" />
+
+              <button
+                className="flex w-full items-center gap-3 rounded-xl px-5 py-4 text-base font-medium text-stone-400 transition hover:bg-red-900/50 hover:text-red-200"
+              >
+                <LogOut className="h-5 w-5 text-red-300" />
+                Đăng xuất
+              </button>
+            </nav>
+          </div>
+        </aside>
+        <main className="flex-1 overflow-y-auto bg-[#f4f1ea] p-6 lg:p-10">
+          <div className="mx-auto max-w-6xl space-y-8">
+            <header className="flex flex-col gap-4 rounded-3xl border border-[#ead7b9] bg-[#fdfbf7] p-6 shadow-[0_24px_60px_rgba(23,20,16,0.08)] md:flex-row md:items-center md:justify-between">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-[0.32em] text-[#b8a47a]">Staff Dashboard</div>
+                <h2 className="mt-2 text-3xl font-semibold text-[#1f1b16]">{currentTitle}</h2>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 text-sm text-[#6c6252]">
+                <div className="inline-flex items-center gap-2 rounded-full border border-[#ead7b9] bg-white/60 px-4 py-1.5">
+                  <User className="h-4 w-4 text-[#c87d2f]" /> {profile.name}
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-[#ead7b9] bg-white/60 px-4 py-1.5">
+                  <Mail className="h-4 w-4 text-[#c87d2f]" /> {profile.email}
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-[#ead7b9] bg-white/60 px-4 py-1.5">
+                  <Phone className="h-4 w-4 text-[#c87d2f]" /> {profile.phone}
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-full border-[#ead7b9] bg-white/70 text-[#1f1b16] hover:bg-[#efe2c6]"
+                  onClick={() => navigate("/")}
+                >
+                  Về trang bán
+                </Button>
+              </div>
+            </header>
+
+            <section className="space-y-8">
+              <Outlet context={outletContext} />
+            </section>
+          </div>
         </main>
       </div>
       <ToastContainer

@@ -64,10 +64,6 @@ export default function CustomersPage() {
     )
   }
 
-  const bulkExport = () => {
-    alert(`Xuất dữ liệu ${selectedCustomers.length} khách hàng để CSKH/marketing.`)
-  }
-
   return (
     <div className="space-y-6">
       <Card>

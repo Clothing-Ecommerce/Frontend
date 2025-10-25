@@ -10,7 +10,7 @@ import CheckoutPage from "./pages/cart/CheckoutPage";
 import PaymentSuccessPage from "./pages/cart/PaymentSuccessPage";
 import WishlistPage from "./pages/wishlist/WishlistPage";
 
-// import StaffPage from "./pages/staff/StaffPage";
+import StaffPage from "./pages/staff/StaffPage(old)";
 import StaffLayout from "./pages/staff/StaffLayout";
 import StaffDashboardPage from "./pages/staff/DashboardPage";
 import StaffOrdersPage from "./pages/staff/OrdersPage";
@@ -54,7 +54,7 @@ function App() {
         <Route path="/cart/checkout/success" element={<PaymentSuccessPage />} />
         <Route path="/wishlist" element={<WishlistPage />} />
 
-        {/* <Route path="/staff" element={<StaffPage />} /> */}
+        <Route path="/staff-old" element={<StaffPage />} />
         <Route path="/staff" element={<StaffLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<StaffDashboardPage />} />
