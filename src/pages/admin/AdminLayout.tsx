@@ -64,6 +64,7 @@ export default function AdminLayout() {
             "lg:w-72 lg:border-r lg:border-b-0",
             "lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:rounded-3xl lg:overflow-hidden",
             "lg:overflow-y-auto",
+            "lg:[scrollbar-width:none] lg:[-ms-overflow-style:none] lg:[&::-webkit-scrollbar]:hidden"
           )}
           style={{ scrollbarGutter: "stable" }}
         >
