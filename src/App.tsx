@@ -10,21 +10,30 @@ import CheckoutPage from "./pages/cart/CheckoutPage";
 import PaymentSuccessPage from "./pages/cart/PaymentSuccessPage";
 import WishlistPage from "./pages/wishlist/WishlistPage";
 
-import StaffPage from "./pages/staff/StaffPage";
+// import StaffPage from "./pages/staff/StaffPage";
+import StaffLayout from "./pages/staff/StaffLayout";
+import StaffDashboardPage from "./pages/staff/DashboardPage";
+import StaffOrdersPage from "./pages/staff/OrdersPage";
+import StaffInventoryPage from "./pages/staff/InventoryPage";
+import StaffProductsPage from "./pages/staff/ProductsPage";
+import StaffCustomersPage from "./pages/staff/CustomersPage";
+import StaffSupportPage from "./pages/staff/SupportPage";
+import StaffReportsPage from "./pages/staff/ReportsPage";
+import StaffProfilePage from "./pages/staff/ProfilePage";
 
 import AdminLayout from "./pages/admin/AdminLayout";
-import DashboardPage from "./pages/admin/DashboardPage";
-import OrdersPage from "./pages/admin/OrdersPage";
-import ProductsPage from "./pages/admin/ProductsPage";
-import CategoriesPage from "./pages/admin/CategoriesPage";
-import InventoryPage from "./pages/admin/InventoryPage";
-import CustomersPage from "./pages/admin/CustomersPage";
-import ReportsPage from "./pages/admin/ReportsPage";
-import UsersRolesPage from "./pages/admin/UsersRolesPage";
-import SettingsPage from "./pages/admin/SettingsPage";
-import SupportPage from "./pages/admin/SupportPage";
-import MarketingPage from "./pages/admin/MarketingPage";
-import AuditLogsPage from "./pages/admin/AuditLogsPage";
+import AdminDashboardPage from "./pages/admin/DashboardPage";
+import AdminOrdersPage from "./pages/admin/OrdersPage";
+import AdminProductsPage from "./pages/admin/ProductsPage";
+import AdminCategoriesPage from "./pages/admin/CategoriesPage";
+import AdminInventoryPage from "./pages/admin/InventoryPage";
+import AdminCustomersPage from "./pages/admin/CustomersPage";
+import AdminReportsPage from "./pages/admin/ReportsPage";
+import AdminUsersRolesPage from "./pages/admin/UsersRolesPage";
+import AdminSettingsPage from "./pages/admin/SettingsPage";
+import AdminSupportPage from "./pages/admin/SupportPage";
+import AdminMarketingPage from "./pages/admin/MarketingPage";
+import AdminAuditLogsPage from "./pages/admin/AuditLogsPage";
 
 // import PrivateRoute from "./utils/PrivateRoute";
 // import PublicRoute from "./utils/PublicRoute";
@@ -45,22 +54,33 @@ function App() {
         <Route path="/cart/checkout/success" element={<PaymentSuccessPage />} />
         <Route path="/wishlist" element={<WishlistPage />} />
 
-        <Route path="/staff" element={<StaffPage />} />
+        {/* <Route path="/staff" element={<StaffPage />} /> */}
+        <Route path="/staff" element={<StaffLayout />}>
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<StaffDashboardPage />} />
+          <Route path="orders" element={<StaffOrdersPage />} />
+          <Route path="inventory" element={<StaffInventoryPage />} />
+          <Route path="products" element={<StaffProductsPage />} />
+          <Route path="customers" element={<StaffCustomersPage />} />
+          <Route path="support" element={<StaffSupportPage />} />
+          <Route path="reports" element={<StaffReportsPage />} />
+          <Route path="profile" element={<StaffProfilePage />} />
+        </Route>
 
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="orders" element={<OrdersPage />} />
-          <Route path="products" element={<ProductsPage />} />
-          <Route path="categories" element={<CategoriesPage />} />
-          <Route path="inventory" element={<InventoryPage />} />
-          <Route path="customers" element={<CustomersPage />} />
-          <Route path="reports" element={<ReportsPage />} />
-          <Route path="users" element={<UsersRolesPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-          <Route path="support" element={<SupportPage />} />
-          <Route path="marketing" element={<MarketingPage />} />
-          <Route path="audit" element={<AuditLogsPage />} />
+          <Route path="dashboard" element={<AdminDashboardPage />} />
+          <Route path="orders" element={<AdminOrdersPage />} />
+          <Route path="products" element={<AdminProductsPage />} />
+          <Route path="categories" element={<AdminCategoriesPage />} />
+          <Route path="inventory" element={<AdminInventoryPage />} />
+          <Route path="customers" element={<AdminCustomersPage />} />
+          <Route path="reports" element={<AdminReportsPage />} />
+          <Route path="users" element={<AdminUsersRolesPage />} />
+          <Route path="settings" element={<AdminSettingsPage />} />
+          <Route path="support" element={<AdminSupportPage />} />
+          <Route path="marketing" element={<AdminMarketingPage />} />
+          <Route path="audit" element={<AdminAuditLogsPage />} />
         </Route>
 
         {/* Public routes (chưa đăng nhập) */}
