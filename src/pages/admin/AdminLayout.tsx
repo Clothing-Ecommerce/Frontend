@@ -62,25 +62,30 @@ export default function AdminLayout() {
           className={cn(
             "flex w-full flex-col border-b border-[#2a2620]/30 bg-[#1c1a16] text-stone-200",
             "lg:w-72 lg:border-r lg:border-b-0",
-            "lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:rounded-3xl lg:overflow-hidden",
-            "lg:overflow-y-auto",
-            "lg:[scrollbar-width:none] lg:[-ms-overflow-style:none] lg:[&::-webkit-scrollbar]:hidden"
+            "lg:sticky lg:top-4 lg:h-[calc(100vh-2rem)] lg:rounded-3xl lg:overflow-hidden"
           )}
           style={{ scrollbarGutter: "stable" }}
         >
-          <div className="p-4">
-            <div className="flex items-center justify-between border-b border-[#2a2620]/50 px-7 py-6">
-              <div>
-                <div className="text-xs uppercase tracking-[0.2em] text-[#d1c4a7]">HyperCommerce</div>
-                <div className="mt-1 text-lg font-semibold text-white">Admin Console</div>
+          <div className="flex h-full flex-col">
+            <div className="flex-shrink-0 p-4">
+              <div className="flex items-center justify-between border-b border-[#2a2620]/50 px-7 py-6">
+                <div>
+                  <div className="text-xs uppercase tracking-[0.2em] text-[#d1c4a7]">HyperCommerce</div>
+                  <div className="mt-1 text-lg font-semibold text-white">Admin Console</div>
+                </div>
+                <Badge className="flex items-center gap-1 border-[#f5c162]/40 bg-[#f5c162]/20 text-[#f5c162]">
+                  <Bell className="h-4 w-4" /> {notificationCount}
+                </Badge>
               </div>
-              <Badge className="flex items-center gap-1 border-[#f5c162]/40 bg-[#f5c162]/20 text-[#f5c162]">
-                <Bell className="h-4 w-4" /> {notificationCount}
-              </Badge>
             </div>
 
-            <nav className="flex flex-1 flex-col space-y-1">
-              <div className="flex-1 space-y-1">
+            <div
+              className={cn(
+                "flex-1 overflow-y-auto px-4 pb-4",
+                "lg:[scrollbar-width:none] lg:[-ms-overflow-style:none] lg:[&::-webkit-scrollbar]:hidden"
+              )}
+            >
+              <nav className="space-y-1">
                 {navItems.map((item) => {
                   const Icon = item.icon
                   const isActive = location.pathname.startsWith(item.to)
@@ -101,15 +106,15 @@ export default function AdminLayout() {
                     </NavLink>
                   )
                 })}
-              </div>
+              </nav>
+            </div>
 
-              <hr className="my-4 border-t border-[#2a2620]/50" />
-
+            <div className="flex-shrink-0 border-t border-[#2a2620]/50 px-4 py-4">
               <button className="flex w-full items-center gap-3 rounded-xl px-5 py-4 text-base font-medium text-stone-400 transition hover:bg-red-900/50 hover:text-red-200">
                 <LogOut className="h-5 w-5 text-red-300" />
                 Đăng xuất
               </button>
-            </nav>
+            </div>
           </div>
         </aside>
         <main className="flex-1 overflow-y-auto bg-[#f4f1ea] p-6 lg:p-10">
