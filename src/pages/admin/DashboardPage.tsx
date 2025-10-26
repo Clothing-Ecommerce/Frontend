@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
+// import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 
 const widgetDefinitions = [
@@ -234,7 +234,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <CardTitle>Sức khỏe sản phẩm</CardTitle>
+              <CardTitle>Tình trạng sản phẩm</CardTitle>
               <CardDescription>Sản phẩm bán chạy, chậm quay vòng và cảnh báo tồn kho</CardDescription>
             </div>
             <Button variant="outline" onClick={() => navigate("/admin/products?tab=inventory")}>Ghép vào danh sách kiểm kho</Button>
@@ -318,7 +318,7 @@ export default function DashboardPage() {
       {widgets.alerts && (
         <Card>
           <CardHeader>
-            <CardTitle>Cảnh báo vận hành & báo cáo ghim</CardTitle>
+            <CardTitle>Cảnh báo vận hành & báo cáo ghim (thay thành bảng thống kê mã khuyến mãi)</CardTitle>
             <CardDescription>
               Theo dõi SLA hỗ trợ, hoàn trả và các báo cáo được ghim lên dashboard
             </CardDescription>
@@ -394,9 +394,9 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      <Separator />
+      {/* <Separator /> */}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+      {/* <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Card>
           <CardHeader>
             <CardTitle>Hành trình vận hành</CardTitle>
@@ -439,7 +439,7 @@ export default function DashboardPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </div> */}
     </div>
   )
 }
