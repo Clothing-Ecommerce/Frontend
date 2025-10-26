@@ -181,6 +181,19 @@ export default function Header({
     ? user.avatar
     : null;
 
+  const managementPath = useMemo(() => {
+    const role = typeof user?.role === "string" ? user.role.toLowerCase() : "";
+    if (role === "admin") return "/admin/dashboard";
+    if (role === "staff") return "/staff/dashboard";
+    return null;
+  }, [user?.role]);
+
+  const handleNavigateToManagement = () => {
+    if (!managementPath) return;
+    navigate(managementPath);
+    setIsAccountDropdownOpen(false);
+  };
+
   const handleSubmitSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const q = searchQuery.trim();
@@ -255,6 +268,15 @@ export default function Header({
                 </div>
                 {isAccountDropdownOpen && (
                   <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-md shadow-lg py-2 z-50">
+                    {managementPath && (
+                      <button
+                        onClick={handleNavigateToManagement}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        Quản Lý
+                      </button>
+                    )}
+                    {managementPath && <hr className="my-1" />}
                     <Link
                       to="/user/profile"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
