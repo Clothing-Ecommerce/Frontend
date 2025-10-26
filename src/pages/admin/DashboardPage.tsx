@@ -322,7 +322,7 @@ export default function DashboardPage() {
             >
           {widgets.revenue && (
             <div
-              className="group relative cursor-pointer overflow-hidden rounded-2xl border border-blue-500/30 bg-gradient-to-br from-[#2563EB] via-[#2F6FF0] to-[#60A5FA] p-6 text-white shadow-lg transition duration-200 hover:scale-[1.02] hover:shadow-2xl"
+              className="group relative cursor-pointer rounded-2xl border border-blue-500/30 bg-gradient-to-br from-[#2563EB] via-[#2F6FF0] to-[#60A5FA] p-6 text-white shadow-lg transition duration-200 hover:scale-[1.02] hover:shadow-2xl"
               onClick={() => setActiveModal("revenue")}
               onMouseEnter={() => setHoveredKpi("revenue")}
               onMouseLeave={() => setHoveredKpi(null)}
