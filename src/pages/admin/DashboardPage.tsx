@@ -1,11 +1,10 @@
 import { useEffect, useId, useMemo, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
+import axios from "axios"
 import {
   alerts,
   bestSellingProducts,
-  dashboardKPIs,
   slowProducts,
-  type TimeRange,
 } from "@/data/adminMock"
 import {
   Card,
@@ -36,6 +35,11 @@ import {
 import { motion } from "framer-motion"
 import { CalendarClock, Info } from "lucide-react"
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts"
+import api from "@/utils/axios"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import type { DashboardOverviewResponse, TimeRange } from "@/types/adminType"
+
+const SPARKLINE_POINTS = 7
 
 const widgetDefinitions = [
   {
@@ -196,6 +200,9 @@ export default function DashboardPage() {
   const [comparePrevious, setComparePrevious] = useState(false)
   const [hoveredKpi, setHoveredKpi] = useState<WidgetId | null>(null)
   const [activeModal, setActiveModal] = useState<WidgetId | null>(null)
+  const [overview, setOverview] = useState<DashboardOverviewResponse | null>(null)
+  const [isOverviewLoading, setIsOverviewLoading] = useState(false)
+  const [overviewError, setOverviewError] = useState<string | null>(null)
 
   useEffect(() => {
     const pinFromQuery = searchParams.get("pin")
@@ -206,43 +213,112 @@ export default function DashboardPage() {
     }
   }, [pinnedReports, searchParams, setSearchParams])
 
-  const activeKpi = dashboardKPIs[timeRange]
+  useEffect(() => {
+    let ignore = false
+    setIsOverviewLoading(true)
+    setOverviewError(null)
+
+    void (async () => {
+      try {
+        const { data } = await api.get<DashboardOverviewResponse>("/admin/dashboard/overview", {
+          params: { range: timeRange },
+        })
+        if (!ignore) {
+          setOverview(data)
+        }
+      } catch (error) {
+        if (ignore) return
+        if (axios.isAxiosError(error)) {
+          const responseData = error.response?.data as { message?: string } | undefined
+          setOverviewError(responseData?.message ?? "Không thể lấy số liệu dashboard")
+        } else {
+          setOverviewError("Không thể lấy số liệu dashboard")
+        }
+      } finally {
+        if (!ignore) {
+          setIsOverviewLoading(false)
+        }
+      }
+    })()
+
+    return () => {
+      ignore = true
+    }
+  }, [timeRange])
+
+  const defaultOverview = useMemo<DashboardOverviewResponse>(
+    () => ({
+      range: timeRange,
+      generatedAt: new Date().toISOString(),
+      revenue: {
+        current: 0,
+        previous: 0,
+        growth: 0,
+        averageOrderValue: null,
+        trend: Array.from({ length: SPARKLINE_POINTS }, () => 0),
+      },
+      orders: {
+        total: 0,
+        previousTotal: 0,
+        counts: {
+          pending: 0,
+          processing: 0,
+          completed: 0,
+          cancelled: 0,
+        },
+      },
+      customers: {
+        new: 0,
+        returning: 0,
+        total: 0,
+        growth: 0,
+        previous: {
+          new: 0,
+          returning: 0,
+          total: 0,
+        },
+      },
+    }),
+    [timeRange],
+  )
+
+  const hasOverviewData = overview?.range === timeRange
+  const metrics: DashboardOverviewResponse = hasOverviewData && overview ? overview : defaultOverview
+
+  const activeKpi = useMemo(
+    () => ({
+      revenue: metrics.revenue.current,
+      orders: metrics.orders.counts,
+      customers: {
+        new: metrics.customers.new,
+        returning: metrics.customers.returning,
+      },
+    }),
+    [metrics],
+  )
 
   const previousKpi = useMemo(
-    () =>
-      ({
-        today: { revenue: 112000000, orders: 302, customers: 168 },
-        week: { revenue: 705000000, orders: 1490, customers: 1180 },
-        month: { revenue: 2980000000, orders: 6380, customers: 4660 },
-        quarter: { revenue: 8750000000, orders: 17700, customers: 14400 },
-        year: { revenue: 34200000000, orders: 68900, customers: 57400 },
-      } as const)[timeRange],
-    [timeRange],
+    () => ({
+      revenue: metrics.revenue.previous,
+      orders: metrics.orders.previousTotal,
+      customers: metrics.customers.previous.total,
+    }),
+    [metrics],
   )
 
   const kpiGrowth = useMemo(
-    () =>
-      ({
-        today: { revenue: 0.14, orders: 0.08, customers: 0.06 },
-        week: { revenue: 0.12, orders: 0.09, customers: 0.08 },
-        month: { revenue: 0.09, orders: 0.06, customers: 0.07 },
-        quarter: { revenue: 0.11, orders: 0.07, customers: 0.05 },
-        year: { revenue: 0.1, orders: 0.08, customers: 0.09 },
-      } as const)[timeRange],
-    [timeRange],
+    () => ({
+      revenue: metrics.revenue.growth ?? 0,
+      orders:
+        metrics.orders.previousTotal > 0
+          ? (metrics.orders.total - metrics.orders.previousTotal) / metrics.orders.previousTotal
+          : 0,
+      customers: metrics.customers.growth ?? 0,
+    }),
+    [metrics],
   )
 
-  const revenueTrend = useMemo(
-    () =>
-      ({
-        today: [86, 88, 96, 110, 122, 128, 132],
-        week: [540, 560, 590, 620, 655, 705, 789],
-        month: [2600, 2680, 2750, 2830, 2940, 3020, 3125],
-        quarter: [8200, 8350, 8540, 8720, 8950, 9100, 9250],
-        year: [29800, 30500, 31400, 32600, 33700, 35200, 36250],
-      } as const)[timeRange],
-    [timeRange],
-  )
+  const revenueTrend = metrics.revenue.trend
 
   const orderStatusMeta = {
     pending: { label: "Chờ xử lý", color: "bg-slate-500", icon: "🕓" },
@@ -251,10 +327,12 @@ export default function DashboardPage() {
     cancelled: { label: "Hủy", color: "bg-rose-500", icon: "❌" },
   } as const
 
-  const totalOrders = Object.values(activeKpi.orders).reduce((sum, val) => sum + val, 0)
-  const newCustomerPercent = Math.round(
-    (activeKpi.customers.new / (activeKpi.customers.new + activeKpi.customers.returning)) * 100,
-  )
+  const totalOrders = metrics.orders.total
+  const newCustomerPercent = metrics.customers.total
+    ? Math.round((metrics.customers.new / metrics.customers.total) * 100)
+    : 0
+  const averageOrderValueLabel =
+    metrics.revenue.averageOrderValue != null ? formatter.format(metrics.revenue.averageOrderValue) : "—"
 
   const toggleWidget = (id: WidgetId) => {
     setWidgets((prev) => ({ ...prev, [id]: !prev[id] }))
@@ -332,13 +410,31 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <motion.div
-              key={timeRange}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.3 }}
-              className="grid gap-6 lg:grid-cols-3"
-            >
+            {overviewError && (
+              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm text-rose-600 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+                {overviewError}
+              </div>
+            )}
+
+            {isOverviewLoading && !hasOverviewData ? (
+              <div className="flex h-48 items-center justify-center">
+                <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
+                  <LoadingSpinner />
+                  <span>Đang tải số liệu...</span>
+                </div>
+              </div>
+            ) : !hasOverviewData ? (
+              <div className="flex h-48 items-center justify-center text-sm text-slate-500 dark:text-slate-400">
+                Chưa có dữ liệu cho chu kỳ này.
+              </div>
+            ) : (
+              <motion.div
+                key={`${metrics.range}-${metrics.generatedAt}`}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.3 }}
+                className={cn("grid gap-6 lg:grid-cols-3", isOverviewLoading && "pointer-events-none opacity-60")}
+              >
           {widgets.revenue && (
             <div
               className="group relative cursor-pointer overflow-visible rounded-2xl border border-blue-500/30 bg-gradient-to-br from-[#2563EB] via-[#2F6FF0] to-[#60A5FA] p-6 text-white shadow-lg transition duration-200 hover:scale-[1.02] hover:shadow-2xl"
@@ -353,7 +449,7 @@ export default function DashboardPage() {
               <h3 className="mt-3 text-3xl font-semibold tracking-tight">
                 {formatter.format(activeKpi.revenue)}
               </h3>
-              {comparePrevious && (
+              {comparePrevious && hasOverviewData && (
                 <p className="mt-1 text-sm font-medium text-emerald-200">
                   {kpiGrowth.revenue >= 0 ? "+" : "-"}
                   {(Math.abs(kpiGrowth.revenue) * 100).toFixed(0)}% so với kỳ trước
@@ -363,8 +459,8 @@ export default function DashboardPage() {
                 <Sparkline data={revenueTrend} />
               </div>
               <div className="mt-4 flex items-center justify-between text-xs text-blue-100/90">
-                <span>Tỉ lệ chuyển đổi 3.2%</span>
-                <span>Giá trị trung bình 1.54 triệu</span>
+                <span>Tỉ lệ chuyển đổi 3.2% (bỏ)</span>
+                <span>Giá trị trung bình {averageOrderValueLabel}</span>
               </div>
               <div
                 className={cn(
@@ -391,28 +487,31 @@ export default function DashboardPage() {
                       Phân bổ trạng thái và SLA giao nhận
                     </p>
                   </div>
-                  {comparePrevious && (
+                  {comparePrevious && hasOverviewData && (
                     <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200">
                       +{(kpiGrowth.orders * 100).toFixed(0)}%
                     </span>
                   )}
                 </div>
                 <div className="mt-6 flex h-3 overflow-hidden rounded-full">
-                  {Object.entries(activeKpi.orders).map(([status, value]) => (
-                    <div
-                      key={status}
-                      className={cn(
-                        "transition-all",
-                        orderStatusMeta[status as keyof typeof orderStatusMeta]?.color ?? "bg-slate-400",
-                      )}
-                      style={{ width: `${(value / totalOrders) * 100}%` }}
-                    />
-                  ))}
+                  {Object.entries(activeKpi.orders).map(([status, value]) => {
+                    const percent = totalOrders > 0 ? (value / totalOrders) * 100 : 0
+                    return (
+                      <div
+                        key={status}
+                        className={cn(
+                          "transition-all",
+                          orderStatusMeta[status as keyof typeof orderStatusMeta]?.color ?? "bg-slate-400",
+                        )}
+                        style={{ width: `${percent}%` }}
+                      />
+                    )
+                  })}
                 </div>
                 <div className="mt-6 space-y-4 text-sm">
                   {Object.entries(activeKpi.orders).map(([status, value]) => {
                     const meta = orderStatusMeta[status as keyof typeof orderStatusMeta]
-                    const percent = Math.round((value / totalOrders) * 100)
+                    const percent = totalOrders > 0 ? Math.round((value / totalOrders) * 100) : 0
                     return (
                       <div key={status} className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -464,7 +563,7 @@ export default function DashboardPage() {
                   <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Khách hàng</p>
                   <p className="text-xs text-slate-500 dark:text-slate-400">Khách mới vs quay lại</p>
                 </div>
-                {comparePrevious && (
+                {comparePrevious && hasOverviewData && (
                   <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200">
                     +{(kpiGrowth.customers * 100).toFixed(0)}%
                   </span>
@@ -517,6 +616,7 @@ export default function DashboardPage() {
             </div>
           )}
             </motion.div>
+            )}
           </CardContent>
         </Card>
 
@@ -556,7 +656,7 @@ export default function DashboardPage() {
                 <div className="space-y-4">
                   {Object.entries(activeKpi.orders).map(([status, value]) => {
                     const meta = orderStatusMeta[status as keyof typeof orderStatusMeta]
-                    const percent = Math.round((value / totalOrders) * 100)
+                    const percent = totalOrders > 0 ? Math.round((value / totalOrders) * 100) : 0
                     return (
                       <div key={status} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
                         <div className="flex items-center justify-between">
