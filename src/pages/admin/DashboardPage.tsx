@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/dialog"
 import { motion } from "framer-motion"
 import { CalendarClock, Info } from "lucide-react"
+import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts"
 
 const widgetDefinitions = [
   {
@@ -144,14 +145,32 @@ function CustomerDonut({
   returningColor: string
 }) {
   const normalized = Math.min(Math.max(newPercent, 0), 100)
+
+  const data = [
+    { type: "new", value: normalized },
+    { type: "returning", value: Math.max(100 - normalized, 0) },
+  ]
+
   return (
-    <div
-      className="relative h-32 w-32"
-      style={{
-        background: `conic-gradient(${newColor} 0 ${normalized}%, ${returningColor} ${normalized}% 100%)`,
-      }}
-    >
-      <div className="absolute inset-3 rounded-full bg-white shadow-inner dark:bg-slate-900" />
+    <div className="relative h-32 w-32">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={data}
+            dataKey="value"
+            innerRadius="72%"
+            outerRadius="100%"
+            stroke="none"
+            startAngle={90}
+            endAngle={-270}
+            isAnimationActive={false}
+          >
+            {data.map((entry, index) => (
+              <Cell key={entry.type} fill={index === 0 ? newColor : returningColor} />
+            ))}
+          </Pie>
+        </PieChart>
+      </ResponsiveContainer>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
         <span className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
           {normalized}%
