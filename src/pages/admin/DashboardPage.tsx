@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useId, useMemo, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import {
   alerts,
@@ -26,6 +26,15 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 // import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { motion } from "framer-motion"
+import { CalendarClock, Info } from "lucide-react"
 
 const widgetDefinitions = [
   {
@@ -74,6 +83,85 @@ const alertRoutes: Record<(typeof alerts)[number]["type"], string> = {
   support: "/admin/support",
 }
 
+function Sparkline({
+  data,
+  stroke = "#fff",
+  fillFrom = "rgba(255,255,255,0.35)",
+  fillTo = "rgba(255,255,255,0)",
+}: {
+  data: ReadonlyArray<number>
+  stroke?: string
+  fillFrom?: string
+  fillTo?: string
+}) {
+  const gradientId = useId()
+  const values = Array.from(data)
+  const max = Math.max(...values)
+  const min = Math.min(...values)
+  const points = values
+    .map((value, index) => {
+      const x = (index / Math.max(values.length - 1, 1)) * 100
+      const y = ((max - value) / Math.max(max - min, 1)) * 100
+      return `${x},${y}`
+    })
+    .join(" ")
+
+  const areaPoints = `${points} 100,100 0,100`
+
+  return (
+    <svg viewBox="0 0 100 100" className="h-full w-full">
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={fillFrom} />
+          <stop offset="100%" stopColor={fillTo} />
+        </linearGradient>
+      </defs>
+      <polyline
+        points={areaPoints}
+        fill={`url(#${gradientId})`}
+        stroke="none"
+        strokeLinejoin="round"
+      />
+      <polyline
+        points={points}
+        fill="none"
+        stroke={stroke}
+        strokeWidth={3}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  )
+}
+
+function CustomerDonut({
+  newPercent,
+  newColor,
+  returningColor,
+}: {
+  newPercent: number
+  newColor: string
+  returningColor: string
+}) {
+  const normalized = Math.min(Math.max(newPercent, 0), 100)
+  return (
+    <div
+      className="relative h-32 w-32"
+      style={{
+        background: `conic-gradient(${newColor} 0 ${normalized}%, ${returningColor} ${normalized}% 100%)`,
+      }}
+    >
+      <div className="absolute inset-3 rounded-full bg-white shadow-inner dark:bg-slate-900" />
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+        <span className="text-2xl font-semibold text-slate-900 dark:text-slate-100">
+          {normalized}%
+        </span>
+        <span className="text-xs uppercase tracking-wide text-slate-500">Khách mới</span>
+      </div>
+    </div>
+  )
+}
+
 export default function DashboardPage() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -86,6 +174,9 @@ export default function DashboardPage() {
     alerts: true,
   })
   const [pinnedReports, setPinnedReports] = useState<string[]>(["Doanh thu theo kênh", "Tồn kho rủi ro"])
+  const [comparePrevious, setComparePrevious] = useState(false)
+  const [hoveredKpi, setHoveredKpi] = useState<WidgetId | null>(null)
+  const [activeModal, setActiveModal] = useState<WidgetId | null>(null)
 
   useEffect(() => {
     const pinFromQuery = searchParams.get("pin")
@@ -98,6 +189,54 @@ export default function DashboardPage() {
 
   const activeKpi = dashboardKPIs[timeRange]
 
+  const previousKpi = useMemo(
+    () =>
+      ({
+        today: { revenue: 112000000, orders: 302, customers: 168 },
+        week: { revenue: 705000000, orders: 1490, customers: 1180 },
+        month: { revenue: 2980000000, orders: 6380, customers: 4660 },
+        quarter: { revenue: 8750000000, orders: 17700, customers: 14400 },
+        year: { revenue: 34200000000, orders: 68900, customers: 57400 },
+      } as const)[timeRange],
+    [timeRange],
+  )
+
+  const kpiGrowth = useMemo(
+    () =>
+      ({
+        today: { revenue: 0.14, orders: 0.08, customers: 0.06 },
+        week: { revenue: 0.12, orders: 0.09, customers: 0.08 },
+        month: { revenue: 0.09, orders: 0.06, customers: 0.07 },
+        quarter: { revenue: 0.11, orders: 0.07, customers: 0.05 },
+        year: { revenue: 0.1, orders: 0.08, customers: 0.09 },
+      } as const)[timeRange],
+    [timeRange],
+  )
+
+  const revenueTrend = useMemo(
+    () =>
+      ({
+        today: [86, 88, 96, 110, 122, 128, 132],
+        week: [540, 560, 590, 620, 655, 705, 789],
+        month: [2600, 2680, 2750, 2830, 2940, 3020, 3125],
+        quarter: [8200, 8350, 8540, 8720, 8950, 9100, 9250],
+        year: [29800, 30500, 31400, 32600, 33700, 35200, 36250],
+      } as const)[timeRange],
+    [timeRange],
+  )
+
+  const orderStatusMeta = {
+    pending: { label: "Chờ xử lý", color: "bg-slate-500", icon: "🕓" },
+    processing: { label: "Đang xử lý", color: "bg-amber-500", icon: "⚙️" },
+    completed: { label: "Hoàn tất", color: "bg-emerald-500", icon: "✅" },
+    cancelled: { label: "Hủy", color: "bg-rose-500", icon: "❌" },
+  } as const
+
+  const totalOrders = Object.values(activeKpi.orders).reduce((sum, val) => sum + val, 0)
+  const newCustomerPercent = Math.round(
+    (activeKpi.customers.new / (activeKpi.customers.new + activeKpi.customers.returning)) * 100,
+  )
+
   const toggleWidget = (id: WidgetId) => {
     setWidgets((prev) => ({ ...prev, [id]: !prev[id] }))
   }
@@ -108,127 +247,364 @@ export default function DashboardPage() {
     )
   }
 
-  const renderOrderStatusBar = () => {
-    const total = Object.values(activeKpi.orders).reduce((sum, val) => sum + val, 0)
-    return (
-      <div className="mt-3 flex overflow-hidden rounded-full border text-xs">
-        {Object.entries(activeKpi.orders).map(([status, value]) => (
-          <div
-            key={status}
-            className={cn(
-              "flex-1 px-3 py-1 text-center text-white",
-              status === "completed" && "bg-emerald-500",
-              status === "processing" && "bg-amber-500",
-              status === "pending" && "bg-slate-500",
-              status === "cancelled" && "bg-rose-500",
-            )}
-            style={{ width: `${(value / total) * 100}%` }}
-          >
-            {status} ({value})
-          </div>
-        ))}
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <CardTitle className="text-xl">Hiệu quả tổng quan</CardTitle>
-            <CardDescription>
-              So sánh theo mốc thời gian và drill-down vào dữ liệu chi tiết
-            </CardDescription>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Chu kỳ</p>
-              <Select value={timeRange} onValueChange={(value) => setTimeRange(value as TimeRange)}>
-                <SelectTrigger className="w-44">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="today">Hôm nay</SelectItem>
-                  <SelectItem value="week">7 ngày</SelectItem>
-                  <SelectItem value="month">30 ngày</SelectItem>
-                  <SelectItem value="quarter">Quý hiện tại</SelectItem>
-                  <SelectItem value="year">Năm nay</SelectItem>
-                </SelectContent>
-              </Select>
+      <Dialog open={activeModal !== null} onOpenChange={(open) => !open && setActiveModal(null)}>
+        <Card>
+          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="space-y-2">
+              <CardTitle className="flex items-center gap-2 text-xl font-semibold text-slate-900 dark:text-slate-100">
+                Hiệu quả tổng quan
+                <span
+                  className="inline-flex"
+                  title="So sánh theo mốc thời gian và drill-down vào dữ liệu chi tiết"
+                >
+                  <Info className="size-4 text-slate-400" aria-hidden />
+                </span>
+              </CardTitle>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Dữ liệu realtime cho các chỉ số cốt lõi của vận hành thương mại.
+              </p>
             </div>
-            <Button variant="outline">Thiết lập so sánh kỳ trước</Button>
-          </div>
-        </CardHeader>
-        <CardContent className="grid gap-6 lg:grid-cols-3">
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="space-y-1">
+                <p className="flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                  <CalendarClock className="size-3.5" /> Chu kỳ
+                </p>
+                <Select value={timeRange} onValueChange={(value) => setTimeRange(value as TimeRange)}>
+                  <SelectTrigger className="flex w-48 items-center gap-2 border-slate-200 text-sm shadow-sm transition focus:ring-2 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+                    <SelectValue placeholder="Chọn chu kỳ" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="today">Hôm nay</SelectItem>
+                    <SelectItem value="week">7 ngày</SelectItem>
+                    <SelectItem value="month">30 ngày</SelectItem>
+                    <SelectItem value="quarter">Quý hiện tại</SelectItem>
+                    <SelectItem value="year">Năm nay</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <button
+                type="button"
+                onClick={() => setComparePrevious((prev) => !prev)}
+                className={cn(
+                  "flex items-center gap-3 rounded-full border px-4 py-2 text-sm font-medium transition",
+                  comparePrevious
+                    ? "border-blue-600 bg-blue-600 text-white shadow-lg"
+                    : "border-slate-300 bg-white text-slate-600 hover:border-blue-400 hover:text-blue-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300",
+                )}
+                aria-pressed={comparePrevious}
+              >
+                <span>So sánh kỳ trước</span>
+                <span
+                  className={cn(
+                    "relative inline-flex h-5 w-10 items-center rounded-full transition",
+                    comparePrevious ? "bg-white/25" : "bg-slate-200 dark:bg-slate-700",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "absolute left-1 top-1 inline-block size-3 rounded-full bg-white shadow-sm transition-transform",
+                      comparePrevious && "translate-x-5 bg-emerald-300",
+                    )}
+                  />
+                </span>
+              </button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <motion.div
+              key={timeRange}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+              className="grid gap-6 lg:grid-cols-3"
+            >
           {widgets.revenue && (
             <div
-              className="cursor-pointer rounded-xl border bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-500 p-6 text-white shadow-lg"
-              onClick={() => navigate("/admin/reports")}
+              className="group relative cursor-pointer overflow-hidden rounded-2xl border border-blue-500/30 bg-gradient-to-br from-[#2563EB] via-[#2F6FF0] to-[#60A5FA] p-6 text-white shadow-lg transition duration-200 hover:scale-[1.02] hover:shadow-2xl"
+              onClick={() => setActiveModal("revenue")}
+              onMouseEnter={() => setHoveredKpi("revenue")}
+              onMouseLeave={() => setHoveredKpi(null)}
             >
-              <p className="text-sm uppercase tracking-widest text-blue-100">Doanh thu</p>
-              <h3 className="text-3xl font-semibold">{formatter.format(activeKpi.revenue)}</h3>
-              <p className="mt-2 text-sm text-blue-100">+12% so với kỳ trước</p>
-              <div className="mt-4 flex items-center justify-between text-xs text-blue-100">
+              <div className="flex items-center gap-2 text-sm uppercase tracking-widest text-blue-100">
+                <span className="text-lg">💰</span>
+                <span>Doanh thu</span>
+              </div>
+              <h3 className="mt-3 text-3xl font-semibold tracking-tight">
+                {formatter.format(activeKpi.revenue)}
+              </h3>
+              {comparePrevious && (
+                <p className="mt-1 text-sm font-medium text-emerald-200">
+                  {kpiGrowth.revenue >= 0 ? "+" : "-"}
+                  {(Math.abs(kpiGrowth.revenue) * 100).toFixed(0)}% so với kỳ trước
+                </p>
+              )}
+              <div className="mt-6 h-20">
+                <Sparkline data={revenueTrend} />
+              </div>
+              <div className="mt-4 flex items-center justify-between text-xs text-blue-100/90">
                 <span>Tỉ lệ chuyển đổi 3.2%</span>
                 <span>Giá trị trung bình 1.54 triệu</span>
+              </div>
+              <div
+                className={cn(
+                  "pointer-events-none absolute left-1/2 top-full z-20 -translate-x-1/2 -translate-y-4 rounded-xl bg-slate-900/90 px-4 py-2 text-xs text-white opacity-0 shadow-lg backdrop-blur-sm transition",
+                  hoveredKpi === "revenue" && "top-[102%] opacity-100",
+                )}
+              >
+                Doanh thu kỳ trước: {formatter.format(previousKpi.revenue)}
               </div>
             </div>
           )}
           {widgets.orders && (
-            <Card className="border-dashed border-blue-100 bg-white/90 hover:border-blue-400">
-              <CardHeader>
-                <CardTitle>Đơn hàng</CardTitle>
-                <CardDescription>Phân bổ trạng thái và SLA giao nhận</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  {Object.entries(activeKpi.orders).map(([status, value]) => (
-                    <div key={status} className="rounded-lg bg-slate-50 p-3 text-center">
-                      <p className="text-xs uppercase tracking-wide text-slate-500">{status}</p>
-                      <p className="text-xl font-semibold text-slate-900">{value}</p>
-                    </div>
-                  ))}
-                </div>
-                {renderOrderStatusBar()}
-                <Button
-                  className="mt-4 w-full"
-                  variant="outline"
-                  onClick={() => navigate("/admin/orders")}
-                >
-                  Drill-down đơn hàng
-                </Button>
-              </CardContent>
-            </Card>
-          )}
-          {widgets.customers && (
-            <Card className="border-emerald-200 bg-white">
-              <CardHeader>
-                <CardTitle>Khách hàng</CardTitle>
-                <CardDescription>Khách mới vs quay lại</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
+            <div
+              className="group flex h-full flex-col justify-between rounded-2xl border border-slate-200 bg-white/90 p-6 shadow-sm transition duration-200 hover:scale-[1.02] hover:shadow-xl dark:border-slate-700 dark:bg-slate-900/80"
+              onClick={() => setActiveModal("orders")}
+              onMouseEnter={() => setHoveredKpi("orders")}
+              onMouseLeave={() => setHoveredKpi(null)}
+            >
+              <div>
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Khách mới</p>
-                    <p className="text-2xl font-semibold text-emerald-600">{activeKpi.customers.new}</p>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Đơn hàng</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Phân bổ trạng thái và SLA giao nhận
+                    </p>
+                  </div>
+                  {comparePrevious && (
+                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200">
+                      +{(kpiGrowth.orders * 100).toFixed(0)}%
+                    </span>
+                  )}
+                </div>
+                <div className="mt-6 flex h-3 overflow-hidden rounded-full">
+                  {Object.entries(activeKpi.orders).map(([status, value]) => (
+                    <div
+                      key={status}
+                      className={cn(
+                        "transition-all",
+                        orderStatusMeta[status as keyof typeof orderStatusMeta]?.color ?? "bg-slate-400",
+                      )}
+                      style={{ width: `${(value / totalOrders) * 100}%` }}
+                    />
+                  ))}
+                </div>
+                <div className="mt-6 space-y-4 text-sm">
+                  {Object.entries(activeKpi.orders).map(([status, value]) => {
+                    const meta = orderStatusMeta[status as keyof typeof orderStatusMeta]
+                    const percent = Math.round((value / totalOrders) * 100)
+                    return (
+                      <div key={status} className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="text-lg" aria-hidden>
+                            {meta?.icon}
+                          </span>
+                          <div>
+                            <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                              {meta?.label ?? status}
+                            </p>
+                            <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">{value}</p>
+                          </div>
+                        </div>
+                        <span className="text-sm font-medium text-slate-600 dark:text-slate-300">{percent}%</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+              <Button
+                className="mt-6 w-full border-blue-200 text-blue-700 hover:bg-blue-600 hover:text-white"
+                variant="outline"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  navigate("/admin/orders")
+                }}
+              >
+                Drill-down đơn hàng
+              </Button>
+              <div
+                className={cn(
+                  "pointer-events-none absolute left-1/2 top-full z-20 -translate-x-1/2 -translate-y-4 rounded-xl bg-slate-900/90 px-4 py-2 text-xs text-white opacity-0 shadow-lg backdrop-blur-sm transition",
+                  hoveredKpi === "orders" && "top-[102%] opacity-100",
+                )}
+              >
+                Đơn hàng kỳ trước: {previousKpi.orders.toLocaleString("vi-VN")}
+              </div>
+            </div>
+          )}
+          {widgets.customers && (
+            <div
+              className="group relative flex h-full flex-col justify-between rounded-2xl border border-emerald-200 bg-white p-6 shadow-sm transition duration-200 hover:scale-[1.02] hover:shadow-xl dark:border-emerald-500/30 dark:bg-slate-900/80"
+              onClick={() => setActiveModal("customers")}
+              onMouseEnter={() => setHoveredKpi("customers")}
+              onMouseLeave={() => setHoveredKpi(null)}
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">Khách hàng</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Khách mới vs quay lại</p>
+                </div>
+                {comparePrevious && (
+                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200">
+                    +{(kpiGrowth.customers * 100).toFixed(0)}%
+                  </span>
+                )}
+              </div>
+              <div className="mt-6 flex items-center justify-between gap-6">
+                <CustomerDonut
+                  newPercent={newCustomerPercent}
+                  newColor="#34d399"
+                  returningColor="#1d4ed8"
+                />
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Khách mới</p>
+                    <p className="text-2xl font-semibold text-emerald-600 dark:text-emerald-300">
+                      {activeKpi.customers.new.toLocaleString("vi-VN")}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs uppercase tracking-wide text-slate-500">Quay lại</p>
-                    <p className="text-2xl font-semibold text-sky-600">{activeKpi.customers.returning}</p>
+                    <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Quay lại</p>
+                    <p className="text-2xl font-semibold text-blue-600 dark:text-blue-300">
+                      {activeKpi.customers.returning.toLocaleString("vi-VN")}
+                    </p>
+                  </div>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-200">
+                    ⬆ Tăng 8%
+                  </span>
+                </div>
+              </div>
+              <Button
+                className="mt-6 inline-flex items-center gap-2"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  navigate("/admin/customers")
+                }}
+              >
+                <span role="img" aria-hidden>
+                  📊
+                </span>
+                Xem phân khúc
+              </Button>
+              <div
+                className={cn(
+                  "pointer-events-none absolute left-1/2 top-full z-20 -translate-x-1/2 -translate-y-4 rounded-xl bg-slate-900/90 px-4 py-2 text-xs text-white opacity-0 shadow-lg backdrop-blur-sm transition",
+                  hoveredKpi === "customers" && "top-[102%] opacity-100",
+                )}
+              >
+                Khách kỳ trước: {previousKpi.customers.toLocaleString("vi-VN")}
+              </div>
+            </div>
+          )}
+            </motion.div>
+          </CardContent>
+        </Card>
+
+        {activeModal && (
+          <DialogContent className="max-w-2xl" showCloseButton>
+            <div className="space-y-6">
+              <DialogHeader>
+                <DialogTitle>
+                  {activeModal === "revenue" && "Chi tiết doanh thu"}
+                  {activeModal === "orders" && "Hiệu suất đơn hàng"}
+                  {activeModal === "customers" && "Phân bổ khách hàng"}
+                </DialogTitle>
+                <DialogDescription>
+                  {activeModal === "revenue" && "Biểu đồ xu hướng 7 ngày gần nhất"}
+                  {activeModal === "orders" && "Tỷ trọng trạng thái đơn hàng trong chu kỳ đã chọn"}
+                  {activeModal === "customers" && "Tỷ lệ khách mới so với khách quay lại"}
+                </DialogDescription>
+              </DialogHeader>
+              {activeModal === "revenue" && (
+                <div className="rounded-2xl bg-gradient-to-br from-blue-600/90 to-blue-400/80 p-6 text-white shadow-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm uppercase tracking-widest text-blue-100">Doanh thu</p>
+                      <p className="text-3xl font-semibold">{formatter.format(activeKpi.revenue)}</p>
+                    </div>
+                    <span className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold text-white">
+                      {kpiGrowth.revenue >= 0 ? "+" : "-"}
+                      {(Math.abs(kpiGrowth.revenue) * 100).toFixed(0)}% so với kỳ trước
+                    </span>
+                  </div>
+                  <div className="mt-6 h-40">
+                    <Sparkline data={revenueTrend} />
                   </div>
                 </div>
-                <div className="rounded-xl border border-dashed border-emerald-200 p-4 text-sm text-slate-600">
-                  <p>
-                    Loyalty campaign đang tăng tỷ lệ quay lại thêm <strong>8%</strong>.
-                  </p>
+              )}
+              {activeModal === "orders" && (
+                <div className="space-y-4">
+                  {Object.entries(activeKpi.orders).map(([status, value]) => {
+                    const meta = orderStatusMeta[status as keyof typeof orderStatusMeta]
+                    const percent = Math.round((value / totalOrders) * 100)
+                    return (
+                      <div key={status} className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <span className="text-lg" aria-hidden>
+                              {meta?.icon}
+                            </span>
+                            <div>
+                              <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                {meta?.label ?? status}
+                              </p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400">{percent}% tổng đơn</p>
+                            </div>
+                          </div>
+                          <span className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                            {value.toLocaleString("vi-VN")}
+                          </span>
+                        </div>
+                        <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                          <div
+                            className={cn(
+                              "h-full",
+                              orderStatusMeta[status as keyof typeof orderStatusMeta]?.color ?? "bg-slate-400",
+                            )}
+                            style={{ width: `${percent}%` }}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
-                <Button onClick={() => navigate("/admin/customers")}>Xem phân khúc</Button>
-              </CardContent>
-            </Card>
-          )}
-        </CardContent>
-      </Card>
+              )}
+              {activeModal === "customers" && (
+                <div className="grid gap-6 md:grid-cols-[240px_1fr]">
+                  <div className="flex flex-col items-center justify-center">
+                    <CustomerDonut
+                      newPercent={newCustomerPercent}
+                      newColor="#22c55e"
+                      returningColor="#1e40af"
+                    />
+                  </div>
+                  <div className="space-y-4 text-sm">
+                    <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 p-4 text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
+                      Khách mới kỳ này tăng {kpiGrowth.customers >= 0 ? "+" : "-"}
+                      {(Math.abs(kpiGrowth.customers) * 100).toFixed(0)}% so với kỳ trước.
+                    </div>
+                    <div className="grid gap-3 text-sm sm:grid-cols-2">
+                      <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Khách mới</p>
+                        <p className="text-2xl font-semibold text-emerald-600 dark:text-emerald-300">
+                          {activeKpi.customers.new.toLocaleString("vi-VN")}
+                        </p>
+                      </div>
+                      <div className="rounded-xl border border-slate-200 p-4 dark:border-slate-700">
+                        <p className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Quay lại</p>
+                        <p className="text-2xl font-semibold text-blue-600 dark:text-blue-300">
+                          {activeKpi.customers.returning.toLocaleString("vi-VN")}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        )}
+      </Dialog>
 
       {widgets.inventory && (
         <Card>
