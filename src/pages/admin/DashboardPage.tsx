@@ -2,11 +2,6 @@ import { useEffect, useId, useMemo, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import axios from "axios"
 import {
-  alerts,
-  bestSellingProducts,
-  slowProducts,
-} from "@/data/adminMock"
-import {
   Card,
   CardContent,
   CardDescription,
@@ -37,7 +32,12 @@ import { CalendarClock, Info } from "lucide-react"
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts"
 import api from "@/utils/axios"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
-import type { DashboardOverviewResponse, TimeRange } from "@/types/adminType"
+import type {
+  DashboardInventoryAlert,
+  DashboardInventoryResponse,
+  DashboardOverviewResponse,
+  TimeRange,
+} from "@/types/adminType"
 
 const SPARKLINE_POINTS = 7
 
@@ -82,10 +82,14 @@ const formatter = new Intl.NumberFormat("vi-VN", {
   maximumFractionDigits: 0,
 })
 
-const alertRoutes: Record<(typeof alerts)[number]["type"], string> = {
-  inventory: "/admin/inventory",
-  returns: "/admin/orders",
-  support: "/admin/support",
+const inventoryAlertRoutes: Record<DashboardInventoryAlert["type"], string> = {
+  inventory: "/admin/products",
+  performance: "/admin/products",
+}
+
+const inventoryAlertLabels: Record<DashboardInventoryAlert["type"], string> = {
+  inventory: "Tồn kho",
+  performance: "Hiệu suất",
 }
 
 function Sparkline({
@@ -203,6 +207,9 @@ export default function DashboardPage() {
   const [overview, setOverview] = useState<DashboardOverviewResponse | null>(null)
   const [isOverviewLoading, setIsOverviewLoading] = useState(false)
   const [overviewError, setOverviewError] = useState<string | null>(null)
+  const [inventory, setInventory] = useState<DashboardInventoryResponse | null>(null)
+  const [isInventoryLoading, setIsInventoryLoading] = useState(false)
+  const [inventoryError, setInventoryError] = useState<string | null>(null)
 
   useEffect(() => {
     const pinFromQuery = searchParams.get("pin")
@@ -237,6 +244,40 @@ export default function DashboardPage() {
       } finally {
         if (!ignore) {
           setIsOverviewLoading(false)
+        }
+      }
+    })()
+
+    return () => {
+      ignore = true
+    }
+  }, [timeRange])
+
+  useEffect(() => {
+    let ignore = false
+    setIsInventoryLoading(true)
+    setInventoryError(null)
+
+    void (async () => {
+      try {
+        const { data } = await api.get<DashboardInventoryResponse>("/admin/dashboard/inventory", {
+          params: { range: timeRange },
+        })
+
+        if (!ignore) {
+          setInventory(data)
+        }
+      } catch (error) {
+        if (ignore) return
+        if (axios.isAxiosError(error)) {
+          const responseData = error.response?.data as { message?: string } | undefined
+          setInventoryError(responseData?.message ?? "Không thể lấy dữ liệu tồn kho")
+        } else {
+          setInventoryError("Không thể lấy dữ liệu tồn kho")
+        }
+      } finally {
+        if (!ignore) {
+          setIsInventoryLoading(false)
         }
       }
     })()
@@ -284,6 +325,24 @@ export default function DashboardPage() {
 
   const hasOverviewData = overview?.range === timeRange
   const metrics: DashboardOverviewResponse = hasOverviewData && overview ? overview : defaultOverview
+
+  const defaultInventory = useMemo<DashboardInventoryResponse>(
+    () => ({
+      range: timeRange,
+      generatedAt: new Date().toISOString(),
+      bestSellers: [],
+      slowMovers: [],
+      alerts: [],
+    }),
+    [timeRange],
+  )
+
+  const hasInventoryData = inventory?.range === timeRange
+  const inventoryMetrics: DashboardInventoryResponse =
+    hasInventoryData && inventory ? inventory : defaultInventory
+  const bestSellers = inventoryMetrics.bestSellers
+  const slowMovers = inventoryMetrics.slowMovers
+  const inventoryAlerts = inventoryMetrics.alerts
 
   const activeKpi = useMemo(
     () => ({
@@ -730,82 +789,120 @@ export default function DashboardPage() {
           <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <CardTitle>Tình trạng sản phẩm</CardTitle>
-              <CardDescription>Sản phẩm bán chạy, chậm quay vòng và cảnh báo tồn kho</CardDescription>
+              <CardDescription>Sản phẩm bán chạy, bán chậm và cảnh báo tồn kho</CardDescription>
             </div>
-            <Button variant="outline" onClick={() => navigate("/admin/products?tab=inventory")}>Ghép vào danh sách kiểm kho</Button>
+            {/* <Button variant="outline" onClick={() => navigate("/admin/products?tab=inventory")}>Ghép vào danh sách kiểm kho</Button> */}
           </CardHeader>
-          <CardContent className="grid gap-6 lg:grid-cols-2">
-            <div className="rounded-xl border bg-white">
-              <div className="flex items-center justify-between border-b px-6 py-4">
-                <div>
-                  <p className="text-sm font-semibold text-slate-800">Top sản phẩm bán chạy</p>
-                  <p className="text-xs text-slate-500">Theo doanh thu</p>
-                </div>
-                <Badge variant="secondary">3 sản phẩm</Badge>
+          <CardContent>
+            {inventoryError && (
+              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50/90 px-4 py-3 text-sm text-rose-600 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+                {inventoryError}
               </div>
-              <ul className="divide-y">
-                {bestSellingProducts.map((item) => (
-                  <li key={item.id} className="flex items-center justify-between px-6 py-4 text-sm">
+            )}
+
+            {isInventoryLoading && !hasInventoryData ? (
+              <div className="flex h-48 items-center justify-center">
+                <div className="flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
+                  <LoadingSpinner />
+                  <span>Đang tải dữ liệu tồn kho...</span>
+                </div>
+              </div>
+            ) : !hasInventoryData ? (
+              <div className="flex h-48 items-center justify-center text-sm text-slate-500 dark:text-slate-400">
+                Chưa có dữ liệu tồn kho cho chu kỳ này.
+              </div>
+            ) : (
+              <div className={cn("grid gap-6 lg:grid-cols-2", isInventoryLoading && "pointer-events-none opacity-60")}>
+                <div className="rounded-xl border bg-white">
+                  <div className="flex items-center justify-between border-b px-6 py-4">
                     <div>
-                      <p className="font-semibold text-slate-900">{item.name}</p>
-                      <p className="text-xs text-slate-500">{item.category} • Tồn kho {item.inventory}</p>
+                      <p className="text-sm font-semibold text-slate-800">Top sản phẩm bán chạy</p>
+                      <p className="text-xs text-slate-500">Theo doanh thu</p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-medium text-slate-900">{formatter.format(item.revenue)}</p>
-                      <p className="text-xs text-emerald-600">Chuyển đổi {item.conversion}%</p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div className="space-y-4">
-              <div className="rounded-xl border bg-amber-50">
-                <div className="border-b px-6 py-3 text-sm font-semibold text-amber-800">
-                  Sản phẩm quay vòng chậm
+                    <Badge variant="secondary">{bestSellers.length} sản phẩm</Badge>
+                  </div>
+                  <ul className="divide-y">
+                    {bestSellers.length ? (
+                      bestSellers.map((item) => (
+                        <li key={item.productId} className="flex items-center justify-between px-6 py-4 text-sm">
+                          <div>
+                            <p className="font-semibold text-slate-900">{item.name}</p>
+                            <p className="text-xs text-slate-500">
+                              {item.category ?? "Không phân loại"} • Tồn kho {item.inventory.toLocaleString("vi-VN")}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium text-slate-900">{formatter.format(item.revenue)}</p>
+                            <p className="text-xs text-emerald-600">Chuyển đổi {item.conversion.toFixed(1)}%</p>
+                          </div>
+                        </li>
+                      ))
+                    ) : (
+                      <li className="px-6 py-8 text-center text-sm text-slate-500">Chưa có sản phẩm bán chạy.</li>
+                    )}
+                  </ul>
                 </div>
-                <ul className="divide-y">
-                  {slowProducts.map((item) => (
-                    <li key={item.id} className="flex items-center justify-between px-6 py-4 text-sm">
-                      <span>
-                        {item.name} <span className="text-xs text-slate-500">({item.category})</span>
-                      </span>
-                      <span className="text-xs font-medium text-amber-700">{item.turnoverDays} ngày</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="space-y-4">
+                  <div className="rounded-xl border bg-amber-50">
+                    <div className="border-b px-6 py-3 text-sm font-semibold text-amber-800">
+                      Sản phẩm bán chậm
+                    </div>
+                    <ul className="divide-y">
+                      {slowMovers.length ? (
+                        slowMovers.map((item) => (
+                          <li key={item.productId} className="flex items-center justify-between px-6 py-4 text-sm">
+                            <span>
+                              {item.name}{" "}
+                              <span className="text-xs text-slate-500">
+                                ({item.category ?? "Không phân loại"})
+                              </span>
+                            </span>
+                            <span className="text-xs font-medium text-amber-700">{item.turnoverDays} ngày</span>
+                          </li>
+                        ))
+                      ) : (
+                        <li className="px-6 py-8 text-center text-sm text-slate-500">Chưa có sản phẩm quay vòng chậm.</li>
+                      )}
+                    </ul>
+                  </div>
+                  <div className="rounded-xl border bg-rose-50">
+                    <div className="border-b px-6 py-3 text-sm font-semibold text-rose-800">Cảnh báo tồn kho</div>
+                    <ul>
+                      {inventoryAlerts.length ? (
+                        inventoryAlerts.map((alert) => (
+                          <li key={alert.id} className="flex items-start gap-3 px-6 py-3 text-sm">
+                            <Badge
+                              variant="secondary"
+                              className={cn(
+                                "mt-1",
+                                alert.severity === "high" && "bg-rose-600 text-white",
+                                alert.severity === "medium" && "bg-amber-500 text-white",
+                                alert.severity === "low" && "bg-slate-200 text-slate-700",
+                              )}
+                            >
+                              {inventoryAlertLabels[alert.type]}
+                            </Badge>
+                            <div>
+                              <p className="font-medium text-slate-900">{alert.title}</p>
+                              <p className="text-xs text-slate-600">{alert.description}</p>
+                              <Button
+                                variant="link"
+                                className="px-0 text-xs"
+                                onClick={() => navigate(inventoryAlertRoutes[alert.type])}
+                              >
+                                Xem chi tiết
+                              </Button>
+                            </div>
+                          </li>
+                        ))
+                      ) : (
+                        <li className="px-6 py-8 text-center text-sm text-slate-500">Không có cảnh báo tồn kho.</li>
+                      )}
+                    </ul>
+                  </div>
+                </div>
               </div>
-              <div className="rounded-xl border bg-rose-50">
-                <div className="border-b px-6 py-3 text-sm font-semibold text-rose-800">Cảnh báo</div>
-                <ul>
-                  {alerts.map((alert) => (
-                    <li key={alert.id} className="flex items-start gap-3 px-6 py-3 text-sm">
-                      <Badge
-                        variant="secondary"
-                        className={cn(
-                          "mt-1",
-                          alert.severity === "high" && "bg-rose-600 text-white",
-                          alert.severity === "medium" && "bg-amber-500 text-white",
-                          alert.severity === "low" && "bg-slate-200 text-slate-700",
-                        )}
-                      >
-                        {alert.type}
-                      </Badge>
-                      <div>
-                        <p className="font-medium text-slate-900">{alert.title}</p>
-                        <p className="text-xs text-slate-600">{alert.description}</p>
-                        <Button
-                          variant="link"
-                          className="px-0 text-xs"
-                          onClick={() => navigate(alertRoutes[alert.type])}
-                        >
-                          Xem chi tiết
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       )}
