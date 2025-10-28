@@ -121,7 +121,7 @@ export default function AdminLayout() {
           <div className="mx-auto max-w-6xl space-y-8">
             <header className="flex flex-col gap-4 rounded-3xl border border-[#ead7b9] bg-[#fdfbf7] p-6 shadow-[0_24px_60px_rgba(23,20,16,0.08)] md:flex-row md:items-center md:justify-between">
               <div>
-                <div className="text-xs font-semibold uppercase tracking-[0.32em] text-[#b8a47a]">Admin Dashboard</div>
+                <div className="text-xs font-semibold uppercase tracking-[0.32em] text-[#b8a47a]">Admin</div>
                 <h2 className="mt-2 text-3xl font-semibold text-[#1f1b16]">{currentTitle}</h2>
               </div>
               <div className="flex flex-wrap items-center gap-2 text-sm text-[#6c6252]">
@@ -140,7 +140,7 @@ export default function AdminLayout() {
                   className="rounded-full border-[#ead7b9] bg-white/70 text-[#1f1b16] hover:bg-[#efe2c6]"
                   onClick={() => navigate("/")}
                 >
-                  Về trang bán
+                  Trang chủ
                 </Button>
               </div>
             </header>

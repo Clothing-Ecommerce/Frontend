@@ -152,6 +152,25 @@ export type OrderStatus =
   | "cancelled"
   | "refunded"
 
+export type OrderTimelineStep = {
+  label: string
+  time: string
+}
+
+export interface OrderLineItem {
+  name: string
+  sku: string
+  quantity: number
+  price: number
+}
+
+export interface OrderDetail {
+  address: string
+  items: OrderLineItem[]
+  timeline: OrderTimelineStep[]
+  notes: string[]
+}
+
 export interface OrderItem {
   id: string
   channel: "Website" | "Shopee" | "Lazada" | "Tiktok Shop"
@@ -164,6 +183,7 @@ export interface OrderItem {
     fulfillment: number
     return: number
   }
+  detail: OrderDetail
 }
 
 export const orderMock: OrderItem[] = [
@@ -179,6 +199,23 @@ export const orderMock: OrderItem[] = [
       fulfillment: 18,
       return: 0,
     },
+    detail: {
+      address: "12 Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh",
+      items: [
+        { name: "Sneaker Velocity X", sku: "VX-39", quantity: 1, price: 1890000 },
+        { name: "Vớ thể thao AirFlow", sku: "SOCK-AIRFLOW", quantity: 2, price: 230000 },
+      ],
+      timeline: [
+        { label: "Đặt hàng", time: "08:30" },
+        { label: "Đóng gói", time: "10:05" },
+        { label: "Bàn giao vận chuyển", time: "--" },
+        { label: "Hoàn tất", time: "--" },
+      ],
+      notes: [
+        "Khách yêu cầu giao trong giờ hành chính",
+        "Đã xác nhận thanh toán online",
+      ],
+    },
   },
   {
     id: "DH-1002",
@@ -191,6 +228,23 @@ export const orderMock: OrderItem[] = [
     sla: {
       fulfillment: 12,
       return: 0,
+    },
+    detail: {
+      address: "45 Nguyễn Oanh, Gò Vấp, TP. Hồ Chí Minh",
+      items: [
+        { name: "Áo khoác TechWind", sku: "TW-M-NV", quantity: 1, price: 890000 },
+        { name: "Quần jogger FlexFit", sku: "JG-FLEXFIT", quantity: 1, price: 590000 },
+      ],
+      timeline: [
+        { label: "Đặt hàng", time: "09:45" },
+        { label: "Đóng gói", time: "11:10" },
+        { label: "Bàn giao vận chuyển", time: "13:00" },
+        { label: "Hoàn tất", time: "--" },
+      ],
+      notes: [
+        "Khách dặn gọi trước khi giao",
+        "Đang theo dõi mã vận đơn GHN",
+      ],
     },
   },
   {
@@ -205,6 +259,24 @@ export const orderMock: OrderItem[] = [
       fulfillment: 26,
       return: 0,
     },
+    detail: {
+      address: "18 Nguyễn Văn Trỗi, Phú Nhuận, TP. Hồ Chí Minh",
+      items: [
+        { name: "Áo khoác TechWind", sku: "TW-L-GR", quantity: 1, price: 1290000 },
+        { name: "Quần jean Indigo", sku: "JN-INDIGO-32", quantity: 1, price: 990000 },
+        { name: "Giày loafers Classic", sku: "LF-CLASSIC-42", quantity: 1, price: 1000000 },
+      ],
+      timeline: [
+        { label: "Đặt hàng", time: "23:10" },
+        { label: "Đóng gói", time: "--" },
+        { label: "Bàn giao vận chuyển", time: "--" },
+        { label: "Hoàn tất", time: "--" },
+      ],
+      notes: [
+        "Khách muốn xuất hoá đơn điện tử",
+        "Chờ xác nhận kho còn đủ size",
+      ],
+    },
   },
   {
     id: "DH-1004",
@@ -218,6 +290,23 @@ export const orderMock: OrderItem[] = [
       fulfillment: 9,
       return: 8,
     },
+    detail: {
+      address: "88 Võ Thị Sáu, Quận 3, TP. Hồ Chí Minh",
+      items: [
+        { name: "Áo thun Everyday", sku: "TS-EVERYDAY-M", quantity: 2, price: 320000 },
+        { name: "Thắt lưng da Heritage", sku: "BL-HERITAGE", quantity: 1, price: 250000 },
+      ],
+      timeline: [
+        { label: "Đặt hàng", time: "14:25" },
+        { label: "Đóng gói", time: "15:00" },
+        { label: "Bàn giao vận chuyển", time: "16:10" },
+        { label: "Hoàn tất", time: "09:45" },
+      ],
+      notes: [
+        "Khách đã nhận hàng và đánh giá 5★",
+        "Đã gửi mã giảm giá cho đơn kế tiếp",
+      ],
+    },
   },
   {
     id: "DH-1005",
@@ -230,6 +319,23 @@ export const orderMock: OrderItem[] = [
     sla: {
       fulfillment: 15,
       return: 30,
+    },
+    detail: {
+      address: "24 Hoàng Văn Thụ, Tân Bình, TP. Hồ Chí Minh",
+      items: [
+        { name: "Áo polo Breeze", sku: "PO-BREEZE-L", quantity: 1, price: 620000 },
+        { name: "Quần short Active", sku: "SH-ACTIVE", quantity: 1, price: 500000 },
+      ],
+      timeline: [
+        { label: "Đặt hàng", time: "10:12" },
+        { label: "Đóng gói", time: "11:00" },
+        { label: "Hoàn trả", time: "15:30" },
+        { label: "Hoàn tiền", time: "16:45" },
+      ],
+      notes: [
+        "Khách trả hàng do không vừa size",
+        "Đã hoàn tiền qua ví điện tử",
+      ],
     },
   },
 ]

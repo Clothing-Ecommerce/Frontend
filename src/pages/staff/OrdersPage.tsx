@@ -169,7 +169,7 @@ export default function StaffOrdersPage() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <Card className="overflow-hidden border-none bg-[#fdfbf7] shadow-[0_24px_60px_rgba(23,20,16,0.12)]">
+        <Card className="overflow-hidden border-none bg-white shadow-[0_24px_60px_rgba(23,20,16,0.12)]">
           <CardHeader className="space-y-4 border-b border-[#ead7b9]">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div className="relative w-full lg:max-w-sm">
