@@ -303,7 +303,6 @@ export default function OrdersPage() {
                     <th className="px-4 py-3">Giá trị</th>
                     <th className="px-4 py-3">Thanh toán</th>
                     <th className="px-4 py-3">Trạng thái</th>
-                    <th className="px-4 py-3">Thao tác</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y bg-white text-sm">
@@ -312,12 +311,20 @@ export default function OrdersPage() {
                     return (
                       <tr
                         key={order.id}
-                        className={cn("transition-colors hover:bg-slate-50", isSelected && "bg-slate-50")}
+                        onClick={() => openOrderDetail(order.id)}
+                        className={cn(
+                          "cursor-pointer transition-colors hover:bg-slate-50",
+                          isSelected && "bg-slate-50",
+                        )}
                       >
                         <td className="px-4 py-3 font-semibold text-slate-800">{order.id}</td>
                         <td className="px-4 py-3">{order.customer}</td>
                         <td className="px-4 py-3 font-medium text-slate-800">{formatCurrency(order.value)}</td>
-                        <td className="px-4 py-3">
+                        <td
+                          className="px-4 py-3"
+                          onClick={(event) => event.stopPropagation()}
+                          onPointerDownCapture={(event) => event.stopPropagation()}
+                        >
                           <Select
                             value={order.payment}
                             onValueChange={(value) => changePaymentMethod(order.id, value as OrderItem["payment"])}
@@ -347,13 +354,6 @@ export default function OrdersPage() {
                               ))}
                             </SelectContent>
                           </Select>
-                        </td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-wrap gap-2">
-                            <Button size="sm" variant="outline" onClick={() => openOrderDetail(order.id)}>
-                              Xem chi tiết
-                            </Button>
-                          </div>
                         </td>
                       </tr>
                     )
