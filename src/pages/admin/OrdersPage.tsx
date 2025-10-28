@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import axios from "axios"
 import { MapPin, Package, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -18,9 +19,17 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-import { orderMock, type OrderItem, type OrderStatus } from "@/data/adminMock"
+import api from "@/utils/axios"
+import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import type {
+  AdminOrderDetailResponse,
+  AdminOrderListResult,
+  AdminOrderPaymentDisplay,
+  AdminOrderStatus,
+  AdminOrderSummary,
+} from "@/types/adminType"
 
-const statusLabels: Record<OrderStatus, string> = {
+const statusLabels: Record<AdminOrderStatus, string> = {
   pending: "Chờ xác nhận",
   processing: "Đang xử lý",
   packed: "Đã đóng gói",
@@ -30,7 +39,7 @@ const statusLabels: Record<OrderStatus, string> = {
   refunded: "Hoàn tiền",
 }
 
-const statusBadge: Record<OrderStatus, string> = {
+const statusBadge: Record<AdminOrderStatus, string> = {
   pending: "border-amber-200 bg-amber-50 text-amber-700",
   processing: "border-blue-200 bg-blue-50 text-blue-700",
   packed: "border-sky-200 bg-sky-50 text-sky-700",
@@ -40,7 +49,7 @@ const statusBadge: Record<OrderStatus, string> = {
   refunded: "border-rose-200 bg-rose-50 text-rose-700",
 }
 
-const statusAccent: Record<OrderStatus, string> = {
+const statusAccent: Record<AdminOrderStatus, string> = {
   pending: "bg-amber-500",
   processing: "bg-blue-500",
   packed: "bg-sky-500",
@@ -85,51 +94,160 @@ function getInitials(name: string) {
 }
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState(orderMock)
+  const [orders, setOrders] = useState<AdminOrderSummary[]>([])
   const [search, setSearch] = useState("")
-  const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all")
-  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
+  const [debouncedSearch, setDebouncedSearch] = useState("")
+  const [statusFilter, setStatusFilter] = useState<AdminOrderStatus | "all">("all")
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const [isListLoading, setIsListLoading] = useState(false)
+  const [listError, setListError] = useState<string | null>(null)
+  const [orderDetail, setOrderDetail] = useState<AdminOrderDetailResponse | null>(null)
+  const [isDetailLoading, setIsDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState<string | null>(null)
+  const [detailReloadKey, setDetailReloadKey] = useState(0)
 
-  const filteredOrders = useMemo(() => {
-    return orders.filter((order) => {
-      const matchesSearch =
-        search.trim().length === 0 ||
-        order.id.toLowerCase().includes(search.toLowerCase()) ||
-        order.customer.toLowerCase().includes(search.toLowerCase())
-      const matchesStatus = statusFilter === "all" || order.status === statusFilter
-      return matchesSearch && matchesStatus
-    })
-  }, [orders, search, statusFilter])
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setDebouncedSearch(search.trim())
+    }, 400)
+    return () => {
+      window.clearTimeout(handle)
+    }
+  }, [search])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    setIsListLoading(true)
+    setListError(null)
+
+    api
+      .get<AdminOrderListResult>("/admin/orders", {
+        params: {
+          page: 1,
+          pageSize: 20,
+          search: debouncedSearch.length ? debouncedSearch : undefined,
+          status: statusFilter !== "all" ? statusFilter : undefined,
+        },
+        signal: controller.signal,
+      })
+      .then((response) => {
+        setOrders(response.data.orders)
+      })
+      .catch((error) => {
+        if (axios.isCancel(error)) return
+        const message =
+          axios.isAxiosError(error) && error.response?.data?.message
+            ? error.response.data.message
+            : "Không thể tải danh sách đơn hàng"
+        setListError(message)
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setIsListLoading(false)
+        }
+      })
+
+    return () => {
+      controller.abort()
+    }
+  }, [debouncedSearch, statusFilter])
 
   useEffect(() => {
     if (!selectedOrderId) return
-    const stillVisible = filteredOrders.some((order) => order.id === selectedOrderId)
+    const stillVisible = orders.some((order) => order.id === selectedOrderId)
     if (!stillVisible) {
       setSelectedOrderId(null)
       setIsDetailOpen(false)
+      setOrderDetail(null)
+      setDetailError(null)
     }
-  }, [filteredOrders, selectedOrderId])
+  }, [orders, selectedOrderId])
 
-  const updateOrderStatus = (id: string, status: OrderStatus) => {
+  useEffect(() => {
+    if (!selectedOrderId) {
+      setIsDetailLoading(false)
+      setOrderDetail(null)
+      setDetailError(null)
+    }
+  }, [selectedOrderId])
+
+  useEffect(() => {
+    if (!selectedOrderId) return
+
+    const controller = new AbortController()
+    setIsDetailLoading(true)
+    setDetailError(null)
+    setOrderDetail(null)
+
+    api
+      .get<AdminOrderDetailResponse>(`/admin/orders/${selectedOrderId}`, {
+        signal: controller.signal,
+      })
+      .then((response) => {
+        setOrderDetail(response.data)
+      })
+      .catch((error) => {
+        if (axios.isCancel(error)) return
+        const message =
+          axios.isAxiosError(error) && error.response?.data?.message
+            ? error.response.data.message
+            : "Không thể tải chi tiết đơn hàng"
+        setDetailError(message)
+        setOrderDetail(null)
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setIsDetailLoading(false)
+        }
+      })
+
+    return () => {
+      controller.abort()
+    }
+  }, [selectedOrderId, detailReloadKey])
+
+  const updateOrderStatus = (id: number, status: AdminOrderStatus) => {
     setOrders((prev) => prev.map((order) => (order.id === id ? { ...order, status } : order)))
+    setOrderDetail((prev) => (prev && prev.id === id ? { ...prev, status } : prev))
   }
 
-  const changePaymentMethod = (id: string, method: OrderItem["payment"]) => {
+  const changePaymentMethod = (id: number, method: AdminOrderPaymentDisplay) => {
     setOrders((prev) => prev.map((order) => (order.id === id ? { ...order, payment: method } : order)))
+    setOrderDetail((prev) =>
+      prev && prev.id === id ? { ...prev, payment: { ...prev.payment, display: method } } : prev,
+    )
   }
 
-  const selectedOrder = orders.find((order) => order.id === selectedOrderId) ?? null
+  const selectedOrder = useMemo(
+    () => orders.find((order) => order.id === selectedOrderId) ?? null,
+    [orders, selectedOrderId],
+  )
 
-  const openOrderDetail = (orderId: string) => {
+  const openOrderDetail = (orderId: number) => {
     setSelectedOrderId(orderId)
+    setDetailReloadKey((prev) => prev + 1)
     setIsDetailOpen(true)
   }
 
   const closeDetail = () => setIsDetailOpen(false)
 
-  const OrderDetailContent = ({ order }: { order: OrderItem | null }) => {
-    if (!order?.detail) {
+  const handleRetryDetail = () => {
+    setDetailReloadKey((prev) => prev + 1)
+  }
+
+  const OrderDetailContent = ({
+    summary,
+    detail,
+    loading,
+    error,
+  }: {
+    summary: AdminOrderSummary | null
+    detail: AdminOrderDetailResponse | null
+    loading: boolean
+    error: string | null
+  }) => {
+    if (!summary && !loading) {
       return (
         <div className="flex h-full items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-slate-50/80 p-6 text-sm text-slate-500">
           Chọn một đơn để xem chi tiết.
@@ -137,22 +255,54 @@ export default function OrdersPage() {
       )
     }
 
-  const accent = statusAccent[order.status]
+    if (error) {
+      return (
+        <div className="flex h-full flex-col items-center justify-center gap-4 rounded-3xl border border-dashed border-rose-200 bg-rose-50/70 p-6 text-center text-sm text-rose-600">
+          <span>{error}</span>
+          <Button size="sm" variant="outline" onClick={handleRetryDetail}>
+            Thử lại
+          </Button>
+        </div>
+      )
+    }
 
-  return (
+    if (loading && !detail) {
+      return (
+        <div className="flex h-full items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-slate-50/80 p-6">
+          <LoadingSpinner size="lg" />
+        </div>
+      )
+    }
+
+    if (!summary) {
+      return null
+    }
+
+    const effectiveStatus: AdminOrderStatus = detail?.status ?? summary.status
+    const accent = statusAccent[effectiveStatus]
+    const displayCode = detail?.code ?? summary.code
+    const displayCustomer = detail?.customer.name?.trim() || summary.customer
+    const createdAt = detail?.createdAt ?? summary.createdAt
+    const paymentDisplay = detail?.payment.display ?? summary.payment
+    const addressLine = detail?.address?.line ?? "Không có thông tin địa chỉ"
+    const timelineEntries = detail?.timeline ?? []
+    const notes = detail?.notes ?? []
+    const items = detail?.items ?? []
+
+    return (
       <div className="flex h-full flex-col justify-between gap-6 rounded-3xl border border-slate-200 bg-gradient-to-b from-white to-slate-50/60 p-6 shadow-[0_20px_45px_rgba(15,23,42,0.08)]">
         <div className="space-y-5">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1">
               <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-400">
-                Order #{order.id}
+                Order {displayCode}
               </p>
-              <h3 className="text-xl font-semibold text-slate-900">{order.customer}</h3>
-              <p className="text-sm text-slate-500">{formatDateTime(order.createdAt)}</p>
+              <h3 className="text-xl font-semibold text-slate-900">{displayCustomer}</h3>
+              <p className="text-sm text-slate-500">{formatDateTime(createdAt)}</p>
             </div>
             <div className="flex items-center gap-2">
               <div className="hidden h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-lg font-semibold text-slate-600 lg:flex">
-                {getInitials(order.customer)}
+                {getInitials(displayCustomer)}
               </div>
               <Button
                 variant="ghost"
@@ -166,10 +316,10 @@ export default function OrdersPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-            <Badge className={cn("border", statusBadge[order.status])}>{statusLabels[order.status]}</Badge>
-            <span className="text-sm font-semibold text-slate-800">{formatCurrency(order.value)}</span>
+            <Badge className={cn("border", statusBadge[effectiveStatus])}>{statusLabels[effectiveStatus]}</Badge>
+            <span className="text-sm font-semibold text-slate-800">{formatCurrency(summary.value)}</span>
             <span className="hidden sm:inline">•</span>
-            <span>Thanh toán: {order.payment}</span>
+            <span>Thanh toán: {paymentDisplay}</span>
           </div>
 
           <div className="space-y-3">
@@ -177,7 +327,7 @@ export default function OrdersPage() {
             <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 text-sm text-slate-600">
               <div className="flex items-start gap-3">
                 <MapPin className="mt-0.5 h-4 w-4 text-slate-500" />
-                <span>{order.detail.address}</span>
+                <span>{addressLine}</span>
               </div>
             </div>
           </div>
@@ -185,53 +335,80 @@ export default function OrdersPage() {
           <div className="space-y-3">
             <h4 className="text-sm font-semibold text-slate-800">Sản phẩm</h4>
             <div className="space-y-2">
-              {order.detail.items.map((item) => (
-                <div
-                  key={item.sku}
-                  className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm"
-                >
-                  <div>
-                    <div className="font-medium text-slate-800">{item.name}</div>
-                    <div className="text-xs text-slate-500">SKU: {item.sku}</div>
-                  </div>
-                  <div className="text-right text-sm font-semibold text-slate-800">
-                    x{item.quantity} • {formatCurrency(item.price)}
-                  </div>
+              {items.length === 0 ? (
+                <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-sm text-slate-500">
+                  Không có thông tin sản phẩm
                 </div>
-              ))}
+              ) : (
+                items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600 shadow-sm"
+                  >
+                    <div>
+                      <div className="font-medium text-slate-800">{item.name}</div>
+                      <div className="text-xs text-slate-500">SKU: {item.sku ?? "—"}</div>
+                    </div>
+                    <div className="text-right text-sm font-semibold text-slate-800">
+                      x{item.quantity} • {formatCurrency(item.price)}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
           <div className="space-y-3">
             <h4 className="text-sm font-semibold text-slate-800">Tiến trình đơn hàng</h4>
             <ol className="space-y-2">
-              {order.detail.timeline.map((step, index) => {
-                const isCompleted = step.time !== "--" && step.time.toLowerCase() !== "đang xử lý"
+              {timelineEntries.length === 0 ? (
+                <li className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-2 text-xs text-slate-500">
+                  Chưa có lịch sử trạng thái.
+                </li>
+              ) : (
+                timelineEntries.map((step, index) => {
+                  const isCompleted = Boolean(step.at)
 
-                return (
-                  <li
-                    key={`${step.label}-${index}`}
-                    className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white/80 px-4 py-2 text-xs text-slate-600"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className={cn("h-2.5 w-2.5 rounded-full", isCompleted ? accent : "bg-slate-300")} />
-                      <span className="font-medium text-slate-800">{step.label}</span>
-                    </div>
-                    <span className="font-mono text-[11px] text-slate-500">{step.time}</span>
-                  </li>
-                )
-              })}
+                  return (
+                    <li
+                      key={`${step.label}-${index}`}
+                      className="flex flex-col gap-1 rounded-2xl border border-slate-200 bg-white/80 px-4 py-2 text-xs text-slate-600"
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <span className={cn("h-2.5 w-2.5 rounded-full", isCompleted ? accent : "bg-slate-300")} />
+                          <span className="font-medium text-slate-800">{step.label}</span>
+                        </div>
+                        <span className="font-mono text-[11px] text-slate-500">
+                          {step.at ? formatDateTime(step.at) : "--"}
+                        </span>
+                      </div>
+                      {step.note ? (
+                        <p className="rounded-lg bg-slate-100/70 p-2 text-[11px] text-slate-500">
+                          {step.note}
+                        </p>
+                      ) : null}
+                    </li>
+                  )
+                })
+              )}
             </ol>
           </div>
 
           <div className="space-y-2">
             <h4 className="text-sm font-semibold text-slate-800">Ghi chú</h4>
             <div className="space-y-2 text-xs text-slate-600">
-              {order.detail.notes.map((note, index) => (
-                <div key={`${note}-${index}`} className="rounded-2xl border border-slate-200 bg-white/70 p-3 leading-relaxed">
-                  {note}
+              {notes.length === 0 ? (
+                <div className="rounded-2xl border border-slate-200 bg-white/70 p-3 text-slate-500">
+                  Không có ghi chú.
                 </div>
-              ))}
+              ) : (
+                notes.map((note, index) => (
+                  <div key={`${note}-${index}`} className="rounded-2xl border border-slate-200 bg-white/70 p-3 leading-relaxed">
+                    {note}
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -270,7 +447,7 @@ export default function OrdersPage() {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
-            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as OrderStatus | "all")}>
+            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as AdminOrderStatus | "all")}>
               <SelectTrigger className="w-44">
                 <SelectValue placeholder="Trạng thái" />
               </SelectTrigger>
@@ -305,58 +482,81 @@ export default function OrdersPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y bg-white text-sm">
-                  {filteredOrders.map((order) => {
-                    const isSelected = order.id === selectedOrderId
-                    return (
-                      <tr
-                        key={order.id}
-                        onClick={() => openOrderDetail(order.id)}
-                        className={cn(
-                          "cursor-pointer transition-colors hover:bg-slate-50",
-                          isSelected && "bg-slate-50",
-                        )}
-                      >
-                        <td className="px-4 py-3 font-semibold text-slate-800">{order.id}</td>
-                        <td className="px-4 py-3">{order.customer}</td>
-                        <td className="px-4 py-3 font-medium text-slate-800">{formatCurrency(order.value)}</td>
-                        <td
-                          className="px-4 py-3"
-                          onClick={(event) => event.stopPropagation()}
-                          onPointerDownCapture={(event) => event.stopPropagation()}
+                  {isListLoading ? (
+                    <tr>
+                      <td colSpan={5} className="py-10 text-center text-sm text-slate-500">
+                        <div className="flex items-center justify-center gap-3">
+                          <LoadingSpinner />
+                          <span>Đang tải đơn hàng...</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : listError ? (
+                    <tr>
+                      <td colSpan={5} className="py-10 text-center text-sm text-rose-600">
+                        {listError}
+                      </td>
+                    </tr>
+                  ) : orders.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-10 text-center text-sm text-slate-500">
+                        Không có đơn hàng nào phù hợp.
+                      </td>
+                    </tr>
+                  ) : (
+                    orders.map((order) => {
+                      const isSelected = order.id === selectedOrderId
+                      return (
+                        <tr
+                          key={order.id}
+                          onClick={() => openOrderDetail(order.id)}
+                          className={cn(
+                            "cursor-pointer transition-colors hover:bg-slate-50",
+                            isSelected && "bg-slate-50",
+                          )}
                         >
-                          <Select
-                            value={order.payment}
-                            onValueChange={(value) => changePaymentMethod(order.id, value as OrderItem["payment"])}
+                          <td className="px-4 py-3 font-semibold text-slate-800">{order.code}</td>
+                          <td className="px-4 py-3">{order.customer}</td>
+                          <td className="px-4 py-3 font-medium text-slate-800">{formatCurrency(order.value)}</td>
+                          <td
+                            className="px-4 py-3"
+                            onClick={(event) => event.stopPropagation()}
+                            onPointerDownCapture={(event) => event.stopPropagation()}
                           >
-                            <SelectTrigger className="h-8 w-28 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="COD">COD</SelectItem>
-                              <SelectItem value="Online">Online</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </td>
-                        <td className="px-4 py-3">
-                          <Select
-                            value={order.status}
-                            onValueChange={(value) => updateOrderStatus(order.id, value as OrderStatus)}
-                          >
-                            <SelectTrigger className="h-8 w-36 text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {Object.keys(statusLabels).map((status) => (
-                                <SelectItem key={status} value={status}>
-                                  {statusLabels[status as OrderStatus]}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </td>
-                      </tr>
-                    )
-                  })}
+                            <Select
+                              value={order.payment}
+                              onValueChange={(value) => changePaymentMethod(order.id, value as AdminOrderPaymentDisplay)}
+                            >
+                              <SelectTrigger className="h-8 w-28 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="COD">COD</SelectItem>
+                                <SelectItem value="Online">Online</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </td>
+                          <td className="px-4 py-3">
+                            <Select
+                              value={order.status}
+                              onValueChange={(value) => updateOrderStatus(order.id, value as AdminOrderStatus)}
+                            >
+                              <SelectTrigger className="h-8 w-36 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {Object.keys(statusLabels).map((status) => (
+                                  <SelectItem key={status} value={status}>
+                                    {statusLabels[status as AdminOrderStatus]}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
@@ -364,11 +564,16 @@ export default function OrdersPage() {
             <div
               className={cn(
                 "hidden min-h-[28rem] lg:flex",
-                isDetailOpen ? "opacity-100" : "pointer-events-none opacity-0",
-                "transition-opacity duration-300",
-              )}
-            >
-              <OrderDetailContent order={selectedOrder} />
+              isDetailOpen ? "opacity-100" : "pointer-events-none opacity-0",
+              "transition-opacity duration-300",
+            )}
+          >
+              <OrderDetailContent
+                summary={selectedOrder}
+                detail={orderDetail}
+                loading={isDetailLoading}
+                error={detailError}
+              />
             </div>
           </div>
 
@@ -386,7 +591,12 @@ export default function OrdersPage() {
               isDetailOpen ? "translate-x-0" : "translate-x-full",
             )}
           >
-            <OrderDetailContent order={selectedOrder} />
+            <OrderDetailContent
+              summary={selectedOrder}
+              detail={orderDetail}
+              loading={isDetailLoading}
+              error={detailError}
+            />
           </div>
         </CardContent>
       </Card>
