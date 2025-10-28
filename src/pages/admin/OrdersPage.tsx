@@ -157,7 +157,7 @@ export default function OrdersPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 rounded-full border border-slate-200 lg:hidden"
+                className="h-9 w-9 rounded-full border border-slate-200 hover:bg-slate-100"
                 onClick={closeDetail}
               >
                 <X className="h-4 w-4" />
@@ -255,7 +255,7 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="relative space-y-6">
+    <div className="relative space-y-6 overflow-x-hidden">
       <Card>
         <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
