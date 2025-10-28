@@ -207,10 +207,10 @@ export default function OrdersPage() {
     }
   }, [selectedOrderId, detailReloadKey])
 
-  const updateOrderStatus = (id: number, status: AdminOrderStatus) => {
-    setOrders((prev) => prev.map((order) => (order.id === id ? { ...order, status } : order)))
-    setOrderDetail((prev) => (prev && prev.id === id ? { ...prev, status } : prev))
-  }
+  // const updateOrderStatus = (id: number, status: AdminOrderStatus) => {
+  //   setOrders((prev) => prev.map((order) => (order.id === id ? { ...order, status } : order)))
+  //   setOrderDetail((prev) => (prev && prev.id === id ? { ...prev, status } : prev))
+  // }
 
   const changePaymentMethod = (id: number, method: AdminOrderPaymentDisplay) => {
     setOrders((prev) => prev.map((order) => (order.id === id ? { ...order, payment: method } : order)))
@@ -537,21 +537,15 @@ export default function OrdersPage() {
                             </Select>
                           </td>
                           <td className="px-4 py-3">
-                            <Select
-                              value={order.status}
-                              onValueChange={(value) => updateOrderStatus(order.id, value as AdminOrderStatus)}
-                            >
-                              <SelectTrigger className="h-8 w-36 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {Object.keys(statusLabels).map((status) => (
-                                  <SelectItem key={status} value={status}>
-                                    {statusLabels[status as AdminOrderStatus]}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <div className="flex items-center gap-2">
+                              <span
+                                aria-hidden
+                                className={cn("h-2 w-2 rounded-full", statusAccent[order.status])}
+                              />
+                              <Badge className={cn("border", statusBadge[order.status])}>
+                                {statusLabels[order.status]}
+                              </Badge>
+                            </div>
                           </td>
                         </tr>
                       )
