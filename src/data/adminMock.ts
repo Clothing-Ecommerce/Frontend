@@ -173,7 +173,6 @@ export interface OrderDetail {
 
 export interface OrderItem {
   id: string
-  channel: "Website" | "Shopee" | "Lazada" | "Tiktok Shop"
   customer: string
   value: number
   payment: "COD" | "Online"
@@ -189,7 +188,6 @@ export interface OrderItem {
 export const orderMock: OrderItem[] = [
   {
     id: "DH-1001",
-    channel: "Website",
     customer: "Nguyễn Văn A",
     value: 2350000,
     payment: "Online",
@@ -219,7 +217,6 @@ export const orderMock: OrderItem[] = [
   },
   {
     id: "DH-1002",
-    channel: "Shopee",
     customer: "Trần Thu B",
     value: 1480000,
     payment: "COD",
@@ -249,7 +246,6 @@ export const orderMock: OrderItem[] = [
   },
   {
     id: "DH-1003",
-    channel: "Lazada",
     customer: "Lê Minh C",
     value: 3280000,
     payment: "Online",
@@ -280,7 +276,6 @@ export const orderMock: OrderItem[] = [
   },
   {
     id: "DH-1004",
-    channel: "Website",
     customer: "Đoàn Hà D",
     value: 890000,
     payment: "COD",
@@ -310,7 +305,6 @@ export const orderMock: OrderItem[] = [
   },
   {
     id: "DH-1005",
-    channel: "Tiktok Shop",
     customer: "Phạm Quang E",
     value: 1120000,
     payment: "Online",

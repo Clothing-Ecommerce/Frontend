@@ -169,7 +169,6 @@ export default function OrdersPage() {
             <Badge className={cn("border", statusBadge[order.status])}>{statusLabels[order.status]}</Badge>
             <span className="text-sm font-semibold text-slate-800">{formatCurrency(order.value)}</span>
             <span className="hidden sm:inline">•</span>
-            <span>Kênh: {order.channel}</span>
             <span>Thanh toán: {order.payment}</span>
           </div>
 
@@ -204,7 +203,7 @@ export default function OrdersPage() {
           </div>
 
           <div className="space-y-3">
-            <h4 className="text-sm font-semibold text-slate-800">Tiến trình đơn</h4>
+            <h4 className="text-sm font-semibold text-slate-800">Tiến trình đơn hàng</h4>
             <ol className="space-y-2">
               {order.detail.timeline.map((step, index) => {
                 const isCompleted = step.time !== "--" && step.time.toLowerCase() !== "đang xử lý"
@@ -226,7 +225,7 @@ export default function OrdersPage() {
           </div>
 
           <div className="space-y-2">
-            <h4 className="text-sm font-semibold text-slate-800">Ghi chú gần đây</h4>
+            <h4 className="text-sm font-semibold text-slate-800">Ghi chú</h4>
             <div className="space-y-2 text-xs text-slate-600">
               {order.detail.notes.map((note, index) => (
                 <div key={`${note}-${index}`} className="rounded-2xl border border-slate-200 bg-white/70 p-3 leading-relaxed">
