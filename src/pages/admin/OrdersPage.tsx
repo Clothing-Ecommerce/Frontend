@@ -24,7 +24,6 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import type {
   AdminOrderDetailResponse,
   AdminOrderListResult,
-  AdminOrderPaymentDisplay,
   AdminOrderStatus,
   AdminOrderSummary,
 } from "@/types/adminType"
@@ -212,12 +211,12 @@ export default function OrdersPage() {
   //   setOrderDetail((prev) => (prev && prev.id === id ? { ...prev, status } : prev))
   // }
 
-  const changePaymentMethod = (id: number, method: AdminOrderPaymentDisplay) => {
-    setOrders((prev) => prev.map((order) => (order.id === id ? { ...order, payment: method } : order)))
-    setOrderDetail((prev) =>
-      prev && prev.id === id ? { ...prev, payment: { ...prev.payment, display: method } } : prev,
-    )
-  }
+  // const changePaymentMethod = (id: number, method: AdminOrderPaymentDisplay) => {
+  //   setOrders((prev) => prev.map((order) => (order.id === id ? { ...order, payment: method } : order)))
+  //   setOrderDetail((prev) =>
+  //     prev && prev.id === id ? { ...prev, payment: { ...prev.payment, display: method } } : prev,
+  //   )
+  // }
 
   const selectedOrder = useMemo(
     () => orders.find((order) => order.id === selectedOrderId) ?? null,
@@ -518,24 +517,7 @@ export default function OrdersPage() {
                           <td className="px-4 py-3 font-semibold text-slate-800">{order.code}</td>
                           <td className="px-4 py-3">{order.customer}</td>
                           <td className="px-4 py-3 font-medium text-slate-800">{formatCurrency(order.value)}</td>
-                          <td
-                            className="px-4 py-3"
-                            onClick={(event) => event.stopPropagation()}
-                            onPointerDownCapture={(event) => event.stopPropagation()}
-                          >
-                            <Select
-                              value={order.payment}
-                              onValueChange={(value) => changePaymentMethod(order.id, value as AdminOrderPaymentDisplay)}
-                            >
-                              <SelectTrigger className="h-8 w-28 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="COD">COD</SelectItem>
-                                <SelectItem value="Online">Online</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </td>
+                          <td className="px-4 py-3 text-slate-700">{order.payment}</td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
                               <span
