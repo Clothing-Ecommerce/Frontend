@@ -18,6 +18,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { cn } from "@/lib/utils"
 import api from "@/utils/axios"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
@@ -105,6 +114,8 @@ export default function OrdersPage() {
   const [isDetailLoading, setIsDetailLoading] = useState(false)
   const [detailError, setDetailError] = useState<string | null>(null)
   const [detailReloadKey, setDetailReloadKey] = useState(0)
+  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false)
+  const [statusSelection, setStatusSelection] = useState<AdminOrderStatus | null>(null)
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -235,16 +246,46 @@ export default function OrdersPage() {
     setDetailReloadKey((prev) => prev + 1)
   }
 
+  const openStatusDialog = (status: AdminOrderStatus) => {
+    setStatusSelection(status)
+    setIsStatusDialogOpen(true)
+  }
+
+  const handleCloseStatusDialog = () => {
+    setIsStatusDialogOpen(false)
+    setStatusSelection(null)
+  }
+
+  const handleSaveStatus = () => {
+    if (!selectedOrderId || !statusSelection) {
+      setIsStatusDialogOpen(false)
+      return
+    }
+
+    setOrders((prev) =>
+      prev.map((order) => (order.id === selectedOrderId ? { ...order, status: statusSelection } : order)),
+    )
+
+    setOrderDetail((prev) =>
+      prev && prev.id === selectedOrderId ? { ...prev, status: statusSelection } : prev,
+    )
+
+    setIsStatusDialogOpen(false)
+    setStatusSelection(null)
+  }
+
   const OrderDetailContent = ({
     summary,
     detail,
     loading,
     error,
+    onUpdateStatus,
   }: {
     summary: AdminOrderSummary | null
     detail: AdminOrderDetailResponse | null
     loading: boolean
     error: string | null
+    onUpdateStatus: (status: AdminOrderStatus) => void
   }) => {
     if (!summary && !loading) {
       return (
@@ -413,7 +454,7 @@ export default function OrdersPage() {
         </div>
 
         <div className="space-y-3">
-          <Button type="button" className="w-full gap-2">
+          <Button type="button" className="w-full gap-2" onClick={() => onUpdateStatus(effectiveStatus)}>
             <Package className="h-4 w-4" /> Cập nhật đơn hàng
           </Button>
           <div className="flex flex-wrap gap-2">
@@ -549,6 +590,7 @@ export default function OrdersPage() {
                 detail={orderDetail}
                 loading={isDetailLoading}
                 error={detailError}
+                onUpdateStatus={openStatusDialog}
               />
             </div>
           </div>
@@ -572,10 +614,64 @@ export default function OrdersPage() {
               detail={orderDetail}
               loading={isDetailLoading}
               error={detailError}
+              onUpdateStatus={openStatusDialog}
             />
           </div>
         </CardContent>
       </Card>
+
+      <Dialog
+        open={isStatusDialogOpen}
+        onOpenChange={(open) => {
+          setIsStatusDialogOpen(open)
+          if (!open) {
+            setStatusSelection(null)
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Cập nhật trạng thái đơn hàng</DialogTitle>
+            <DialogDescription>
+              Chọn trạng thái phù hợp cho đơn hàng này. Bạn chỉ có thể chọn một trạng thái tại một thời điểm.
+            </DialogDescription>
+          </DialogHeader>
+
+          <RadioGroup className="space-y-3">
+            {Object.entries(statusLabels).map(([status, label]) => {
+              const typedStatus = status as AdminOrderStatus
+
+              return (
+                <label
+                  key={status}
+                  className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 transition hover:border-slate-300"
+                >
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-slate-900">{label}</span>
+                    <span className="text-xs text-slate-500">Mã trạng thái: {status}</span>
+                  </div>
+                  <RadioGroupItem
+                    value={status}
+                    checked={statusSelection === typedStatus}
+                    name="admin-order-status"
+                    onChange={() => setStatusSelection(typedStatus)}
+                    aria-label={label}
+                  />
+                </label>
+              )
+            })}
+          </RadioGroup>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={handleCloseStatusDialog}>
+              Huỷ
+            </Button>
+            <Button onClick={handleSaveStatus} disabled={!statusSelection}>
+              Lưu
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
