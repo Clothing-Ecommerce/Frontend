@@ -629,40 +629,42 @@ export default function OrdersPage() {
           }
         }}
       >
-        <DialogContent className="sm:max-w-md max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-md max-h-[80vh] overflow-hidden bg-white flex flex-col">
+          <DialogHeader className="shrink-0 pb-2">
             <DialogTitle>Cập nhật trạng thái đơn hàng</DialogTitle>
             <DialogDescription>
               Chọn trạng thái phù hợp cho đơn hàng này. Bạn chỉ có thể chọn một trạng thái tại một thời điểm.
             </DialogDescription>
           </DialogHeader>
 
-          <RadioGroup className="space-y-3">
-            {Object.entries(statusLabels).map(([status, label]) => {
-              const typedStatus = status as AdminOrderStatus
+          <div className="flex-1 overflow-y-auto pr-2">
+            <RadioGroup className="space-y-3 pb-4">
+              {Object.entries(statusLabels).map(([status, label]) => {
+                const typedStatus = status as AdminOrderStatus
 
-              return (
-                <label
-                  key={status}
-                  className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 transition hover:border-slate-300"
-                >
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-slate-900">{label}</span>
-                    <span className="text-xs text-slate-500">Mã trạng thái: {status}</span>
-                  </div>
-                  <RadioGroupItem
-                    value={status}
-                    checked={statusSelection === typedStatus}
-                    name="admin-order-status"
-                    onChange={() => setStatusSelection(typedStatus)}
-                    aria-label={label}
-                  />
-                </label>
-              )
-            })}
-          </RadioGroup>
+                return (
+                  <label
+                    key={status}
+                    className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 transition hover:border-slate-300"
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-semibold text-slate-900">{label}</span>
+                      {/* <span className="text-xs text-slate-500">Mã trạng thái: {status}</span> */}
+                    </div>
+                    <RadioGroupItem
+                      value={status}
+                      checked={statusSelection === typedStatus}
+                      name="admin-order-status"
+                      onChange={() => setStatusSelection(typedStatus)}
+                      aria-label={label}
+                    />
+                  </label>
+                )
+              })}
+            </RadioGroup>
+          </div>
 
-          <DialogFooter className="gap-2">
+          <DialogFooter className="gap-2 shrink-0 pt-2">
             <Button variant="outline" onClick={handleCloseStatusDialog}>
               Huỷ
             </Button>
