@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import axios from "axios"
 import { Loader2, MapPin, Package, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -34,6 +34,15 @@ import api from "@/utils/axios"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
 import { ToastContainer } from "@/components/ui/toast"
 import { useToast } from "@/hooks/useToast"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 import type {
   AdminOrderDetailResponse,
   AdminOrderListResult,
@@ -95,6 +104,8 @@ function formatDateTime(iso: string) {
   }
 }
 
+const DEFAULT_PAGE_SIZE = 11
+
 function getInitials(name: string) {
   const initials = name
     .split(" ")
@@ -108,6 +119,8 @@ function getInitials(name: string) {
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<AdminOrderSummary[]>([])
+  const [pagination, setPagination] = useState<AdminOrderListResult["pagination"] | null>(null)
+  const [currentPage, setCurrentPage] = useState(1)
   const [search, setSearch] = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<AdminOrderStatus | "all">("all")
@@ -136,6 +149,10 @@ export default function OrdersPage() {
   }, [search])
 
   useEffect(() => {
+    setCurrentPage((prev) => (prev === 1 ? prev : 1))
+  }, [debouncedSearch, statusFilter])
+
+  useEffect(() => {
     const controller = new AbortController()
     setIsListLoading(true)
     setListError(null)
@@ -143,8 +160,8 @@ export default function OrdersPage() {
     api
       .get<AdminOrderListResult>("/admin/orders", {
         params: {
-          page: 1,
-          pageSize: 20,
+          page: currentPage,
+          pageSize: DEFAULT_PAGE_SIZE,
           search: debouncedSearch.length ? debouncedSearch : undefined,
           status: statusFilter !== "all" ? statusFilter : undefined,
         },
@@ -152,6 +169,7 @@ export default function OrdersPage() {
       })
       .then((response) => {
         setOrders(response.data.orders)
+        setPagination(response.data.pagination)
       })
       .catch((error) => {
         if (axios.isCancel(error)) return
@@ -160,6 +178,7 @@ export default function OrdersPage() {
             ? error.response.data.message
             : "Không thể tải danh sách đơn hàng"
         setListError(message)
+        setPagination(null)
       })
       .finally(() => {
         if (!controller.signal.aborted) {
@@ -170,7 +189,15 @@ export default function OrdersPage() {
     return () => {
       controller.abort()
     }
-  }, [debouncedSearch, statusFilter])
+  }, [currentPage, debouncedSearch, statusFilter])
+
+  useEffect(() => {
+    if (!pagination) return
+    const maxPage = Math.max(pagination.totalPages, 1)
+    if (currentPage > maxPage) {
+      setCurrentPage(maxPage)
+    }
+  }, [currentPage, pagination])
 
   useEffect(() => {
     if (!selectedOrderId) return
@@ -245,6 +272,74 @@ export default function OrdersPage() {
 
   const currentEffectiveStatus: AdminOrderStatus | null =
     orderDetail?.status ?? selectedOrder?.status ?? null
+
+  const handlePageChange = useCallback(
+    (targetPage: number) => {
+      const maxPage = pagination ? Math.max(pagination.totalPages, 1) : Number.MAX_SAFE_INTEGER
+      const normalized = Math.min(Math.max(targetPage, 1), maxPage)
+      setCurrentPage((prev) => (prev === normalized ? prev : normalized))
+    },
+    [pagination],
+  )
+
+  const buildPageHref = useCallback(
+    (targetPage: number) => {
+      if (!pagination) return "#"
+
+      const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost"
+      const baseLink =
+        pagination.nextLink ??
+        pagination.previousLink ??
+        (typeof window !== "undefined" ? window.location.href : `${origin}/admin/orders`)
+
+      try {
+        const url = new URL(baseLink, origin)
+        url.searchParams.set("page", String(targetPage))
+        url.searchParams.set("pageSize", String(pagination.pageSize))
+
+        if (baseLink.startsWith("http")) {
+          return url.toString()
+        }
+
+        return `${url.pathname}${url.search}`
+      } catch (error) {
+        console.error("Failed to build admin orders pagination href", error)
+        return `?page=${targetPage}&pageSize=${pagination.pageSize}`
+      }
+    },
+    [pagination],
+  )
+
+  const paginationItems = useMemo(() => {
+    if (!pagination) return []
+    const { totalPages, page } = pagination
+    if (totalPages <= 0) return []
+
+    const pages = new Set<number>()
+    pages.add(1)
+    pages.add(totalPages)
+
+    for (let offset = -2; offset <= 2; offset += 1) {
+      const value = page + offset
+      if (value >= 1 && value <= totalPages) {
+        pages.add(value)
+      }
+    }
+
+    const sorted = Array.from(pages).sort((a, b) => a - b)
+    const items: Array<number | "ellipsis"> = []
+
+    for (let index = 0; index < sorted.length; index += 1) {
+      const current = sorted[index]
+      const previous = sorted[index - 1]
+      if (previous !== undefined && current - previous > 1) {
+        items.push("ellipsis")
+      }
+      items.push(current)
+    }
+
+    return items
+  }, [pagination])
 
   const openOrderDetail = (orderId: number) => {
     setSelectedOrderId(orderId)
@@ -649,6 +744,71 @@ export default function OrdersPage() {
               />
             </div>
           </div>
+
+          {pagination && pagination.totalPages > 1 && (
+            <Pagination className="justify-end pt-2">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href={
+                      pagination.previousLink ??
+                      buildPageHref(Math.max(pagination.page - 1, 1))
+                    }
+                    onClick={(event) => {
+                      event.preventDefault()
+                      if (pagination.page <= 1) return
+                      handlePageChange(pagination.page - 1)
+                    }}
+                    className={
+                      pagination.page <= 1 ? "pointer-events-none opacity-50" : undefined
+                    }
+                  />
+                </PaginationItem>
+                {paginationItems.map((item, index) => (
+                  <PaginationItem key={`admin-orders-page-${item}-${index}`}>
+                    {item === "ellipsis" ? (
+                      <PaginationEllipsis />
+                    ) : (
+                      <PaginationLink
+                        href={buildPageHref(item)}
+                        size="default"
+                        isActive={pagination.page === item}
+                        onClick={(event) => {
+                          event.preventDefault()
+                          if (pagination.page === item) return
+                          handlePageChange(item)
+                        }}
+                      >
+                        {item}
+                      </PaginationLink>
+                    )}
+                  </PaginationItem>
+                ))}
+                <PaginationItem>
+                  <PaginationNext
+                    href={
+                      pagination.nextLink ??
+                      buildPageHref(
+                        Math.min(pagination.page + 1, Math.max(pagination.totalPages, 1)),
+                      )
+                    }
+                    onClick={(event) => {
+                      event.preventDefault()
+                      if (pagination.page >= pagination.totalPages) {
+                        return
+                      }
+                      handlePageChange(pagination.page + 1)
+                    }}
+                    className={
+                      pagination.page >= pagination.totalPages
+                        ? "pointer-events-none opacity-50"
+                        : undefined
+                    }
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
 
           <div
             className={cn(

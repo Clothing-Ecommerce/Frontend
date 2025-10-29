@@ -103,6 +103,8 @@ export interface AdminOrderListResult {
     pageSize: number
     totalItems: number
     totalPages: number
+    previousLink: string | null
+    nextLink: string | null
   }
 }
 
