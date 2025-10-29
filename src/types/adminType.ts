@@ -183,3 +183,12 @@ export interface AdminOrderDetailResponse {
     return: number | null
   }
 }
+
+export interface AdminOrderStatusUpdateResponse {
+  message: string
+  order: AdminOrderDetailResponse
+  summary: AdminOrderSummary
+  status: AdminOrderStatus
+  rawStatus: string
+  changed: boolean
+}

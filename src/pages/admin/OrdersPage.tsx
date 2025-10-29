@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import axios from "axios"
-import { MapPin, Package, X } from "lucide-react"
+import { Loader2, MapPin, Package, X } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -27,14 +27,19 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 import api from "@/utils/axios"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
+import { ToastContainer } from "@/components/ui/toast"
+import { useToast } from "@/hooks/useToast"
 import type {
   AdminOrderDetailResponse,
   AdminOrderListResult,
   AdminOrderStatus,
   AdminOrderSummary,
+  AdminOrderStatusUpdateResponse,
 } from "@/types/adminType"
 
 const statusLabels: Record<AdminOrderStatus, string> = {
@@ -116,6 +121,10 @@ export default function OrdersPage() {
   const [detailReloadKey, setDetailReloadKey] = useState(0)
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false)
   const [statusSelection, setStatusSelection] = useState<AdminOrderStatus | null>(null)
+  const [statusNote, setStatusNote] = useState("")
+  const [isStatusSaving, setIsStatusSaving] = useState(false)
+  const [statusError, setStatusError] = useState<string | null>(null)
+  const { toasts, toast, removeToast } = useToast()
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -234,6 +243,9 @@ export default function OrdersPage() {
     [orders, selectedOrderId],
   )
 
+  const currentEffectiveStatus: AdminOrderStatus | null =
+    orderDetail?.status ?? selectedOrder?.status ?? null
+
   const openOrderDetail = (orderId: number) => {
     setSelectedOrderId(orderId)
     setDetailReloadKey((prev) => prev + 1)
@@ -248,30 +260,68 @@ export default function OrdersPage() {
 
   const openStatusDialog = (status: AdminOrderStatus) => {
     setStatusSelection(status)
+    setStatusNote("")
+    setStatusError(null)
+    setIsStatusSaving(false)
     setIsStatusDialogOpen(true)
   }
 
   const handleCloseStatusDialog = () => {
     setIsStatusDialogOpen(false)
     setStatusSelection(null)
+    setStatusNote("")
+    setStatusError(null)
+    setIsStatusSaving(false)
   }
 
-  const handleSaveStatus = () => {
+  const handleSaveStatus = async () => {
     if (!selectedOrderId || !statusSelection) {
       setIsStatusDialogOpen(false)
       return
     }
 
-    setOrders((prev) =>
-      prev.map((order) => (order.id === selectedOrderId ? { ...order, status: statusSelection } : order)),
-    )
+    const trimmedNote = statusNote.trim()
+    setIsStatusSaving(true)
+    setStatusError(null)
 
-    setOrderDetail((prev) =>
-      prev && prev.id === selectedOrderId ? { ...prev, status: statusSelection } : prev,
-    )
+    try {
+      const response = await api.patch<AdminOrderStatusUpdateResponse>(
+        `/admin/orders/${selectedOrderId}/status`,
+        {
+          status: statusSelection,
+          note: trimmedNote.length ? trimmedNote : undefined,
+        },
+      )
 
-    setIsStatusDialogOpen(false)
-    setStatusSelection(null)
+      const data = response.data
+
+      setOrders((prev) => prev.map((order) => (order.id === data.summary.id ? data.summary : order)))
+      setOrderDetail(data.order)
+
+      const successMessage =
+        typeof data.message === "string" && data.message.trim().length
+          ? data.message
+          : "Cập nhật trạng thái thành công"
+      toast.success(successMessage, `Trạng thái hiện tại: ${statusLabels[data.status]}`)
+
+      setIsStatusDialogOpen(false)
+      setStatusSelection(null)
+      setStatusNote("")
+      setStatusError(null)
+    } catch (error) {
+      console.error("Failed to update admin order status", error)
+      let message = "Không thể cập nhật trạng thái đơn hàng"
+      if (axios.isAxiosError(error)) {
+        const responseMessage = error.response?.data?.message
+        if (typeof responseMessage === "string" && responseMessage.trim().length) {
+          message = responseMessage
+        }
+      }
+      setStatusError(message)
+      toast.error("Cập nhật không thành công", message)
+    } finally {
+      setIsStatusSaving(false)
+    }
   }
 
   const OrderDetailContent = ({
@@ -470,6 +520,11 @@ export default function OrdersPage() {
     )
   }
 
+  const trimmedStatusNote = statusNote.trim()
+  const canSubmitStatusUpdate =
+    Boolean(statusSelection) &&
+    (statusSelection !== currentEffectiveStatus || trimmedStatusNote.length > 0)
+
   return (
     <div className="relative space-y-6 overflow-x-hidden">
       <Card>
@@ -623,9 +678,10 @@ export default function OrdersPage() {
       <Dialog
         open={isStatusDialogOpen}
         onOpenChange={(open) => {
-          setIsStatusDialogOpen(open)
           if (!open) {
-            setStatusSelection(null)
+            handleCloseStatusDialog()
+          } else {
+            setIsStatusDialogOpen(true)
           }
         }}
       >
@@ -637,8 +693,8 @@ export default function OrdersPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto pr-2">
-            <RadioGroup className="space-y-3 pb-4">
+          <div className="flex-1 overflow-y-auto pr-2 space-y-4">
+            <RadioGroup className="space-y-3">
               {Object.entries(statusLabels).map(([status, label]) => {
                 const typedStatus = status as AdminOrderStatus
 
@@ -653,27 +709,66 @@ export default function OrdersPage() {
                     </div>
                     <RadioGroupItem
                       value={status}
-                      checked={statusSelection === typedStatus}
                       name="admin-order-status"
-                      onChange={() => setStatusSelection(typedStatus)}
+                      checked={statusSelection === typedStatus}
+                      onChange={() => {
+                        setStatusSelection(typedStatus)
+                        setStatusError(null)
+                      }}
                       aria-label={label}
                     />
                   </label>
                 )
               })}
             </RadioGroup>
+
+            <div className="space-y-2">
+              <Label htmlFor="admin-order-status-note">Ghi chú (tuỳ chọn)</Label>
+              <Textarea
+                id="admin-order-status-note"
+                placeholder="Thêm ghi chú cho lần cập nhật trạng thái này"
+                value={statusNote}
+                onChange={(event) => {
+                  setStatusNote(event.target.value)
+                  if (statusError) {
+                    setStatusError(null)
+                  }
+                }}
+                className="min-h-24"
+              />
+              <p className="text-xs text-slate-500">
+                Ghi chú sẽ được lưu lại trong lịch sử trạng thái của đơn hàng.
+              </p>
+            </div>
           </div>
 
+          {statusError ? <p className="px-1 text-sm text-rose-600">{statusError}</p> : null}
+
           <DialogFooter className="gap-2 shrink-0 pt-2">
-            <Button variant="outline" onClick={handleCloseStatusDialog}>
+            <Button variant="outline" onClick={handleCloseStatusDialog} disabled={isStatusSaving}>
               Huỷ
             </Button>
-            <Button onClick={handleSaveStatus} disabled={!statusSelection}>
-              Lưu
+            <Button
+              onClick={handleSaveStatus}
+              disabled={!canSubmitStatusUpdate || isStatusSaving}
+            >
+              {isStatusSaving ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Đang lưu...
+                </span>
+              ) : (
+                "Lưu"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ToastContainer
+        toasts={toasts.map((toastItem) => ({ ...toastItem, onClose: removeToast }))}
+        onClose={removeToast}
+      />
     </div>
   )
 }
