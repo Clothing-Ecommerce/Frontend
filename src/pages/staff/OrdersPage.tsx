@@ -287,7 +287,7 @@ export default function StaffOrdersPage() {
                       >
                         <div>
                           <div className="font-medium text-[#1f1b16]">{item.name}</div>
-                          <div className="text-xs text-[#9a8f7f]">SKU: {item.sku}</div>
+                          {/* <div className="text-xs text-[#9a8f7f]">SKU: {item.sku}</div> */}
                         </div>
                         <div className="text-right text-sm font-medium text-[#1f1b16]">
                           x{item.quantity} • {formatCurrency(item.price)}
