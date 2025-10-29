@@ -437,7 +437,7 @@ export default function OrdersPage() {
                   >
                     <div>
                       <div className="font-medium text-slate-800">{item.name}</div>
-                      <div className="text-xs text-slate-500">SKU: {item.sku ?? "—"}</div>
+                      {/* <div className="text-xs text-slate-500">SKU: {item.sku ?? "—"}</div> */}
                     </div>
                     <div className="text-right text-sm font-semibold text-slate-800">
                       x{item.quantity} • {formatCurrency(item.price)}
