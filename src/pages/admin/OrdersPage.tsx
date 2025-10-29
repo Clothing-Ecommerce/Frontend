@@ -746,7 +746,7 @@ export default function OrdersPage() {
           </div>
 
           {pagination && pagination.totalPages > 1 && (
-            <Pagination className="justify-end pt-2">
+            <Pagination className="justify-start pt-2">
               <PaginationContent>
                 <PaginationItem>
                   <PaginationPrevious
