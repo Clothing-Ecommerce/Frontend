@@ -730,11 +730,12 @@ export default function OrdersPage() {
 
             <div
               className={cn(
-                "hidden min-h-[28rem] lg:flex",
-              isDetailOpen ? "opacity-100" : "pointer-events-none opacity-0",
-              "transition-opacity duration-300",
-            )}
-          >
+                "hidden overflow-hidden transition-[opacity,height] duration-300 lg:flex",
+                isDetailOpen
+                  ? "min-h-[28rem] opacity-100"
+                  : "h-0 min-h-0 pointer-events-none opacity-0",
+              )}
+            >
               <OrderDetailContent
                 summary={selectedOrder}
                 detail={orderDetail}
