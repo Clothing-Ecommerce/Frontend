@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react"
+import { useEffect, useMemo, useState, useRef, type FormEvent } from "react"
 import axios from "axios"
 import {
   Plus,
@@ -11,6 +11,16 @@ import {
   Package,
   ArrowUpDown,
   Loader2,
+  Upload,
+  ImagePlus,
+  Star,
+  X,
+  GripVertical,
+  RefreshCw,
+  Bold,
+  Italic,
+  List,
+  Eraser,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -40,6 +50,12 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 import api from "@/utils/axios"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
@@ -67,6 +83,35 @@ const currencyFormatter = new Intl.NumberFormat("vi-VN", {
 
 const formatCurrency = (value: number) => currencyFormatter.format(value)
 
+type MediaItem = {
+  id: string
+  file: File
+  preview: string
+  isCover: boolean
+  sortOrder: number
+}
+
+type VariantAttributes = {
+  colors: string[]
+  sizes: string[]
+}
+
+type VariantDraft = {
+  id: string
+  color?: string
+  size?: string
+  sku: string
+  price: string
+  stock: string
+  imageId?: string
+}
+
+type SpecificationEntry = {
+  id: string
+  key: string
+  value: string
+}
+
 type CreateProductFormState = {
   name: string
   slug: string
@@ -74,20 +119,39 @@ type CreateProductFormState = {
   categoryId: string
   brandId: string
   description: string
+  material: string
+  careInstructions: string
   features: string
-  specifications: string
+  specifications: SpecificationEntry[]
+  media: MediaItem[]
+  variantAttributes: VariantAttributes
+  variants: VariantDraft[]
+  seoTitle: string
+  seoDescription: string
 }
 
-const INITIAL_FORM_STATE: CreateProductFormState = {
+const uniqueId = () =>
+  typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2)
+
+const createInitialFormState = (): CreateProductFormState => ({
   name: "",
   slug: "",
   basePrice: "",
   categoryId: "",
   brandId: "",
   description: "",
+  material: "",
+  careInstructions: "",
   features: "",
-  specifications: "",
-}
+  specifications: [],
+  media: [],
+  variantAttributes: { colors: [], sizes: [] },
+  variants: [],
+  seoTitle: "",
+  seoDescription: "",
+})
 
 const slugify = (value: string) =>
   value
@@ -97,6 +161,88 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "")
     .replace(/-+/g, "-")
+
+type RichTextEditorProps = {
+  id: string
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+}
+
+const SimpleRichTextEditor = ({ id, value, onChange, placeholder }: RichTextEditorProps) => {
+  const editorRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (editorRef.current && editorRef.current.innerHTML !== value) {
+      editorRef.current.innerHTML = value || ""
+    }
+  }, [value])
+
+  const handleCommand = (command: string) => {
+    document.execCommand(command, false)
+    if (editorRef.current) {
+      onChange(editorRef.current.innerHTML)
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-2 rounded-md border border-[#ead7b9] bg-[#fdfaf4] p-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-[#6c6252] hover:bg-[#f4f1ea]"
+          onClick={() => handleCommand("bold")}
+        >
+          <Bold className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-[#6c6252] hover:bg-[#f4f1ea]"
+          onClick={() => handleCommand("italic")}
+        >
+          <Italic className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-[#6c6252] hover:bg-[#f4f1ea]"
+          onClick={() => handleCommand("insertUnorderedList")}
+        >
+          <List className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-[#6c6252] hover:bg-[#f4f1ea]"
+          onClick={() => {
+            if (editorRef.current) {
+              editorRef.current.innerHTML = ""
+              onChange("")
+            }
+          }}
+        >
+          <Eraser className="h-4 w-4" />
+        </Button>
+      </div>
+      <div
+        id={id}
+        ref={editorRef}
+        className="min-h-[160px] rounded-md border border-[#ead7b9] bg-white px-3 py-2 text-sm shadow-inner focus-visible:outline-none"
+        contentEditable
+        onInput={() => onChange(editorRef.current?.innerHTML ?? "")}
+        suppressContentEditableWarning
+      >
+        {!value?.length && <span className="text-[#b7aa96]">{placeholder}</span>}
+      </div>
+    </div>
+  )
+}
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<AdminProductListItem[]>([])
@@ -117,10 +263,14 @@ export default function ProductsPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
-  const [createForm, setCreateForm] = useState<CreateProductFormState>(INITIAL_FORM_STATE)
+  const [createForm, setCreateForm] = useState<CreateProductFormState>(createInitialFormState)
   const [isCreating, setIsCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [activeTab, setActiveTab] = useState("general")
+  const [colorInput, setColorInput] = useState("")
+  const [sizeInput, setSizeInput] = useState("")
+  const mediaInputRef = useRef<HTMLInputElement | null>(null)
   const { toasts, toast, removeToast } = useToast()
 
   useEffect(() => {
@@ -236,8 +386,14 @@ export default function ProductsPage() {
   }
 
   const resetCreateForm = () => {
-    setCreateForm(INITIAL_FORM_STATE)
+    setCreateForm((prev) => {
+      prev.media.forEach((item) => URL.revokeObjectURL(item.preview))
+      return createInitialFormState()
+    })
     setCreateError(null)
+    setActiveTab("general")
+    setColorInput("")
+    setSizeInput("")
   }
 
   useEffect(() => {
@@ -288,6 +444,173 @@ export default function ProductsPage() {
     }
   }, [])
 
+  const addAttributesValue = (type: keyof VariantAttributes, value: string) => {
+    const normalized = value.trim()
+    if (!normalized) return
+
+    setCreateForm((prev) => {
+      if (prev.variantAttributes[type].includes(normalized)) return prev
+
+      return {
+        ...prev,
+        variantAttributes: {
+          ...prev.variantAttributes,
+          [type]: [...prev.variantAttributes[type], normalized],
+        },
+      }
+    })
+  }
+
+  const removeAttributesValue = (type: keyof VariantAttributes, value: string) => {
+    setCreateForm((prev) => ({
+      ...prev,
+      variantAttributes: {
+        ...prev.variantAttributes,
+        [type]: prev.variantAttributes[type].filter((item) => item !== value),
+      },
+    }))
+  }
+
+  const handleMediaFiles = (fileList: FileList | null) => {
+    if (!fileList?.length) return
+
+    setCreateForm((prev) => {
+      const incoming = Array.from(fileList).map((file, index) => ({
+        id: uniqueId(),
+        file,
+        preview: URL.createObjectURL(file),
+        isCover: prev.media.length === 0 && index === 0,
+        sortOrder: prev.media.length + index,
+      }))
+
+      return {
+        ...prev,
+        media: [...prev.media, ...incoming].map((item, idx) => ({
+          ...item,
+          sortOrder: idx,
+        })),
+      }
+    })
+  }
+
+  const handleRemoveMedia = (id: string) => {
+    setCreateForm((prev) => {
+      const remaining = prev.media.filter((item) => item.id !== id)
+      const removed = prev.media.find((item) => item.id === id)
+      if (removed) URL.revokeObjectURL(removed.preview)
+      if (!remaining.length) return { ...prev, media: [] }
+      return {
+        ...prev,
+        media: remaining.map((item, index) => ({
+          ...item,
+          isCover: index === 0 ? true : item.isCover,
+          sortOrder: index,
+        })),
+      }
+    })
+  }
+
+  const handleSetCoverMedia = (id: string) => {
+    setCreateForm((prev) => ({
+      ...prev,
+      media: prev.media.map((item) => ({
+        ...item,
+        isCover: item.id === id,
+      })),
+    }))
+  }
+
+  const handleMoveMedia = (id: string, direction: "up" | "down") => {
+    setCreateForm((prev) => {
+      const index = prev.media.findIndex((item) => item.id === id)
+      if (index === -1) return prev
+
+      const targetIndex = direction === "up" ? index - 1 : index + 1
+      if (targetIndex < 0 || targetIndex >= prev.media.length) return prev
+
+      const updated = [...prev.media]
+      const [moved] = updated.splice(index, 1)
+      updated.splice(targetIndex, 0, moved)
+
+      return {
+        ...prev,
+        media: updated.map((item, idx) => ({ ...item, sortOrder: idx })),
+      }
+    })
+  }
+
+  const generateVariants = () => {
+    const colors = createForm.variantAttributes.colors.length
+      ? createForm.variantAttributes.colors
+      : [undefined]
+    const sizes = createForm.variantAttributes.sizes.length
+      ? createForm.variantAttributes.sizes
+      : [undefined]
+
+    const combinations: Array<{ color?: string; size?: string }> = []
+    colors.forEach((color) => {
+      sizes.forEach((size) => combinations.push({ color, size }))
+    })
+
+    setCreateForm((prev) => {
+      const nextVariants = combinations.map((combo) => {
+        const existing = prev.variants.find(
+          (variant) => variant.color === combo.color && variant.size === combo.size,
+        )
+        return (
+          existing ?? {
+            id: uniqueId(),
+            color: combo.color,
+            size: combo.size,
+            sku: "",
+            price: prev.basePrice,
+            stock: "0",
+          }
+        )
+      })
+
+      return { ...prev, variants: nextVariants }
+    })
+  }
+
+  const handleAutoSku = (variantId: string) => {
+    setCreateForm((prev) => ({
+      ...prev,
+      variants: prev.variants.map((variant) => {
+        if (variant.id !== variantId) return variant
+
+        const parts = [prev.slug || slugify(prev.name)]
+        if (variant.color) parts.push(slugify(variant.color))
+        if (variant.size) parts.push(slugify(variant.size))
+
+        return { ...variant, sku: parts.filter(Boolean).join("-").toUpperCase() }
+      }),
+    }))
+  }
+
+  const handleSpecificationChange = (id: string, key: keyof SpecificationEntry, value: string) => {
+    setCreateForm((prev) => ({
+      ...prev,
+      specifications: prev.specifications.map((item) =>
+        item.id === id ? { ...item, [key]: value } : item,
+      ),
+    }))
+  }
+
+  const addSpecificationRow = () => {
+    setCreateForm((prev) => ({
+      ...prev,
+      specifications: [...prev.specifications, { id: uniqueId(), key: "", value: "" }],
+    }))
+  }
+
+  const removeSpecificationRow = (id: string) => {
+    setCreateForm((prev) => ({
+      ...prev,
+      specifications: prev.specifications.filter((item) => item.id !== id),
+    }))
+  }
+
   const handleCreateSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const name = createForm.name.trim()
@@ -299,7 +622,6 @@ export default function ProductsPage() {
       : undefined
     const description = createForm.description.trim()
     const features = createForm.features.trim()
-    const specifications = createForm.specifications.trim()
 
     if (!name) return setCreateError("Vui lòng nhập tên sản phẩm")
     if (!slug) return setCreateError("Vui lòng nhập slug sản phẩm")
@@ -310,6 +632,41 @@ export default function ProductsPage() {
       return setCreateError("Danh mục không hợp lệ")
     }
 
+    const specificationPayload: Record<string, string> = {}
+    createForm.specifications.forEach((item) => {
+      if (item.key.trim() && item.value.trim()) {
+        specificationPayload[item.key.trim()] = item.value.trim()
+      }
+    })
+    if (createForm.material.trim()) specificationPayload["Chất liệu"] = createForm.material.trim()
+    if (createForm.careInstructions.trim())
+      specificationPayload["Hướng dẫn bảo quản"] = createForm.careInstructions.trim()
+    if (createForm.seoTitle.trim()) specificationPayload["SEO Title"] = createForm.seoTitle.trim()
+    if (createForm.seoDescription.trim())
+      specificationPayload["SEO Description"] = createForm.seoDescription.trim()
+
+    const imagePayload =
+      createForm.media.length > 0
+        ? createForm.media.map((item, index) => ({
+            url: item.file.name,
+            alt: name,
+            isPrimary: item.isCover,
+            sortOrder: index,
+          }))
+        : undefined
+
+    const variantPayload =
+      createForm.variants.length > 0
+        ? createForm.variants.map((variant) => ({
+            sku: variant.sku || undefined,
+            price: Number(variant.price) || basePrice,
+            stock: Number.isFinite(Number(variant.stock)) ? Number(variant.stock) : 0,
+            sizeId: undefined,
+            colorId: undefined,
+            isActive: true,
+          }))
+        : undefined
+
     const payload: AdminCreateProductRequest = {
       name,
       slug,
@@ -318,7 +675,9 @@ export default function ProductsPage() {
       description: description.length ? description : undefined,
       brandId: Number.isFinite(brandId) ? brandId : undefined,
       features: features.length ? features : undefined,
-      specifications: specifications.length ? specifications : undefined,
+      specifications: Object.keys(specificationPayload).length ? specificationPayload : undefined,
+      images: imagePayload,
+      variants: variantPayload,
     }
 
     setIsCreating(true)
@@ -597,7 +956,7 @@ export default function ProductsPage() {
           if (!open) resetCreateForm()
         }}
       >
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className="sm:max-w-5xl">
           <DialogHeader>
             <DialogTitle>Thêm sản phẩm mới</DialogTitle>
             <DialogDescription>
@@ -605,154 +964,607 @@ export default function ProductsPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <form className="space-y-4" onSubmit={handleCreateSubmit}>
-            <div className="grid gap-3">
-              <div className="grid gap-2">
-                <Label htmlFor="product-name">Tên sản phẩm</Label>
-                <Input
-                  id="product-name"
-                  value={createForm.name}
-                  onChange={(e) =>
-                    setCreateForm((prev) => ({ ...prev, name: e.target.value }))
-                  }
-                  placeholder="Áo thun basic..."
-                  required
-                  className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
-                />
-              </div>
+          <form className="space-y-6" onSubmit={handleCreateSubmit}>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+              <TabsList className="grid w-full grid-cols-2 gap-2 lg:grid-cols-4">
+                <TabsTrigger value="general">Thông tin chung</TabsTrigger>
+                <TabsTrigger value="media">Hình ảnh</TabsTrigger>
+                <TabsTrigger value="variants">Biến thể & Kho</TabsTrigger>
+                <TabsTrigger value="specifications">Thông số khác</TabsTrigger>
+              </TabsList>
 
-              <div className="grid gap-2">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="product-slug">Slug sản phẩm</Label>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 px-2 text-[#6c6252] hover:bg-[#f4f1ea]"
-                    onClick={handleGenerateSlug}
-                  >
-                    Tạo từ tên
-                  </Button>
+              <TabsContent value="general" className="space-y-4">
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <div className="space-y-3">
+                    <div className="grid gap-2">
+                      <Label htmlFor="product-name">Tên sản phẩm</Label>
+                      <Input
+                        id="product-name"
+                        value={createForm.name}
+                        onChange={(e) =>
+                          setCreateForm((prev) => ({ ...prev, name: e.target.value }))
+                        }
+                        placeholder="Áo thun basic..."
+                        required
+                        className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                      />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="product-slug">Slug sản phẩm</Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 text-[#6c6252] hover:bg-[#f4f1ea]"
+                          onClick={handleGenerateSlug}
+                        >
+                          Tạo từ tên
+                        </Button>
+                      </div>
+                      <Input
+                        id="product-slug"
+                        value={createForm.slug}
+                        onChange={(e) =>
+                          setCreateForm((prev) => ({ ...prev, slug: e.target.value }))
+                        }
+                        placeholder="ao-thun-basic"
+                        required
+                        className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                      />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="product-material">Chất liệu</Label>
+                      <Input
+                        id="product-material"
+                        value={createForm.material}
+                        onChange={(e) =>
+                          setCreateForm((prev) => ({ ...prev, material: e.target.value }))
+                        }
+                        placeholder="100% Cotton mềm mại..."
+                        className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                      />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="product-care">Hướng dẫn bảo quản</Label>
+                      <Input
+                        id="product-care"
+                        value={createForm.careInstructions}
+                        onChange={(e) =>
+                          setCreateForm((prev) => ({ ...prev, careInstructions: e.target.value }))
+                        }
+                        placeholder="Giặt tay, phơi nơi thoáng mát..."
+                        className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="grid gap-2">
+                      <Label htmlFor="product-description">Mô tả chi tiết</Label>
+                      <SimpleRichTextEditor
+                        id="product-description"
+                        value={createForm.description}
+                        onChange={(value) =>
+                          setCreateForm((prev) => ({ ...prev, description: value }))
+                        }
+                        placeholder="Mô tả ngắn gọn, có thể chèn bullet, bôi đậm..."
+                      />
+                    </div>
+
+                    <div className="grid gap-2">
+                      <Label htmlFor="product-features">Tính năng nổi bật</Label>
+                      <Textarea
+                        id="product-features"
+                        value={createForm.features}
+                        onChange={(e) =>
+                          setCreateForm((prev) => ({ ...prev, features: e.target.value }))
+                        }
+                        placeholder="Liệt kê tính năng nổi bật, mỗi dòng một mục..."
+                        className="min-h-[80px] border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                      />
+                    </div>
+                  </div>
                 </div>
-                <Input
-                  id="product-slug"
-                  value={createForm.slug}
-                  onChange={(e) =>
-                    setCreateForm((prev) => ({ ...prev, slug: e.target.value }))
-                  }
-                  placeholder="ao-thun-basic"
-                  required
-                  className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
-                />
-              </div>
 
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                <div className="grid gap-2">
-                  <Label htmlFor="product-price">Giá cơ bản (VND)</Label>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="product-price">Giá cơ bản (VND)</Label>
+                    <Input
+                      id="product-price"
+                      type="number"
+                      min={0}
+                      value={createForm.basePrice}
+                      onChange={(e) =>
+                        setCreateForm((prev) => ({ ...prev, basePrice: e.target.value }))
+                      }
+                      placeholder="199000"
+                      required
+                      className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="product-category">Danh mục</Label>
+                    <Select
+                      value={createForm.categoryId}
+                      onValueChange={(value) =>
+                        setCreateForm((prev) => ({ ...prev, categoryId: value }))
+                      }
+                      required
+                    >
+                      <SelectTrigger
+                        id="product-category"
+                        className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                      >
+                        <SelectValue placeholder="Chọn danh mục" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categoryOptions.map((category) => (
+                          <SelectItem key={category.id} value={String(category.id)}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="product-brand">Thương hiệu (tuỳ chọn)</Label>
+                    <Select
+                      value={createForm.brandId || "none"}
+                      onValueChange={(value) =>
+                        setCreateForm((prev) => ({ ...prev, brandId: value === "none" ? "" : value }))
+                      }
+                    >
+                      <SelectTrigger
+                        id="product-brand"
+                        className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                      >
+                        <SelectValue placeholder="Chọn thương hiệu" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Không chọn thương hiệu</SelectItem>
+                        {availableBrands.map((brand) => (
+                          <SelectItem key={brand.id} value={String(brand.id)}>
+                            {brand.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2 rounded-lg border border-[#ead7b9] bg-[#fdfaf4] p-3 text-sm text-[#6c6252]">
+                    <p className="font-medium text-[#1f1b16]">Mẹo</p>
+                    <p>
+                      Bạn có thể dùng trình soạn thảo mô tả để chèn bảng size, bullet point hoặc highlight nội dung quan trọng.
+                    </p>
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="media" className="space-y-4">
+                <div
+                  className="flex min-h-[160px] flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-[#e0caa3] bg-[#fdfaf4] p-6 text-center"
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => {
+                    event.preventDefault()
+                    handleMediaFiles(event.dataTransfer.files)
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => mediaInputRef.current?.click()}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") mediaInputRef.current?.click()
+                  }}
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white shadow">
+                    <ImagePlus className="h-6 w-6 text-[#c87d2f]" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-[#1f1b16]">Kéo & thả ảnh sản phẩm</p>
+                    <p className="text-xs text-[#6c6252]">Hỗ trợ chọn nhiều ảnh cùng lúc, tối thiểu 1 ảnh đại diện.</p>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-[#6c6252]">
+                    <Upload className="h-4 w-4" />
+                    <span>Chấp nhận JPG, PNG, tối đa 5MB</span>
+                  </div>
                   <Input
-                    id="product-price"
-                    type="number"
-                    min={0}
-                    value={createForm.basePrice}
-                    onChange={(e) =>
-                      setCreateForm((prev) => ({ ...prev, basePrice: e.target.value }))
-                    }
-                    placeholder="199000"
-                    required
-                    className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                    ref={mediaInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(event) => handleMediaFiles(event.target.files)}
                   />
                 </div>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="product-category">ID danh mục</Label>
-                  <Select
-                    value={createForm.categoryId}
-                    onValueChange={(value) =>
-                      setCreateForm((prev) => ({ ...prev, categoryId: value }))
-                    }
-                    required
-                  >
-                    <SelectTrigger
-                      id="product-category"
-                      className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
-                    >
-                      <SelectValue placeholder="Chọn danh mục" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categoryOptions.map((category) => (
-                        <SelectItem key={category.id} value={String(category.id)}>
-                          {category.name}
-                        </SelectItem>
+                {createForm.media.length > 0 && (
+                  <div className="grid gap-3">
+                    <div className="flex items-center justify-between text-sm text-[#6c6252]">
+                      <p>
+                        Đã chọn <strong>{createForm.media.length}</strong> ảnh. Chọn 1 ảnh làm đại diện và sắp xếp thứ tự.
+                      </p>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {createForm.media.map((item, index) => (
+                        <div
+                          key={item.id}
+                          className="relative overflow-hidden rounded-lg border border-[#ead7b9] bg-white shadow-sm"
+                        >
+                          <img
+                            src={item.preview}
+                            alt={`Ảnh ${index + 1}`}
+                            className="h-48 w-full object-cover"
+                          />
+                          {item.isCover && (
+                            <div className="absolute left-2 top-2 rounded-full bg-[#1c1a16] px-3 py-1 text-xs font-medium text-white">
+                              Ảnh đại diện
+                            </div>
+                          )}
+                          <div className="absolute right-2 top-2 flex flex-col gap-1">
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="secondary"
+                              className="h-8 w-8 bg-white/90 text-[#c87d2f] hover:bg-white"
+                              onClick={() => handleSetCoverMedia(item.id)}
+                              title="Đặt làm ảnh đại diện"
+                            >
+                              <Star className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="secondary"
+                              className="h-8 w-8 bg-white/90 text-[#6c6252] hover:bg-white"
+                              onClick={() => handleRemoveMedia(item.id)}
+                              title="Xoá ảnh"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/60 to-transparent px-3 py-2 text-xs text-white">
+                            <span className="flex items-center gap-2">
+                              <GripVertical className="h-4 w-4" />
+                              Thứ tự {item.sortOrder + 1}
+                            </span>
+                            <div className="flex gap-1">
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="secondary"
+                                className="h-7 w-7 bg-white/80 text-[#1f1b16] hover:bg-white"
+                                disabled={index === 0}
+                                onClick={() => handleMoveMedia(item.id, "up")}
+                              >
+                                ↑
+                              </Button>
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="secondary"
+                                className="h-7 w-7 bg-white/80 text-[#1f1b16] hover:bg-white"
+                                disabled={index === createForm.media.length - 1}
+                                onClick={() => handleMoveMedia(item.id, "down")}
+                              >
+                                ↓
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="variants" className="space-y-4">
+                <div className="rounded-lg border border-[#ead7b9] bg-[#fdfaf4] p-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label className="flex items-center justify-between" htmlFor="color-input">
+                        Màu sắc
+                        <span className="text-xs font-normal text-[#6c6252]">Multi-select</span>
+                      </Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="color-input"
+                          value={colorInput}
+                          onChange={(e) => setColorInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault()
+                              addAttributesValue("colors", colorInput)
+                              setColorInput("")
+                            }
+                          }}
+                          placeholder="Đỏ, Xanh, Đen..."
+                          className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                        />
+                        <Button
+                          type="button"
+                          className="bg-[#1c1a16] text-[#f4f1ea] hover:bg-[#2a2620]"
+                          onClick={() => {
+                            addAttributesValue("colors", colorInput)
+                            setColorInput("")
+                          }}
+                        >
+                          Thêm
+                        </Button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {createForm.variantAttributes.colors.map((color) => (
+                          <Badge key={color} variant="secondary" className="bg-white text-[#1f1b16]">
+                            {color}
+                            <button
+                              type="button"
+                              className="ml-2 text-[#c87d2f]"
+                              onClick={() => removeAttributesValue("colors", color)}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="flex items-center justify-between" htmlFor="size-input">
+                        Kích thước
+                        <span className="text-xs font-normal text-[#6c6252]">Multi-select</span>
+                      </Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="size-input"
+                          value={sizeInput}
+                          onChange={(e) => setSizeInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault()
+                              addAttributesValue("sizes", sizeInput)
+                              setSizeInput("")
+                            }
+                          }}
+                          placeholder="S, M, L, XL..."
+                          className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                        />
+                        <Button
+                          type="button"
+                          className="bg-[#1c1a16] text-[#f4f1ea] hover:bg-[#2a2620]"
+                          onClick={() => {
+                            addAttributesValue("sizes", sizeInput)
+                            setSizeInput("")
+                          }}
+                        >
+                          Thêm
+                        </Button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {createForm.variantAttributes.sizes.map((size) => (
+                          <Badge key={size} variant="secondary" className="bg-white text-[#1f1b16]">
+                            {size}
+                            <button
+                              type="button"
+                              className="ml-2 text-[#c87d2f]"
+                              onClick={() => removeAttributesValue("sizes", size)}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-between gap-3 rounded-md border border-[#ead7b9] bg-white p-3">
+                    <div className="text-sm text-[#6c6252]">
+                      Hệ thống sẽ tự động tạo ma trận biến thể dựa trên Màu sắc x Kích thước.
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="border-[#ead7b9] bg-[#1c1a16] text-[#f4f1ea] hover:bg-[#2a2620]"
+                      onClick={generateVariants}
+                    >
+                      <Plus className="mr-2 h-4 w-4" /> Tạo biến thể
+                    </Button>
+                  </div>
                 </div>
-              </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="product-brand">ID thương hiệu (tuỳ chọn)</Label>
-                <Select
-                  value={createForm.brandId || "none"}
-                  onValueChange={(value) =>
-                    setCreateForm((prev) => ({ ...prev, brandId: value === "none" ? "" : value }))
-                  }
-                >
-                  <SelectTrigger
-                    id="product-brand"
-                    className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
-                  >
-                    <SelectValue placeholder="Chọn thương hiệu" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Không chọn thương hiệu</SelectItem>
-                    {availableBrands.map((brand) => (
-                      <SelectItem key={brand.id} value={String(brand.id)}>
-                        {brand.name}
-                      </SelectItem>
+                {createForm.variants.length > 0 && (
+                  <div className="overflow-hidden rounded-lg border border-[#ead7b9]">
+                    <div className="grid grid-cols-12 bg-[#fdfaf4] px-3 py-2 text-xs font-medium text-[#6c6252]">
+                      <span className="col-span-3">Tên biến thể</span>
+                      <span className="col-span-2">SKU</span>
+                      <span className="col-span-2">Giá bán</span>
+                      <span className="col-span-2">Tồn kho</span>
+                      <span className="col-span-3">Ảnh gán</span>
+                    </div>
+                    <div className="divide-y divide-[#ead7b9]">
+                      {createForm.variants.map((variant) => {
+                        const displayName = [
+                          createForm.name || "Biến thể",
+                          variant.color ? `- ${variant.color}` : "",
+                          variant.size ? `/ ${variant.size}` : "",
+                        ]
+                          .join(" ")
+                          .trim()
+
+                        return (
+                          <div key={variant.id} className="grid grid-cols-12 items-center gap-2 px-3 py-3 text-sm">
+                            <div className="col-span-3 font-medium text-[#1f1b16]">{displayName}</div>
+                            <div className="col-span-2 flex items-center gap-2">
+                              <Input
+                                value={variant.sku}
+                                onChange={(e) =>
+                                  setCreateForm((prev) => ({
+                                    ...prev,
+                                    variants: prev.variants.map((item) =>
+                                      item.id === variant.id ? { ...item, sku: e.target.value } : item,
+                                    ),
+                                  }))
+                                }
+                                placeholder="SKU"
+                                className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                              />
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="outline"
+                                className="h-9 w-9 border-[#ead7b9]"
+                                onClick={() => handleAutoSku(variant.id)}
+                                title="Tự động tạo SKU"
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <div className="col-span-2">
+                              <Input
+                                type="number"
+                                min={0}
+                                value={variant.price}
+                                onChange={(e) =>
+                                  setCreateForm((prev) => ({
+                                    ...prev,
+                                    variants: prev.variants.map((item) =>
+                                      item.id === variant.id ? { ...item, price: e.target.value } : item,
+                                    ),
+                                  }))
+                                }
+                                className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                              />
+                            </div>
+                            <div className="col-span-2">
+                              <Input
+                                type="number"
+                                min={0}
+                                value={variant.stock}
+                                onChange={(e) =>
+                                  setCreateForm((prev) => ({
+                                    ...prev,
+                                    variants: prev.variants.map((item) =>
+                                      item.id === variant.id ? { ...item, stock: e.target.value } : item,
+                                    ),
+                                  }))
+                                }
+                                className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                              />
+                            </div>
+                            <div className="col-span-3">
+                              <Select
+                                value={variant.imageId || "none"}
+                                onValueChange={(value) =>
+                                  setCreateForm((prev) => ({
+                                    ...prev,
+                                    variants: prev.variants.map((item) =>
+                                      item.id === variant.id ? { ...item, imageId: value === "none" ? undefined : value } : item,
+                                    ),
+                                  }))
+                                }
+                              >
+                                <SelectTrigger className="border-[#ead7b9] focus-visible:ring-[#c87d2f]">
+                                  <SelectValue placeholder="Chọn ảnh màu" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="none">Không gán ảnh riêng</SelectItem>
+                                  {createForm.media.map((item) => (
+                                    <SelectItem key={item.id} value={item.id}>
+                                      Ảnh {item.sortOrder + 1} - {item.file.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="specifications" className="space-y-4">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-[#1f1b16]">Thông số kỹ thuật</p>
+                      <p className="text-xs text-[#6c6252]">Nhập theo dạng cặp Key-Value, ví dụ: [Chất liệu] - [Cotton]</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="border-[#ead7b9] bg-[#fdfaf4] hover:bg-[#f4f1ea]"
+                      onClick={addSpecificationRow}
+                    >
+                      <Plus className="mr-2 h-4 w-4" /> Thêm thông số
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {createForm.specifications.length === 0 && (
+                      <div className="rounded-md border border-dashed border-[#ead7b9] px-4 py-6 text-center text-sm text-[#6c6252]">
+                        Chưa có thông số. Nhấn "Thêm thông số" để bắt đầu.
+                      </div>
+                    )}
+                    {createForm.specifications.map((item) => (
+                      <div
+                        key={item.id}
+                        className="grid gap-2 rounded-lg border border-[#ead7b9] bg-white p-3 md:grid-cols-[1.2fr_1.8fr_auto]"
+                      >
+                        <Input
+                          value={item.key}
+                          onChange={(e) => handleSpecificationChange(item.id, "key", e.target.value)}
+                          placeholder="Tên thông số"
+                          className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                        />
+                        <Input
+                          value={item.value}
+                          onChange={(e) => handleSpecificationChange(item.id, "value", e.target.value)}
+                          placeholder="Giá trị"
+                          className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="text-[#c87d2f] hover:bg-[#fdfaf4]"
+                          onClick={() => removeSpecificationRow(item.id)}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" /> Xoá
+                        </Button>
+                      </div>
                     ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  </div>
+                </div>
 
-              <div className="grid gap-2">
-                <Label htmlFor="product-description">Mô tả</Label>
-                <Textarea
-                  id="product-description"
-                  value={createForm.description}
-                  onChange={(e) =>
-                    setCreateForm((prev) => ({ ...prev, description: e.target.value }))
-                  }
-                  placeholder="Mô tả ngắn gọn về sản phẩm..."
-                  className="min-h-[100px] border-[#ead7b9] focus-visible:ring-[#c87d2f]"
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="product-features">Tính năng</Label>
-                <Textarea
-                  id="product-features"
-                  value={createForm.features}
-                  onChange={(e) =>
-                    setCreateForm((prev) => ({ ...prev, features: e.target.value }))
-                  }
-                  placeholder="Liệt kê tính năng nổi bật, mỗi dòng một mục..."
-                  className="min-h-[80px] border-[#ead7b9] focus-visible:ring-[#c87d2f]"
-                />
-              </div>
-
-              <div className="grid gap-2">
-                <Label htmlFor="product-specifications">Thông số kỹ thuật</Label>
-                <Textarea
-                  id="product-specifications"
-                  value={createForm.specifications}
-                  onChange={(e) =>
-                    setCreateForm((prev) => ({ ...prev, specifications: e.target.value }))
-                  }
-                  placeholder="Ghi rõ thông số, vật liệu, kích thước..."
-                  className="min-h-[100px] border-[#ead7b9] focus-visible:ring-[#c87d2f]"
-                />
-              </div>
-            </div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="seo-title">SEO Title</Label>
+                    <Input
+                      id="seo-title"
+                      value={createForm.seoTitle}
+                      onChange={(e) => setCreateForm((prev) => ({ ...prev, seoTitle: e.target.value }))}
+                      placeholder="Tiêu đề SEO (tuỳ chọn)"
+                      className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="seo-description">SEO Description</Label>
+                    <Textarea
+                      id="seo-description"
+                      value={createForm.seoDescription}
+                      onChange={(e) => setCreateForm((prev) => ({ ...prev, seoDescription: e.target.value }))}
+                      placeholder="Mô tả SEO ngắn gọn"
+                      className="min-h-[80px] border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
 
             {createError && <p className="text-sm text-red-600">{createError}</p>}
 
