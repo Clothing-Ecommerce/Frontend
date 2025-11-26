@@ -74,6 +74,8 @@ type CreateProductFormState = {
   categoryId: string
   brandId: string
   description: string
+  features: string
+  specifications: string
 }
 
 const INITIAL_FORM_STATE: CreateProductFormState = {
@@ -83,6 +85,8 @@ const INITIAL_FORM_STATE: CreateProductFormState = {
   categoryId: "",
   brandId: "",
   description: "",
+  features: "",
+  specifications: "",
 }
 
 const slugify = (value: string) =>
@@ -104,6 +108,10 @@ export default function ProductsPage() {
   const [statusFilter, setStatusFilter] = useState<AdminProductStockStatus | "all">("all")
   const [categoryFilter, setCategoryFilter] = useState<number | "all">("all")
   const [availableCategories, setAvailableCategories] = useState<
+    { id: number; name: string }[]
+  >([])
+  const [availableBrands, setAvailableBrands] = useState<{ id: number; name: string }[]>([])
+  const [categoryOptions, setCategoryOptions] = useState<
     { id: number; name: string }[]
   >([])
   const [isLoading, setIsLoading] = useState(false)
@@ -232,6 +240,54 @@ export default function ProductsPage() {
     setCreateError(null)
   }
 
+  useEffect(() => {
+    if (!availableCategories.length) return
+
+    setCategoryOptions((prev) => {
+      const merged = new Map(prev.map((category) => [category.id, category]))
+      availableCategories.forEach((category) => merged.set(category.id, category))
+      return Array.from(merged.values()).sort((a, b) => a.name.localeCompare(b.name))
+    })
+  }, [availableCategories])
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    const fetchOptions = async () => {
+      try {
+        const [categoriesResponse, brandsResponse] = await Promise.all([
+          api.get<{ id: number; name: string }[]>("/admin/categories", {
+            signal: controller.signal,
+          }),
+          api.get<{ id: number; name: string }[]>("/brands/", {
+            signal: controller.signal,
+          }),
+        ])
+
+        setCategoryOptions((prev) => {
+          const merged = new Map(prev.map((category) => [category.id, category]))
+          categoriesResponse.data.forEach((category) => merged.set(category.id, category))
+          return Array.from(merged.values()).sort((a, b) => a.name.localeCompare(b.name))
+        })
+
+        setAvailableBrands(
+          brandsResponse.data
+            .map((brand) => ({ id: Number(brand.id), name: brand.name }))
+            .filter((brand) => Number.isFinite(brand.id) && brand.name?.length),
+        )
+      } catch (fetchError) {
+        if (axios.isCancel(fetchError)) return
+        console.error("Failed to load category/brand options", fetchError)
+      }
+    }
+
+    fetchOptions()
+
+    return () => {
+      controller.abort()
+    }
+  }, [])
+
   const handleCreateSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     const name = createForm.name.trim()
@@ -242,6 +298,8 @@ export default function ProductsPage() {
       ? Number(createForm.brandId)
       : undefined
     const description = createForm.description.trim()
+    const features = createForm.features.trim()
+    const specifications = createForm.specifications.trim()
 
     if (!name) return setCreateError("Vui lòng nhập tên sản phẩm")
     if (!slug) return setCreateError("Vui lòng nhập slug sản phẩm")
@@ -259,6 +317,8 @@ export default function ProductsPage() {
       categoryId,
       description: description.length ? description : undefined,
       brandId: Number.isFinite(brandId) ? brandId : undefined,
+      features: features.length ? features : undefined,
+      specifications: specifications.length ? specifications : undefined,
     }
 
     setIsCreating(true)
@@ -605,39 +665,53 @@ export default function ProductsPage() {
 
                 <div className="grid gap-2">
                   <Label htmlFor="product-category">ID danh mục</Label>
-                  <Input
-                    id="product-category"
-                    type="number"
-                    min={1}
+                  <Select
                     value={createForm.categoryId}
-                    onChange={(e) =>
-                      setCreateForm((prev) => ({ ...prev, categoryId: e.target.value }))
+                    onValueChange={(value) =>
+                      setCreateForm((prev) => ({ ...prev, categoryId: value }))
                     }
-                    placeholder="1"
                     required
-                    className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
-                  />
-                  {availableCategories.length > 0 && (
-                    <p className="text-xs text-muted-foreground">
-                      Gợi ý: {availableCategories.map((category) => category.id).join(", ")}
-                    </p>
-                  )}
+                  >
+                    <SelectTrigger
+                      id="product-category"
+                      className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                    >
+                      <SelectValue placeholder="Chọn danh mục" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categoryOptions.map((category) => (
+                        <SelectItem key={category.id} value={String(category.id)}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
               <div className="grid gap-2">
                 <Label htmlFor="product-brand">ID thương hiệu (tuỳ chọn)</Label>
-                <Input
-                  id="product-brand"
-                  type="number"
-                  min={1}
-                  value={createForm.brandId}
-                  onChange={(e) =>
-                    setCreateForm((prev) => ({ ...prev, brandId: e.target.value }))
+                <Select
+                  value={createForm.brandId || "none"}
+                  onValueChange={(value) =>
+                    setCreateForm((prev) => ({ ...prev, brandId: value === "none" ? "" : value }))
                   }
-                  placeholder="VD: 2"
-                  className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
-                />
+                >
+                  <SelectTrigger
+                    id="product-brand"
+                    className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                  >
+                    <SelectValue placeholder="Chọn thương hiệu" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Không chọn thương hiệu</SelectItem>
+                    {availableBrands.map((brand) => (
+                      <SelectItem key={brand.id} value={String(brand.id)}>
+                        {brand.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="grid gap-2">
@@ -649,6 +723,32 @@ export default function ProductsPage() {
                     setCreateForm((prev) => ({ ...prev, description: e.target.value }))
                   }
                   placeholder="Mô tả ngắn gọn về sản phẩm..."
+                  className="min-h-[100px] border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="product-features">Tính năng</Label>
+                <Textarea
+                  id="product-features"
+                  value={createForm.features}
+                  onChange={(e) =>
+                    setCreateForm((prev) => ({ ...prev, features: e.target.value }))
+                  }
+                  placeholder="Liệt kê tính năng nổi bật, mỗi dòng một mục..."
+                  className="min-h-[80px] border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="product-specifications">Thông số kỹ thuật</Label>
+                <Textarea
+                  id="product-specifications"
+                  value={createForm.specifications}
+                  onChange={(e) =>
+                    setCreateForm((prev) => ({ ...prev, specifications: e.target.value }))
+                  }
+                  placeholder="Ghi rõ thông số, vật liệu, kích thước..."
                   className="min-h-[100px] border-[#ead7b9] focus-visible:ring-[#c87d2f]"
                 />
               </div>
