@@ -93,6 +93,31 @@ export interface AdminProductListResponse {
   }
 }
 
+export interface AdminCreateProductRequest {
+  name: string
+  slug: string
+  basePrice: number
+  categoryId: number
+  brandId?: number | null
+  description?: string | null
+  features?: unknown
+  specifications?: unknown
+  images?: Array<{ url: string; alt?: string | null; isPrimary?: boolean; sortOrder?: number }>
+  variants?: Array<{
+    sku?: string | null
+    price?: number | null
+    stock?: number | null
+    sizeId?: number | null
+    colorId?: number | null
+    isActive?: boolean | null
+  }>
+}
+
+export interface AdminCreateProductResponse {
+  message: string
+  product: AdminProductListItem
+}
+
 // Orders
 export type AdminOrderStatus =
   | "pending"

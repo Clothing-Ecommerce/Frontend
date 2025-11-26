@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, type FormEvent } from "react"
 import axios from "axios"
 import {
   Plus,
@@ -10,7 +10,7 @@ import {
   Trash2,
   Package,
   ArrowUpDown,
-  Download,
+  Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,6 +30,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 import api from "@/utils/axios"
 import { LoadingSpinner } from "@/components/ui/loading-spinner"
@@ -37,7 +47,11 @@ import type {
   AdminProductListItem,
   AdminProductListResponse,
   AdminProductStockStatus,
+  AdminCreateProductRequest,
+  AdminCreateProductResponse,
 } from "@/types/adminType"
+import { ToastContainer } from "@/components/ui/toast"
+import { useToast } from "@/hooks/useToast"
 
 const statusLabel: Record<AdminProductStockStatus, string> = {
   "in-stock": "Còn hàng",
@@ -53,6 +67,33 @@ const currencyFormatter = new Intl.NumberFormat("vi-VN", {
 
 const formatCurrency = (value: number) => currencyFormatter.format(value)
 
+type CreateProductFormState = {
+  name: string
+  slug: string
+  basePrice: string
+  categoryId: string
+  brandId: string
+  description: string
+}
+
+const INITIAL_FORM_STATE: CreateProductFormState = {
+  name: "",
+  slug: "",
+  basePrice: "",
+  categoryId: "",
+  brandId: "",
+  description: "",
+}
+
+const slugify = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)+/g, "")
+    .replace(/-+/g, "-")
+
 export default function ProductsPage() {
   const [products, setProducts] = useState<AdminProductListItem[]>([])
   const [pagination, setPagination] =
@@ -67,6 +108,12 @@ export default function ProductsPage() {
   >([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [createForm, setCreateForm] = useState<CreateProductFormState>(INITIAL_FORM_STATE)
+  const [isCreating, setIsCreating] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const { toasts, toast, removeToast } = useToast()
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
@@ -131,7 +178,7 @@ export default function ProductsPage() {
     return () => {
       controller.abort()
     }
-  }, [currentPage, debouncedSearch, statusFilter, categoryFilter])
+  }, [currentPage, debouncedSearch, statusFilter, categoryFilter, refreshKey])
 
   useEffect(() => {
     if (!pagination) return
@@ -173,6 +220,73 @@ export default function ProductsPage() {
     return (pagination.page - 1) * pagination.pageSize + products.length
   }, [pagination, products.length])
 
+  const handleGenerateSlug = () => {
+    setCreateForm((prev) => ({
+      ...prev,
+      slug: prev.slug || slugify(prev.name),
+    }))
+  }
+
+  const resetCreateForm = () => {
+    setCreateForm(INITIAL_FORM_STATE)
+    setCreateError(null)
+  }
+
+  const handleCreateSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const name = createForm.name.trim()
+    const slug = createForm.slug.trim() || slugify(createForm.name)
+    const basePrice = Number(createForm.basePrice)
+    const categoryId = Number(createForm.categoryId)
+    const brandId = createForm.brandId.trim()
+      ? Number(createForm.brandId)
+      : undefined
+    const description = createForm.description.trim()
+
+    if (!name) return setCreateError("Vui lòng nhập tên sản phẩm")
+    if (!slug) return setCreateError("Vui lòng nhập slug sản phẩm")
+    if (!Number.isFinite(basePrice) || basePrice <= 0) {
+      return setCreateError("Giá sản phẩm không hợp lệ")
+    }
+    if (!Number.isFinite(categoryId) || categoryId <= 0) {
+      return setCreateError("Danh mục không hợp lệ")
+    }
+
+    const payload: AdminCreateProductRequest = {
+      name,
+      slug,
+      basePrice,
+      categoryId,
+      description: description.length ? description : undefined,
+      brandId: Number.isFinite(brandId) ? brandId : undefined,
+    }
+
+    setIsCreating(true)
+    setCreateError(null)
+
+    api
+      .post<AdminCreateProductResponse>("/admin/products", payload)
+      .then((response) => {
+        toast.success("Tạo sản phẩm thành công", response.data.product.name)
+        setIsCreateOpen(false)
+        resetCreateForm()
+        setRefreshKey((prev) => prev + 1)
+        setCurrentPage(1)
+      })
+      .catch((submitError) => {
+        if (axios.isCancel(submitError)) return
+        const message =
+          axios.isAxiosError(submitError) && submitError.response?.data?.message
+            ? submitError.response.data.message
+            : "Không thể tạo sản phẩm mới"
+        setCreateError(message)
+        toast.error("Tạo sản phẩm thất bại", message)
+      })
+      .finally(() => {
+        setIsCreating(false)
+      })
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -181,10 +295,13 @@ export default function ProductsPage() {
           <p className="text-sm text-[#6c6252]">Theo dõi, thêm mới và chỉnh sửa danh mục sản phẩm của bạn.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="border-[#ead7b9] text-[#6c6252] hover:bg-[#f4f1ea] hover:text-[#1f1b16]">
+          {/* <Button variant="outline" className="border-[#ead7b9] text-[#6c6252] hover:bg-[#f4f1ea] hover:text-[#1f1b16]">
             <Download className="mr-2 h-4 w-4" /> Xuất Excel
-          </Button>
-          <Button className="bg-[#1c1a16] text-[#f4f1ea] hover:bg-[#2a2620]">
+          </Button> */}
+          <Button
+            className="bg-[#1c1a16] text-[#f4f1ea] hover:bg-[#2a2620]"
+            onClick={() => setIsCreateOpen(true)}
+          >
             <Plus className="mr-2 h-4 w-4" /> Thêm sản phẩm
           </Button>
         </div>
@@ -412,6 +529,160 @@ export default function ProductsPage() {
           </div>
         </div>
       </div>
+
+      <Dialog
+        open={isCreateOpen}
+        onOpenChange={(open) => {
+          setIsCreateOpen(open)
+          if (!open) resetCreateForm()
+        }}
+      >
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Thêm sản phẩm mới</DialogTitle>
+            <DialogDescription>
+              Nhập thông tin cơ bản để tạo sản phẩm trong hệ thống quản trị.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form className="space-y-4" onSubmit={handleCreateSubmit}>
+            <div className="grid gap-3">
+              <div className="grid gap-2">
+                <Label htmlFor="product-name">Tên sản phẩm</Label>
+                <Input
+                  id="product-name"
+                  value={createForm.name}
+                  onChange={(e) =>
+                    setCreateForm((prev) => ({ ...prev, name: e.target.value }))
+                  }
+                  placeholder="Áo thun basic..."
+                  required
+                  className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="product-slug">Slug sản phẩm</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2 text-[#6c6252] hover:bg-[#f4f1ea]"
+                    onClick={handleGenerateSlug}
+                  >
+                    Tạo từ tên
+                  </Button>
+                </div>
+                <Input
+                  id="product-slug"
+                  value={createForm.slug}
+                  onChange={(e) =>
+                    setCreateForm((prev) => ({ ...prev, slug: e.target.value }))
+                  }
+                  placeholder="ao-thun-basic"
+                  required
+                  className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="product-price">Giá cơ bản (VND)</Label>
+                  <Input
+                    id="product-price"
+                    type="number"
+                    min={0}
+                    value={createForm.basePrice}
+                    onChange={(e) =>
+                      setCreateForm((prev) => ({ ...prev, basePrice: e.target.value }))
+                    }
+                    placeholder="199000"
+                    required
+                    className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="product-category">ID danh mục</Label>
+                  <Input
+                    id="product-category"
+                    type="number"
+                    min={1}
+                    value={createForm.categoryId}
+                    onChange={(e) =>
+                      setCreateForm((prev) => ({ ...prev, categoryId: e.target.value }))
+                    }
+                    placeholder="1"
+                    required
+                    className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                  />
+                  {availableCategories.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Gợi ý: {availableCategories.map((category) => category.id).join(", ")}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="product-brand">ID thương hiệu (tuỳ chọn)</Label>
+                <Input
+                  id="product-brand"
+                  type="number"
+                  min={1}
+                  value={createForm.brandId}
+                  onChange={(e) =>
+                    setCreateForm((prev) => ({ ...prev, brandId: e.target.value }))
+                  }
+                  placeholder="VD: 2"
+                  className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="product-description">Mô tả</Label>
+                <Textarea
+                  id="product-description"
+                  value={createForm.description}
+                  onChange={(e) =>
+                    setCreateForm((prev) => ({ ...prev, description: e.target.value }))
+                  }
+                  placeholder="Mô tả ngắn gọn về sản phẩm..."
+                  className="min-h-[100px] border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                />
+              </div>
+            </div>
+
+            {createError && <p className="text-sm text-red-600">{createError}</p>}
+
+            <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end sm:gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="border-[#ead7b9]"
+                onClick={() => {
+                  setIsCreateOpen(false)
+                  resetCreateForm()
+                }}
+                disabled={isCreating}
+              >
+                Huỷ
+              </Button>
+              <Button
+                type="submit"
+                className="bg-[#1c1a16] text-[#f4f1ea] hover:bg-[#2a2620]"
+                disabled={isCreating}
+              >
+                {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Tạo sản phẩm
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      <ToastContainer toasts={toasts} onClose={removeToast} />
+      
     </div>
   )
 }

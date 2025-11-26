@@ -1,5 +1,3 @@
-"use client"
-
 import * as React from "react"
 import { X } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -10,10 +8,11 @@ export interface ToastProps {
   description?: string
   type?: "success" | "error" | "warning" | "info"
   duration?: number
-  onClose: (id: string) => void
 }
 
-export function Toast({ id, title, description, type = "info", onClose }: ToastProps) {
+type ToastComponentProps = ToastProps & { onClose: (id: string) => void }
+
+export function Toast({ id, title, description, type = "info", onClose }: ToastComponentProps) {
   React.useEffect(() => {
     const timer = setTimeout(() => {
       onClose(id)
