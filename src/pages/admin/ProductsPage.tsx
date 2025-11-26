@@ -61,6 +61,7 @@ import type {
   AdminProductStockStatus,
   AdminCreateProductRequest,
   AdminCreateProductResponse,
+  AdminProductDetail,
 } from "@/types/adminType"
 import { ToastContainer } from "@/components/ui/toast"
 import { useToast } from "@/hooks/useToast"
@@ -78,6 +79,8 @@ const currencyFormatter = new Intl.NumberFormat("vi-VN", {
 })
 
 const formatCurrency = (value: number) => currencyFormatter.format(value)
+const formatDateTime = (value: string) =>
+  new Date(value).toLocaleString("vi-VN", { hour12: false })
 
 type MediaItem = {
   id: string
@@ -185,6 +188,12 @@ export default function ProductsPage() {
   const [colorInput, setColorInput] = useState("")
   const [sizeInput, setSizeInput] = useState("")
   const mediaInputRef = useRef<HTMLInputElement | null>(null)
+  const [selectedProduct, setSelectedProduct] = useState<AdminProductDetail | null>(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
+  const [detailError, setDetailError] = useState<string | null>(null)
+  const [isDetailLoading, setIsDetailLoading] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<AdminProductListItem | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const { toasts, toast, removeToast } = useToast()
 
   useEffect(() => {
@@ -291,6 +300,54 @@ export default function ProductsPage() {
     if (!pagination) return 0
     return (pagination.page - 1) * pagination.pageSize + products.length
   }, [pagination, products.length])
+
+  const handleViewDetail = (productId: number) => {
+    setIsDetailOpen(true)
+    setIsDetailLoading(true)
+    setDetailError(null)
+    setSelectedProduct(null)
+
+    api
+      .get<AdminProductDetail>(`/admin/products/${productId}`)
+      .then((response) => {
+        setSelectedProduct(response.data)
+      })
+      .catch((fetchError) => {
+        if (axios.isCancel(fetchError)) return
+        const message =
+          axios.isAxiosError(fetchError) && fetchError.response?.data?.message
+            ? fetchError.response.data.message
+            : "Không thể tải thông tin sản phẩm"
+        setDetailError(message)
+      })
+      .finally(() => {
+        setIsDetailLoading(false)
+      })
+  }
+
+  const confirmDeleteProduct = () => {
+    if (!deleteTarget) return
+
+    setIsDeleting(true)
+    api
+      .delete(`/admin/products/${deleteTarget.id}`)
+      .then(() => {
+        toast.success("Xoá sản phẩm thành công", deleteTarget.name)
+        setDeleteTarget(null)
+        setRefreshKey((prev) => prev + 1)
+      })
+      .catch((deleteError) => {
+        if (axios.isCancel(deleteError)) return
+        const message =
+          axios.isAxiosError(deleteError) && deleteError.response?.data?.message
+            ? deleteError.response.data.message
+            : "Không thể xoá sản phẩm"
+        toast.error("Xoá sản phẩm thất bại", message)
+      })
+      .finally(() => {
+        setIsDeleting(false)
+      })
+  }
 
   const handleGenerateSlug = () => {
     setCreateForm((prev) => ({
@@ -808,13 +865,19 @@ export default function ProductsPage() {
                         <DropdownMenuContent align="end" className="border-[#ead7b9] bg-white">
                           <DropdownMenuLabel>Thao tác</DropdownMenuLabel>
                           <DropdownMenuSeparator className="bg-[#ead7b9]/50" />
-                          <DropdownMenuItem className="cursor-pointer focus:bg-[#f4f1ea]">
+                          <DropdownMenuItem
+                            className="cursor-pointer focus:bg-[#f4f1ea]"
+                            onClick={() => handleViewDetail(product.id)}
+                          >
                             <Eye className="mr-2 h-4 w-4" /> Xem chi tiết
                           </DropdownMenuItem>
                           <DropdownMenuItem className="cursor-pointer focus:bg-[#f4f1ea]">
                             <Edit className="mr-2 h-4 w-4" /> Chỉnh sửa
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer text-red-600 focus:bg-red-50 focus:text-red-700">
+                          <DropdownMenuItem
+                            className="cursor-pointer text-red-600 focus:bg-red-50 focus:text-red-700"
+                            onClick={() => setDeleteTarget(product)}
+                          >
                             <Trash2 className="mr-2 h-4 w-4" /> Xóa sản phẩm
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -862,6 +925,171 @@ export default function ProductsPage() {
           </div>
         </div>
       </div>
+
+      <Dialog
+        open={isDetailOpen}
+        onOpenChange={(open) => {
+          setIsDetailOpen(open)
+          if (!open) {
+            setSelectedProduct(null)
+            setDetailError(null)
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Chi tiết sản phẩm</DialogTitle>
+            <DialogDescription>
+              Thông tin chi tiết của sản phẩm trong hệ thống quản trị.
+            </DialogDescription>
+          </DialogHeader>
+
+          {isDetailLoading ? (
+            <div className="flex items-center justify-center py-8 text-[#6c6252]">
+              <LoadingSpinner className="mr-3 h-5 w-5" />
+              Đang tải thông tin sản phẩm...
+            </div>
+          ) : detailError ? (
+            <p className="text-sm text-red-600">{detailError}</p>
+          ) : selectedProduct ? (
+            <div className="space-y-6">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-[#1f1b16]">{selectedProduct.name}</h3>
+                  <Badge variant="secondary" className="bg-[#f4f1ea] text-[#6c6252]">
+                    #{selectedProduct.id}
+                  </Badge>
+                </div>
+                <p className="text-sm text-[#6c6252]">Slug: {selectedProduct.slug}</p>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2 rounded-lg border border-[#ead7b9] bg-[#fdfaf4] p-4">
+                  <p className="text-sm font-medium text-[#1f1b16]">Thông tin cơ bản</p>
+                  <div className="space-y-1 text-sm text-[#4a4337]">
+                    <p>Danh mục: {selectedProduct.category?.name ?? "Không có"}</p>
+                    <p>Thương hiệu: {selectedProduct.brand?.name ?? "Không có"}</p>
+                    <p>Giá niêm yết: {formatCurrency(selectedProduct.basePrice)}</p>
+                    <p>
+                      Tồn kho tổng: {selectedProduct.variants.reduce((sum, variant) => sum + variant.stock, 0).toLocaleString("vi-VN")}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2 rounded-lg border border-[#ead7b9] bg-[#fdfaf4] p-4">
+                  <p className="text-sm font-medium text-[#1f1b16]">Thời gian</p>
+                  <div className="space-y-1 text-sm text-[#4a4337]">
+                    <p>Ngày tạo: {formatDateTime(selectedProduct.createdAt)}</p>
+                    <p>Cập nhật: {formatDateTime(selectedProduct.updatedAt)}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-[#1f1b16]">Biến thể hoạt động</p>
+                <div className="space-y-2">
+                  {selectedProduct.variants.length === 0 && (
+                    <p className="text-sm text-[#6c6252]">Chưa có biến thể.</p>
+                  )}
+                  {selectedProduct.variants.map((variant) => (
+                    <div
+                      key={variant.id}
+                      className="flex flex-wrap items-center justify-between rounded-lg border border-[#ead7b9] bg-white px-3 py-2 text-sm text-[#4a4337]"
+                    >
+                      <div className="space-y-1">
+                        <p className="font-medium text-[#1f1b16]">SKU: {variant.sku ?? "—"}</p>
+                        <p>
+                          Giá: {formatCurrency(variant.price)} • Kho: {variant.stock.toLocaleString("vi-VN")}
+                        </p>
+                        <p className="text-xs text-[#6c6252]">
+                          Màu: {variant.colorName ?? "Không có"} | Size: {variant.sizeName ?? "Không có"}
+                        </p>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "border-[#ead7b9]",
+                          variant.isActive ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700",
+                        )}
+                      >
+                        {variant.isActive ? "Đang bán" : "Tạm ngưng"}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {selectedProduct.images.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-[#1f1b16]">Hình ảnh</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedProduct.images.map((image) => (
+                      <div
+                        key={image.id}
+                        className="flex items-center gap-2 rounded-md border border-[#ead7b9] bg-white px-3 py-2 text-sm text-[#4a4337]"
+                      >
+                        <span className="font-medium">#{image.sortOrder + 1}</span>
+                        <span className="max-w-[220px] truncate" title={image.url}>
+                          {image.url}
+                        </span>
+                        {image.isPrimary && (
+                          <Badge variant="secondary" className="bg-[#f4f1ea] text-[#6c6252]">
+                            Ảnh chính
+                          </Badge>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-[#6c6252]">Không có dữ liệu sản phẩm.</p>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null)
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Xác nhận xoá sản phẩm</DialogTitle>
+            <DialogDescription>
+              Thao tác này sẽ xoá sản phẩm khỏi hệ thống. Hãy kiểm tra kỹ trước khi thực hiện.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            <p className="text-sm text-[#1f1b16]">Bạn có chắc muốn xoá sản phẩm?</p>
+            <p className="text-sm font-semibold text-[#c0392b]">{deleteTarget?.name}</p>
+          </div>
+
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              className="border-[#ead7b9]"
+              onClick={() => setDeleteTarget(null)}
+              disabled={isDeleting}
+            >
+              Huỷ
+            </Button>
+            <Button
+              type="button"
+              className="bg-red-600 text-white hover:bg-red-700"
+              onClick={confirmDeleteProduct}
+              disabled={isDeleting}
+            >
+              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Xoá sản phẩm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={isCreateOpen}

@@ -118,6 +118,43 @@ export interface AdminCreateProductResponse {
   product: AdminProductListItem
 }
 
+export interface AdminProductDetailImage {
+  id: number
+  url: string
+  alt: string | null
+  isPrimary: boolean
+  sortOrder: number
+}
+
+export interface AdminProductDetailVariant {
+  id: number
+  sku: string | null
+  price: number
+  stock: number
+  sizeId: number | null
+  sizeName: string | null
+  colorId: number | null
+  colorName: string | null
+  colorHex: string | null
+  isActive: boolean
+}
+
+export interface AdminProductDetail {
+  id: number
+  name: string
+  slug: string
+  description: string | null
+  basePrice: number
+  category: { id: number; name: string } | null
+  brand: { id: number; name: string } | null
+  features: unknown
+  specifications: unknown
+  images: AdminProductDetailImage[]
+  variants: AdminProductDetailVariant[]
+  createdAt: string
+  updatedAt: string
+}
+
 // Orders
 export type AdminOrderStatus =
   | "pending"
