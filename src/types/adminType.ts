@@ -65,6 +65,34 @@ export interface DashboardInventoryResponse {
   alerts: DashboardInventoryAlert[]
 }
 
+// Products
+export type AdminProductStockStatus = "in-stock" | "low-stock" | "out-of-stock"
+
+export interface AdminProductListItem {
+  id: number
+  name: string
+  slug: string
+  category: { id: number; name: string }
+  brand: { id: number; name: string } | null
+  price: number
+  totalStock: number
+  stockStatus: AdminProductStockStatus
+  variants: number
+  imageUrl: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface AdminProductListResponse {
+  products: AdminProductListItem[]
+  pagination: {
+    page: number
+    pageSize: number
+    totalItems: number
+    totalPages: number
+  }
+}
+
 // Orders
 export type AdminOrderStatus =
   | "pending"
