@@ -888,105 +888,71 @@ export default function ProductsPage() {
               </TabsList>
 
               <TabsContent value="general" className="space-y-4">
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <div className="space-y-3">
-                    <div className="grid gap-2">
-                      <Label htmlFor="product-name">Tên sản phẩm</Label>
-                      <Input
-                        id="product-name"
-                        value={createForm.name}
-                        onChange={(e) =>
-                          setCreateForm((prev) => ({ ...prev, name: e.target.value }))
-                        }
-                        placeholder="Áo thun basic..."
-                        required
-                        className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
-                      />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="product-slug">Slug sản phẩm</Label>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 px-2 text-[#6c6252] hover:bg-[#f4f1ea]"
-                          onClick={handleGenerateSlug}
-                        >
-                          Tạo từ tên
-                        </Button>
-                      </div>
-                      <Input
-                        id="product-slug"
-                        value={createForm.slug}
-                        onChange={(e) =>
-                          setCreateForm((prev) => ({ ...prev, slug: e.target.value }))
-                        }
-                        placeholder="ao-thun-basic"
-                        required
-                        className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
-                      />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="product-material">Chất liệu</Label>
-                      <Input
-                        id="product-material"
-                        value={createForm.material}
-                        onChange={(e) =>
-                          setCreateForm((prev) => ({ ...prev, material: e.target.value }))
-                        }
-                        placeholder="100% Cotton mềm mại..."
-                        className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
-                      />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="product-care">Hướng dẫn bảo quản</Label>
-                      <Input
-                        id="product-care"
-                        value={createForm.careInstructions}
-                        onChange={(e) =>
-                          setCreateForm((prev) => ({ ...prev, careInstructions: e.target.value }))
-                        }
-                        placeholder="Giặt tay, phơi nơi thoáng mát..."
-                        className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
-                      />
-                    </div>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="grid gap-2">
+                    <Label htmlFor="product-name">Tên sản phẩm</Label>
+                    <Input
+                      id="product-name"
+                      value={createForm.name}
+                      onChange={(e) =>
+                        setCreateForm((prev) => ({ ...prev, name: e.target.value }))
+                      }
+                      placeholder="Áo thun basic..."
+                      required
+                      className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                    />
                   </div>
 
-                  <div className="space-y-3">
-                    <div className="grid gap-2">
-                      <Label htmlFor="product-description">Mô tả chi tiết</Label>
-                      <Textarea
-                        id="product-description"
-                        value={createForm.description}
-                        onChange={(e) =>
-                          setCreateForm((prev) => ({ ...prev, description: e.target.value }))
-                        }
-                        placeholder="Mô tả ngắn gọn, có thể chèn bullet, bôi đậm..."
-                        className="min-h-[160px] border-[#ead7b9] focus-visible:ring-[#c87d2f]"
-                      />
+                  <div className="grid gap-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="product-slug">Slug sản phẩm</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2 text-[#6c6252] hover:bg-[#f4f1ea]"
+                        onClick={handleGenerateSlug}
+                      >
+                        Tạo từ tên
+                      </Button>
                     </div>
+                    <Input
+                      id="product-slug"
+                      value={createForm.slug}
+                      onChange={(e) =>
+                        setCreateForm((prev) => ({ ...prev, slug: e.target.value }))
+                      }
+                      placeholder="ao-thun-basic"
+                      required
+                      className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                    />
                   </div>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label htmlFor="product-price">Giá cơ bản (VND)</Label>
-                    <Input
-                      id="product-price"
-                      type="number"
-                      min={0}
-                      value={createForm.basePrice}
-                      onChange={(e) =>
-                        setCreateForm((prev) => ({ ...prev, basePrice: e.target.value }))
+                    <Label htmlFor="product-brand">Thương hiệu (tuỳ chọn)</Label>
+                    <Select
+                      value={createForm.brandId || "none"}
+                      onValueChange={(value) =>
+                        setCreateForm((prev) => ({ ...prev, brandId: value === "none" ? "" : value }))
                       }
-                      placeholder="199000"
-                      required
-                      className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
-                    />
+                    >
+                      <SelectTrigger
+                        id="product-brand"
+                        className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                      >
+                        <SelectValue placeholder="Chọn thương hiệu" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Không chọn thương hiệu</SelectItem>
+                        {availableBrands.map((brand) => (
+                          <SelectItem key={brand.id} value={String(brand.id)}>
+                            {brand.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="grid gap-2">
@@ -1017,28 +983,60 @@ export default function ProductsPage() {
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
-                    <Label htmlFor="product-brand">Thương hiệu (tuỳ chọn)</Label>
-                    <Select
-                      value={createForm.brandId || "none"}
-                      onValueChange={(value) =>
-                        setCreateForm((prev) => ({ ...prev, brandId: value === "none" ? "" : value }))
+                    <Label htmlFor="product-price">Giá niêm yết (VND)</Label>
+                    <Input
+                      id="product-price"
+                      type="number"
+                      min={0}
+                      value={createForm.basePrice}
+                      onChange={(e) =>
+                        setCreateForm((prev) => ({ ...prev, basePrice: e.target.value }))
                       }
-                    >
-                      <SelectTrigger
-                        id="product-brand"
-                        className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
-                      >
-                        <SelectValue placeholder="Chọn thương hiệu" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Không chọn thương hiệu</SelectItem>
-                        {availableBrands.map((brand) => (
-                          <SelectItem key={brand.id} value={String(brand.id)}>
-                            {brand.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      placeholder="199000"
+                      required
+                      className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="product-material">Chất liệu</Label>
+                    <Input
+                      id="product-material"
+                      value={createForm.material}
+                      onChange={(e) =>
+                        setCreateForm((prev) => ({ ...prev, material: e.target.value }))
+                      }
+                      placeholder="100% Cotton mềm mại..."
+                      className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-[1fr_2fr]">
+                  <div className="grid gap-2">
+                    <Label htmlFor="product-care">Hướng dẫn bảo quản</Label>
+                    <Input
+                      id="product-care"
+                      value={createForm.careInstructions}
+                      onChange={(e) =>
+                        setCreateForm((prev) => ({ ...prev, careInstructions: e.target.value }))
+                      }
+                      placeholder="Giặt tay, phơi nơi thoáng mát..."
+                      className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                    />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="product-description">Mô tả chi tiết</Label>
+                    <Textarea
+                      id="product-description"
+                      value={createForm.description}
+                      onChange={(e) =>
+                        setCreateForm((prev) => ({ ...prev, description: e.target.value }))
+                      }
+                      placeholder="Mô tả ngắn gọn, có thể chèn bullet, bôi đậm..."
+                      className="min-h-[160px] border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                    />
                   </div>
                 </div>
               </TabsContent>
