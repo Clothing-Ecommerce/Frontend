@@ -192,6 +192,19 @@ export default function ProductsPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [detailError, setDetailError] = useState<string | null>(null)
   const [isDetailLoading, setIsDetailLoading] = useState(false)
+  const [editProduct, setEditProduct] = useState<AdminProductDetail | null>(null)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
+  const [isEditLoading, setIsEditLoading] = useState(false)
+  const [isSavingEdit, setIsSavingEdit] = useState(false)
+  const [editForm, setEditForm] = useState({
+    name: "",
+    slug: "",
+    basePrice: "",
+    categoryId: "",
+    brandId: "",
+    description: "",
+  })
   const [deleteTarget, setDeleteTarget] = useState<AdminProductListItem | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
   const { toasts, toast, removeToast } = useToast()
@@ -325,6 +338,39 @@ export default function ProductsPage() {
       })
   }
 
+  const handleEditProduct = (productId: number) => {
+    setIsEditOpen(true)
+    setIsEditLoading(true)
+    setEditError(null)
+    setEditProduct(null)
+
+    api
+      .get<AdminProductDetail>(`/admin/products/${productId}`)
+      .then((response) => {
+        const product = response.data
+        setEditProduct(product)
+        setEditForm({
+          name: product.name,
+          slug: product.slug,
+          basePrice: String(product.basePrice),
+          categoryId: product.category?.id ? String(product.category.id) : "",
+          brandId: product.brand?.id ? String(product.brand.id) : "",
+          description: product.description ?? "",
+        })
+      })
+      .catch((fetchError) => {
+        if (axios.isCancel(fetchError)) return
+        const message =
+          axios.isAxiosError(fetchError) && fetchError.response?.data?.message
+            ? fetchError.response.data.message
+            : "Không thể tải thông tin sản phẩm"
+        setEditError(message)
+      })
+      .finally(() => {
+        setIsEditLoading(false)
+      })
+  }
+
   const confirmDeleteProduct = () => {
     if (!deleteTarget) return
 
@@ -354,6 +400,81 @@ export default function ProductsPage() {
       ...prev,
       slug: prev.slug || slugify(prev.name),
     }))
+  }
+
+  const resetEditState = () => {
+    setEditProduct(null)
+    setEditError(null)
+    setEditForm({
+      name: "",
+      slug: "",
+      basePrice: "",
+      categoryId: "",
+      brandId: "",
+      description: "",
+    })
+  }
+
+  const handleEditSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!editProduct) return
+
+    const name = editForm.name.trim()
+    const slug = editForm.slug.trim() || slugify(editForm.name)
+    const basePrice = Number(editForm.basePrice)
+    const categoryId = Number(editForm.categoryId)
+    const brandId = editForm.brandId.trim() ? Number(editForm.brandId) : undefined
+    const description = editForm.description.trim()
+
+    if (!name) return setEditError("Vui lòng nhập tên sản phẩm")
+    if (!slug) return setEditError("Vui lòng nhập slug sản phẩm")
+    if (!Number.isFinite(basePrice) || basePrice <= 0) {
+      return setEditError("Giá sản phẩm không hợp lệ")
+    }
+    if (!Number.isFinite(categoryId) || categoryId <= 0) {
+      return setEditError("Danh mục không hợp lệ")
+    }
+
+    const payload = {
+      name,
+      slug,
+      basePrice,
+      categoryId,
+      brandId,
+      description: description || null,
+      features: editProduct.features,
+      specifications: editProduct.specifications,
+      images: editProduct.images.map((image) => ({
+        url: image.url,
+        alt: image.alt,
+        isPrimary: image.isPrimary,
+        sortOrder: image.sortOrder,
+      })),
+    }
+
+    setIsSavingEdit(true)
+    setEditError(null)
+
+    api
+      .patch(`/admin/products/${editProduct.id}`, payload)
+      .then(() => {
+        toast.success("Cập nhật sản phẩm thành công", name)
+        setIsEditOpen(false)
+        resetEditState()
+        setRefreshKey((prev) => prev + 1)
+      })
+      .catch((updateError) => {
+        if (axios.isCancel(updateError)) return
+        const message =
+          axios.isAxiosError(updateError) && updateError.response?.data?.message
+            ? updateError.response.data.message
+            : "Không thể cập nhật sản phẩm"
+        setEditError(message)
+        toast.error("Cập nhật sản phẩm thất bại", message)
+      })
+      .finally(() => {
+        setIsSavingEdit(false)
+      })
   }
 
   const resetCreateForm = () => {
@@ -871,7 +992,10 @@ export default function ProductsPage() {
                           >
                             <Eye className="mr-2 h-4 w-4" /> Xem chi tiết
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer focus:bg-[#f4f1ea]">
+                          <DropdownMenuItem
+                            className="cursor-pointer focus:bg-[#f4f1ea]"
+                            onClick={() => handleEditProduct(product.id)}
+                          >
                             <Edit className="mr-2 h-4 w-4" /> Chỉnh sửa
                           </DropdownMenuItem>
                           <DropdownMenuItem
@@ -1043,6 +1167,178 @@ export default function ProductsPage() {
                 </div>
               )}
             </div>
+          ) : (
+            <p className="text-sm text-[#6c6252]">Không có dữ liệu sản phẩm.</p>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isEditOpen}
+        onOpenChange={(open) => {
+          setIsEditOpen(open)
+          if (!open) {
+            resetEditState()
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Chỉnh sửa sản phẩm</DialogTitle>
+            <DialogDescription>
+              Cập nhật thông tin cơ bản của sản phẩm trong hệ thống quản trị.
+            </DialogDescription>
+          </DialogHeader>
+
+          {isEditLoading ? (
+            <div className="flex items-center justify-center py-8 text-[#6c6252]">
+              <LoadingSpinner className="mr-3 h-5 w-5" />
+              Đang tải thông tin sản phẩm...
+            </div>
+          ) : editError && !editProduct ? (
+            <p className="text-sm text-red-600">{editError}</p>
+          ) : editProduct ? (
+            <form className="space-y-4" onSubmit={handleEditSubmit}>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-name">Tên sản phẩm</Label>
+                  <Input
+                    id="edit-name"
+                    value={editForm.name}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({ ...prev, name: e.target.value }))
+                    }
+                    placeholder="Áo thun cổ tròn..."
+                    className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label className="flex items-center justify-between" htmlFor="edit-slug">
+                    Slug
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 border-[#ead7b9]"
+                      onClick={() =>
+                        setEditForm((prev) => ({ ...prev, slug: prev.slug || slugify(prev.name) }))
+                      }
+                    >
+                      Tạo slug
+                    </Button>
+                  </Label>
+                  <Input
+                    id="edit-slug"
+                    value={editForm.slug}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({ ...prev, slug: e.target.value }))
+                    }
+                    placeholder="ao-thun-co-tron"
+                    className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-price">Giá niêm yết (VND)</Label>
+                  <Input
+                    id="edit-price"
+                    type="number"
+                    min={0}
+                    value={editForm.basePrice}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({ ...prev, basePrice: e.target.value }))
+                    }
+                    className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-category">Danh mục</Label>
+                  <Select
+                    value={editForm.categoryId || ""}
+                    onValueChange={(value) =>
+                      setEditForm((prev) => ({ ...prev, categoryId: value }))
+                    }
+                  >
+                    <SelectTrigger className="border-[#ead7b9] focus-visible:ring-[#c87d2f]">
+                      <SelectValue placeholder="Chọn danh mục" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categoryOptions.map((category) => (
+                        <SelectItem key={category.id} value={String(category.id)}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-brand">Thương hiệu</Label>
+                  <Select
+                    value={editForm.brandId || ""}
+                    onValueChange={(value) =>
+                      setEditForm((prev) => ({ ...prev, brandId: value === "none" ? "" : value }))
+                    }
+                  >
+                    <SelectTrigger className="border-[#ead7b9] focus-visible:ring-[#c87d2f]">
+                      <SelectValue placeholder="Chọn thương hiệu" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Không có</SelectItem>
+                      {availableBrands.map((brand) => (
+                        <SelectItem key={brand.id} value={String(brand.id)}>
+                          {brand.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-description">Mô tả</Label>
+                  <Textarea
+                    id="edit-description"
+                    value={editForm.description}
+                    onChange={(e) =>
+                      setEditForm((prev) => ({ ...prev, description: e.target.value }))
+                    }
+                    placeholder="Mô tả ngắn gọn..."
+                    className="min-h-[120px] border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                  />
+                </div>
+              </div>
+
+              {editError && <p className="text-sm text-red-600">{editError}</p>}
+
+              <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end sm:gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-[#ead7b9]"
+                  onClick={() => {
+                    setIsEditOpen(false)
+                    resetEditState()
+                  }}
+                  disabled={isSavingEdit}
+                >
+                  Huỷ
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-[#1c1a16] text-[#f4f1ea] hover:bg-[#2a2620]"
+                  disabled={isSavingEdit}
+                >
+                  {isSavingEdit && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Lưu thay đổi
+                </Button>
+              </DialogFooter>
+            </form>
           ) : (
             <p className="text-sm text-[#6c6252]">Không có dữ liệu sản phẩm.</p>
           )}
