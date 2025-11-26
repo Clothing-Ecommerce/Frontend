@@ -17,10 +17,6 @@ import {
   X,
   GripVertical,
   RefreshCw,
-  Bold,
-  Italic,
-  List,
-  Eraser,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -161,88 +157,6 @@ const slugify = (value: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)+/g, "")
     .replace(/-+/g, "-")
-
-type RichTextEditorProps = {
-  id: string
-  value: string
-  onChange: (value: string) => void
-  placeholder?: string
-}
-
-const SimpleRichTextEditor = ({ id, value, onChange, placeholder }: RichTextEditorProps) => {
-  const editorRef = useRef<HTMLDivElement | null>(null)
-
-  useEffect(() => {
-    if (editorRef.current && editorRef.current.innerHTML !== value) {
-      editorRef.current.innerHTML = value || ""
-    }
-  }, [value])
-
-  const handleCommand = (command: string) => {
-    document.execCommand(command, false)
-    if (editorRef.current) {
-      onChange(editorRef.current.innerHTML)
-    }
-  }
-
-  return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap gap-2 rounded-md border border-[#ead7b9] bg-[#fdfaf4] p-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-[#6c6252] hover:bg-[#f4f1ea]"
-          onClick={() => handleCommand("bold")}
-        >
-          <Bold className="h-4 w-4" />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-[#6c6252] hover:bg-[#f4f1ea]"
-          onClick={() => handleCommand("italic")}
-        >
-          <Italic className="h-4 w-4" />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-[#6c6252] hover:bg-[#f4f1ea]"
-          onClick={() => handleCommand("insertUnorderedList")}
-        >
-          <List className="h-4 w-4" />
-        </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-[#6c6252] hover:bg-[#f4f1ea]"
-          onClick={() => {
-            if (editorRef.current) {
-              editorRef.current.innerHTML = ""
-              onChange("")
-            }
-          }}
-        >
-          <Eraser className="h-4 w-4" />
-        </Button>
-      </div>
-      <div
-        id={id}
-        ref={editorRef}
-        className="min-h-[160px] rounded-md border border-[#ead7b9] bg-white px-3 py-2 text-sm shadow-inner focus-visible:outline-none"
-        contentEditable
-        onInput={() => onChange(editorRef.current?.innerHTML ?? "")}
-        suppressContentEditableWarning
-      >
-        {!value?.length && <span className="text-[#b7aa96]">{placeholder}</span>}
-      </div>
-    </div>
-  )
-}
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<AdminProductListItem[]>([])
@@ -1045,26 +959,14 @@ export default function ProductsPage() {
                   <div className="space-y-3">
                     <div className="grid gap-2">
                       <Label htmlFor="product-description">Mô tả chi tiết</Label>
-                      <SimpleRichTextEditor
+                      <Textarea
                         id="product-description"
                         value={createForm.description}
-                        onChange={(value) =>
-                          setCreateForm((prev) => ({ ...prev, description: value }))
+                        onChange={(e) =>
+                          setCreateForm((prev) => ({ ...prev, description: e.target.value }))
                         }
                         placeholder="Mô tả ngắn gọn, có thể chèn bullet, bôi đậm..."
-                      />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="product-features">Tính năng nổi bật</Label>
-                      <Textarea
-                        id="product-features"
-                        value={createForm.features}
-                        onChange={(e) =>
-                          setCreateForm((prev) => ({ ...prev, features: e.target.value }))
-                        }
-                        placeholder="Liệt kê tính năng nổi bật, mỗi dòng một mục..."
-                        className="min-h-[80px] border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                        className="min-h-[160px] border-[#ead7b9] focus-visible:ring-[#c87d2f]"
                       />
                     </div>
                   </div>
@@ -1137,12 +1039,6 @@ export default function ProductsPage() {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div className="grid gap-2 rounded-lg border border-[#ead7b9] bg-[#fdfaf4] p-3 text-sm text-[#6c6252]">
-                    <p className="font-medium text-[#1f1b16]">Mẹo</p>
-                    <p>
-                      Bạn có thể dùng trình soạn thảo mô tả để chèn bảng size, bullet point hoặc highlight nội dung quan trọng.
-                    </p>
                   </div>
                 </div>
               </TabsContent>
@@ -1538,29 +1434,6 @@ export default function ProductsPage() {
                         </Button>
                       </div>
                     ))}
-                  </div>
-                </div>
-
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div className="grid gap-2">
-                    <Label htmlFor="seo-title">SEO Title</Label>
-                    <Input
-                      id="seo-title"
-                      value={createForm.seoTitle}
-                      onChange={(e) => setCreateForm((prev) => ({ ...prev, seoTitle: e.target.value }))}
-                      placeholder="Tiêu đề SEO (tuỳ chọn)"
-                      className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="seo-description">SEO Description</Label>
-                    <Textarea
-                      id="seo-description"
-                      value={createForm.seoDescription}
-                      onChange={(e) => setCreateForm((prev) => ({ ...prev, seoDescription: e.target.value }))}
-                      placeholder="Mô tả SEO ngắn gọn"
-                      className="min-h-[80px] border-[#ead7b9] focus-visible:ring-[#c87d2f]"
-                    />
                   </div>
                 </div>
               </TabsContent>
