@@ -1012,17 +1012,18 @@ export default function ProductsPage() {
                   </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-[1fr_2fr]">
+                <div className="grid gap-4 md:grid-cols-2">
                   <div className="grid gap-2">
                     <Label htmlFor="product-care">Hướng dẫn bảo quản</Label>
-                    <Input
+                    {/* Thay đổi: Input -> Textarea và thêm class min-h-[160px] */}
+                    <Textarea
                       id="product-care"
                       value={createForm.careInstructions}
                       onChange={(e) =>
                         setCreateForm((prev) => ({ ...prev, careInstructions: e.target.value }))
                       }
                       placeholder="Giặt tay, phơi nơi thoáng mát..."
-                      className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
+                      className="min-h-[160px] border-[#ead7b9] focus-visible:ring-[#c87d2f]"
                     />
                   </div>
 
