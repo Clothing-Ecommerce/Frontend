@@ -25,13 +25,9 @@ import AdminDashboardPage from "./pages/admin/DashboardPage";
 import AdminOrdersPage from "./pages/admin/OrdersPage";
 import AdminProductsPage from "./pages/admin/ProductsPage";
 import AdminCategoriesPage from "./pages/admin/CategoriesPage";
-import AdminInventoryPage from "./pages/admin/InventoryPage";
 import AdminCustomersPage from "./pages/admin/CustomersPage";
 import AdminReportsPage from "./pages/admin/ReportsPage";
 import AdminUsersRolesPage from "./pages/admin/UsersRolesPage";
-import AdminSettingsPage from "./pages/admin/SettingsPage";
-import AdminSupportPage from "./pages/admin/SupportPage";
-import AdminMarketingPage from "./pages/admin/MarketingPage";
 import AdminAuditLogsPage from "./pages/admin/AuditLogsPage";
 
 // import PrivateRoute from "./utils/PrivateRoute";
@@ -71,13 +67,9 @@ function App() {
           <Route path="orders" element={<AdminOrdersPage />} />
           <Route path="products" element={<AdminProductsPage />} />
           <Route path="categories" element={<AdminCategoriesPage />} />
-          <Route path="inventory" element={<AdminInventoryPage />} />
           <Route path="customers" element={<AdminCustomersPage />} />
           <Route path="reports" element={<AdminReportsPage />} />
           <Route path="users" element={<AdminUsersRolesPage />} />
-          <Route path="settings" element={<AdminSettingsPage />} />
-          <Route path="support" element={<AdminSupportPage />} />
-          <Route path="marketing" element={<AdminMarketingPage />} />
           <Route path="audit" element={<AdminAuditLogsPage />} />
         </Route>
 
