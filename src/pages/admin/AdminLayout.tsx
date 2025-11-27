@@ -28,13 +28,13 @@ const navItems = [
   { label: "Đơn Hàng", to: "/admin/orders", icon: ShoppingBag },
   { label: "Sản Phẩm", to: "/admin/products", icon: PackageSearch },
   { label: "Danh Mục", to: "/admin/categories", icon: Layers },
-  { label: "Inventory & Shipping (bỏ)", to: "/admin/inventory", icon: Warehouse },
-  { label: "Khách Hàng", to: "/admin/customers", icon: Users },
+  // { label: "Inventory & Shipping (bỏ)", to: "/admin/inventory", icon: Warehouse },
+  // { label: "Khách Hàng", to: "/admin/customers", icon: Users },
   { label: "Báo Cáo & Phân Tích (biểu đồ,thống kê năng suất của nhân viên)", to: "/admin/reports", icon: BarChart3 },
   { label: "Người Dùng", to: "/admin/users", icon: ShieldCheck },
-  { label: "Cài Đặt", to: "/admin/settings", icon: Settings },
-  { label: "Hỗ Trợ (Chỉnh sửa lại)", to: "/admin/support", icon: LifeBuoy },
-  { label: "Khuyến Mãi", to: "/admin/marketing", icon: Megaphone },
+  // { label: "Cài Đặt", to: "/admin/settings", icon: Settings },
+  // { label: "Hỗ Trợ (Chỉnh sửa lại)", to: "/admin/support", icon: LifeBuoy },
+  // { label: "Khuyến Mãi", to: "/admin/marketing", icon: Megaphone },
   { label: "Nhật Ký", to: "/admin/audit", icon: History },
 ] as const
 
