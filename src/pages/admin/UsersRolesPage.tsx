@@ -458,7 +458,6 @@ export default function UsersRolesPage() {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="staff@example.com"
-                disabled={!!editingUser} // Thường không cho sửa email
               />
             </div>
             <div className="grid gap-2">
