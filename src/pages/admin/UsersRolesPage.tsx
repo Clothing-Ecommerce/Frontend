@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   MoreVertical,
   Plus,
@@ -8,9 +8,9 @@ import {
   Lock,
   Unlock,
   Edit,
-  User,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Loader2
 } from "lucide-react"
 
 // Import các UI components
@@ -64,137 +64,215 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import api from "@/utils/axios"
+import { useToast } from "@/hooks/useToast"
+import type { AdminUser, AdminUserResponse, AdminUserRole, AdminUserStatus } from "@/types/adminType"
 
-// --- Types & Mock Data ---
-// (Bạn có thể chuyển phần này sang file types/adminType.ts và data/adminMock.ts)
-
-type UserRole = "Admin" | "Staff" | "Customer";
-type UserStatus = "active" | "suspended";
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: UserRole;
-  status: UserStatus;
-  lastActive: string;
-  avatar?: string;
+const ROLE_TO_PAYLOAD: Record<AdminUserRole, string> = {
+  Admin: "admin",
+  Staff: "staff",
+  Customer: "customer",
 }
 
-const initialUsers: User[] = [
-  { id: "1", name: "Nguyễn Hoài Phong", email: "phong.nguyen@example.com", role: "Admin", status: "active", lastActive: "Vừa xong" },
-  { id: "2", name: "Trần Thị B", email: "staff.b@example.com", role: "Staff", status: "active", lastActive: "5 phút trước" },
-  { id: "3", name: "Lê Văn C", email: "support.c@example.com", role: "Customer", status: "suspended", lastActive: "2 ngày trước" },
-  { id: "4", name: "Phạm Minh D", email: "manager.d@example.com", role: "Customer", status: "active", lastActive: "1 giờ trước" },
-];
+const PAYLOAD_TO_ROLE: Record<string, AdminUserRole> = {
+  admin: "Admin",
+  staff: "Staff",
+  customer: "Customer",
+}
 
-const ROLES: UserRole[] = ["Admin", "Staff", "Customer"];
+const ROLES: AdminUserRole[] = ["Admin", "Staff", "Customer"]
+
+const mapApiUser = (user: AdminUserResponse): AdminUser => ({
+  id: user.id,
+  name: user.name,
+  email: user.email,
+  role: PAYLOAD_TO_ROLE[String(user.role).toLowerCase()] ?? "Staff",
+  status: user.status === "active" ? "active" : "suspended",
+  lastActive: typeof user.lastActive === "string" ? user.lastActive : null,
+})
+
+const formatLastActive = (value: string | null) => {
+  if (!value) return "Chưa hoạt động"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+
+  const diffMs = Date.now() - date.getTime()
+  if (diffMs < 0) return date.toLocaleString("vi-VN")
+
+  const minutes = Math.floor(diffMs / 1000 / 60)
+  if (minutes < 1) return "Vừa xong"
+  if (minutes < 60) return `${minutes} phút trước`
+
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} giờ trước`
+
+  const days = Math.floor(hours / 24)
+  if (days < 30) return `${days} ngày trước`
+
+  return date.toLocaleString("vi-VN")
+}
+
+const getErrorMessage = (error: unknown, fallback: string) => {
+  if (error && typeof error === "object" && "response" in error) {
+    const err = error as { response?: { data?: { message?: string } } }
+    return err.response?.data?.message ?? fallback
+  }
+  return fallback
+}
 
 // --- Main Component ---
 
 export default function UsersRolesPage() {
-  const [users, setUsers] = useState<User[]>(initialUsers);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [users, setUsers] = useState<AdminUser[]>([])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [roleFilter, setRoleFilter] = useState<string>("all")
+  const [isLoading, setIsLoading] = useState(false)
+  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [isAlertOpen, setIsAlertOpen] = useState(false)
+  const [editingUser, setEditingUser] = useState<AdminUser | null>(null)
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
+  const [statusUpdatingId, setStatusUpdatingId] = useState<number | null>(null)
+  const { toast } = useToast()
 
-  // State cho các Dialog
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isAlertOpen, setIsAlertOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  // Form State (Dùng chung cho Create/Edit)
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    role: "Staff" as UserRole,
-  });
+    role: "Staff" as AdminUserRole,
+  })
 
-  // --- Logic Xử lý ---
+  const formattedUsers = useMemo(() => users, [users])
 
-  // Lọc danh sách
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch =
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = roleFilter === "all" || user.role === roleFilter;
-    return matchesSearch && matchesRole;
-  });
+  const loadUsers = useCallback(
+    async (signal?: AbortSignal) => {
+      setIsLoading(true)
+      try {
+        const response = await api.get<AdminUserResponse[]>("/admin/users", {
+          params: {
+            search: searchQuery.trim() || undefined,
+            role: roleFilter !== "all" ? ROLE_TO_PAYLOAD[roleFilter as AdminUserRole] : undefined,
+          },
+          signal,
+        })
+
+        setUsers(response.data.map(mapApiUser))
+      } catch (error: unknown) {
+        if (signal?.aborted) return
+        console.error(error)
+        toast.error(getErrorMessage(error, "Không thể tải danh sách nhân sự"))
+      } finally {
+        if (!signal?.aborted) {
+          setIsLoading(false)
+        }
+      }
+    },
+    [roleFilter, searchQuery, toast],
+  )
+
+  useEffect(() => {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => {
+      loadUsers(controller.signal)
+    }, 350)
+
+    return () => {
+      clearTimeout(timeout)
+      controller.abort()
+    }
+  }, [loadUsers])
 
   // Mở Dialog Thêm mới
   const openCreateDialog = () => {
-    setEditingUser(null);
-    setFormData({ name: "", email: "", role: "Staff" });
-    setIsDialogOpen(true);
-  };
+    setEditingUser(null)
+    setFormData({ name: "", email: "", role: "Staff" })
+    setIsDialogOpen(true)
+  }
 
   // Mở Dialog Chỉnh sửa
-  const openEditDialog = (user: User) => {
-    setEditingUser(user);
-    setFormData({ name: user.name, email: user.email, role: user.role });
-    setIsDialogOpen(true);
-  };
+  const openEditDialog = (user: AdminUser) => {
+    setEditingUser(user)
+    setFormData({ name: user.name, email: user.email, role: user.role })
+    setIsDialogOpen(true)
+  }
 
-  // Xử lý Lưu (Thêm mới hoặc Cập nhật)
-  const handleSave = () => {
-    if (editingUser) {
-      // Logic cập nhật
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === editingUser.id ? { ...u, ...formData } : u
-        )
-      );
-    } else {
-      // Logic thêm mới
-      const newUser: User = {
-        id: Math.random().toString(36).substr(2, 9),
-        ...formData,
-        status: "active",
-        lastActive: "Chưa đăng nhập",
-      };
-      setUsers((prev) => [newUser, ...prev]);
+  const handleSave = async () => {
+    const name = formData.name.trim()
+    const email = formData.email.trim()
+    if (!name || !email) {
+      toast.error("Thiếu thông tin bắt buộc")
+      return
     }
-    setIsDialogOpen(false);
-    // TODO: Gọi API cập nhật backend tại đây
-  };
 
-  // Xử lý Khóa/Mở khóa
-  const toggleStatus = (id: string) => {
-    setUsers((prev) =>
-      prev.map((user) =>
-        user.id === id
-          ? { ...user, status: user.status === "active" ? "suspended" : "active" }
-          : user
-      )
-    );
-    // TODO: Gọi API cập nhật status
-  };
+    setIsSaving(true)
+    const payload = {
+      name,
+      email,
+      role: ROLE_TO_PAYLOAD[formData.role],
+    }
+
+    try {
+      if (editingUser) {
+        await api.patch(`/admin/users/${editingUser.id}`, payload)
+        toast.success("Cập nhật nhân sự thành công")
+      } else {
+        await api.post("/admin/users", payload)
+        toast.success("Tạo nhân sự thành công")
+      }
+      setIsDialogOpen(false)
+      setEditingUser(null)
+      await loadUsers()
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Không thể lưu thông tin nhân sự"))
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const toggleStatus = async (id: number, currentStatus: AdminUserStatus) => {
+    const nextStatus: AdminUserStatus = currentStatus === "active" ? "suspended" : "active"
+    setStatusUpdatingId(id)
+    try {
+      await api.patch(`/admin/users/${id}/status`, { status: nextStatus })
+      toast.success("Cập nhật trạng thái thành công")
+      await loadUsers()
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Không thể cập nhật trạng thái"))
+    } finally {
+      setStatusUpdatingId(null)
+    }
+  }
 
   // Xử lý Xóa (Mở Alert)
-  const confirmDelete = (id: string) => {
-    setDeletingId(id);
-    setIsAlertOpen(true);
-  };
+  const confirmDelete = (id: number) => {
+    setDeletingId(id)
+    setIsAlertOpen(true)
+  }
 
   // Thực hiện Xóa
-  const handleDelete = () => {
-    if (deletingId) {
-      setUsers((prev) => prev.filter((u) => u.id !== deletingId));
-      setIsAlertOpen(false);
-      setDeletingId(null);
+  const handleDelete = async () => {
+    if (!deletingId) return
+    setIsSaving(true)
+    try {
+      await api.delete(`/admin/users/${deletingId}`)
+      toast.success("Đã xoá tài khoản")
+      setIsAlertOpen(false)
+      setDeletingId(null)
+      await loadUsers()
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Không thể xoá tài khoản"))
+    } finally {
+      setIsSaving(false)
     }
-    // TODO: Gọi API xóa user
-  };
+  }
 
   // Helper render Badge Role
-  const getRoleBadgeColor = (role: UserRole) => {
+  const getRoleBadgeColor = (role: AdminUserRole) => {
     switch (role) {
-      case "Admin": return "bg-slate-900 text-white hover:bg-slate-700"; // Đen
-      // case "Customer": return "bg-purple-100 text-purple-700 hover:bg-purple-200"; // Tím
-      case "Staff": return "bg-blue-100 text-blue-700 hover:bg-blue-200"; // Xanh dương
-      default: return "bg-slate-100 text-slate-700 hover:bg-slate-200"; // Xám
+      case "Admin": return "bg-slate-900 text-white hover:bg-slate-700" // Đen
+      case "Staff": return "bg-blue-100 text-blue-700 hover:bg-blue-200" // Xanh dương
+      default: return "bg-slate-100 text-slate-700 hover:bg-slate-200" // Xám
     }
-  };
+  }
 
   return (
     <div className="space-y-6">
@@ -252,14 +330,22 @@ export default function UsersRolesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.length === 0 ? (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-24 text-center text-slate-500">
+                    <div className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Đang tải dữ liệu
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : formattedUsers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="h-24 text-center text-slate-500">
                     Không tìm thấy nhân sự nào.
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredUsers.map((user) => (
+                formattedUsers.map((user) => (
                   <TableRow key={user.id} className="hover:bg-slate-50/50 transition-colors">
                     <TableCell className="pl-6 py-3">
                       <div className="flex items-center gap-3">
@@ -284,8 +370,8 @@ export default function UsersRolesPage() {
                     </TableCell>
                     <TableCell>
                       <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${
-                        user.status === "active" 
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200" 
+                        user.status === "active"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                           : "bg-rose-50 text-rose-700 border-rose-200"
                       }`}>
                         {user.status === "active" ? (
@@ -297,7 +383,7 @@ export default function UsersRolesPage() {
                       </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-xs text-slate-500">
-                      {user.lastActive}
+                      {formatLastActive(user.lastActive)}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -311,7 +397,10 @@ export default function UsersRolesPage() {
                           <DropdownMenuItem onClick={() => openEditDialog(user)}>
                             <Edit className="mr-2 h-4 w-4" /> Chỉnh sửa
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => toggleStatus(user.id)}>
+                          <DropdownMenuItem
+                            disabled={statusUpdatingId === user.id}
+                            onClick={() => toggleStatus(user.id, user.status)}
+                          >
                             {user.status === "active" ? (
                               <>
                                 <Lock className="mr-2 h-4 w-4" /> Khóa tài khoản
@@ -323,7 +412,7 @@ export default function UsersRolesPage() {
                             )}
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             className="text-rose-600 focus:text-rose-600 focus:bg-rose-50"
                             onClick={() => confirmDelete(user.id)}
                           >
@@ -376,7 +465,7 @@ export default function UsersRolesPage() {
               <Label htmlFor="role">Vai trò</Label>
               <Select
                 value={formData.role}
-                onValueChange={(val) => setFormData({ ...formData, role: val as UserRole })}
+                onValueChange={(val) => setFormData({ ...formData, role: val as AdminUserRole })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Chọn vai trò" />
@@ -390,8 +479,20 @@ export default function UsersRolesPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Hủy</Button>
-            <Button onClick={handleSave}>{editingUser ? "Lưu thay đổi" : "Tạo tài khoản"}</Button>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSaving}>
+              Hủy
+            </Button>
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Đang lưu
+                </>
+              ) : editingUser ? (
+                "Lưu thay đổi"
+              ) : (
+                "Tạo tài khoản"
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -408,11 +509,18 @@ export default function UsersRolesPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Hủy bỏ</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleDelete}
               className="bg-rose-600 hover:bg-rose-700 focus:ring-rose-600"
+              disabled={isSaving}
             >
-              Xóa vĩnh viễn
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Đang xoá
+                </>
+              ) : (
+                "Xóa vĩnh viễn"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

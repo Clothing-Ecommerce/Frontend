@@ -284,3 +284,25 @@ export interface AdminOrderStatusUpdateResponse {
   rawStatus: string
   changed: boolean
 }
+
+export type AdminUserRole = "Admin" | "Staff" | "Customer";
+
+export type AdminUserStatus = "active" | "suspended";
+
+export interface AdminUser {
+  id: number;
+  name: string;
+  email: string;
+  role: AdminUserRole;
+  status: AdminUserStatus;
+  lastActive: string | null;
+}
+
+export interface AdminUserResponse {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  status: string;
+  lastActive: string | null;
+}
