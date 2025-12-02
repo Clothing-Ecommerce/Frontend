@@ -68,8 +68,8 @@ import {
 // --- Types & Mock Data ---
 // (Bạn có thể chuyển phần này sang file types/adminType.ts và data/adminMock.ts)
 
-type UserRole = "Admin" | "Staff" | "Manager" | "Support";
-type UserStatus = "active" | "locked";
+type UserRole = "Admin" | "Staff" | "Customer";
+type UserStatus = "active" | "suspended";
 
 interface User {
   id: string;
@@ -84,11 +84,11 @@ interface User {
 const initialUsers: User[] = [
   { id: "1", name: "Nguyễn Hoài Phong", email: "phong.nguyen@example.com", role: "Admin", status: "active", lastActive: "Vừa xong" },
   { id: "2", name: "Trần Thị B", email: "staff.b@example.com", role: "Staff", status: "active", lastActive: "5 phút trước" },
-  { id: "3", name: "Lê Văn C", email: "support.c@example.com", role: "Support", status: "locked", lastActive: "2 ngày trước" },
-  { id: "4", name: "Phạm Minh D", email: "manager.d@example.com", role: "Manager", status: "active", lastActive: "1 giờ trước" },
+  { id: "3", name: "Lê Văn C", email: "support.c@example.com", role: "Customer", status: "suspended", lastActive: "2 ngày trước" },
+  { id: "4", name: "Phạm Minh D", email: "manager.d@example.com", role: "Customer", status: "active", lastActive: "1 giờ trước" },
 ];
 
-const ROLES: UserRole[] = ["Admin", "Staff", "Manager", "Support"];
+const ROLES: UserRole[] = ["Admin", "Staff", "Customer"];
 
 // --- Main Component ---
 
@@ -163,7 +163,7 @@ export default function UsersRolesPage() {
     setUsers((prev) =>
       prev.map((user) =>
         user.id === id
-          ? { ...user, status: user.status === "active" ? "locked" : "active" }
+          ? { ...user, status: user.status === "active" ? "suspended" : "active" }
           : user
       )
     );
@@ -190,7 +190,7 @@ export default function UsersRolesPage() {
   const getRoleBadgeColor = (role: UserRole) => {
     switch (role) {
       case "Admin": return "bg-slate-900 text-white hover:bg-slate-700"; // Đen
-      case "Manager": return "bg-purple-100 text-purple-700 hover:bg-purple-200"; // Tím
+      // case "Customer": return "bg-purple-100 text-purple-700 hover:bg-purple-200"; // Tím
       case "Staff": return "bg-blue-100 text-blue-700 hover:bg-blue-200"; // Xanh dương
       default: return "bg-slate-100 text-slate-700 hover:bg-slate-200"; // Xám
     }
