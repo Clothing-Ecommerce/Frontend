@@ -1,87 +1,212 @@
-import { useState } from "react"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Button } from "@/components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import type React from "react"
+import { useEffect, useMemo, useState } from "react"
+
+import { AlertTriangle, ArrowDownRight, ArrowUpRight, DollarSign, Package, ShoppingBag, Users } from "lucide-react"
+import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
+
 import { Badge } from "@/components/ui/badge"
-import {
-  ArrowUpRight,
-  ArrowDownRight,
-  DollarSign,
-  ShoppingBag,
-  Users,
-  Package,
-  AlertTriangle,
-  Download,
-  Filter
-} from "lucide-react"
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  Legend
-} from 'recharts'
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import api from "@/utils/axios"
 
-// --- MOCK DATA (Dữ liệu giả lập) ---
-const revenueData = [
-  { name: 'T2', revenue: 4000000, orders: 24 },
-  { name: 'T3', revenue: 3000000, orders: 18 },
-  { name: 'T4', revenue: 2000000, orders: 12 },
-  { name: 'T5', revenue: 2780000, orders: 30 },
-  { name: 'T6', revenue: 1890000, orders: 20 },
-  { name: 'T7', revenue: 2390000, orders: 25 },
-  { name: 'CN', revenue: 3490000, orders: 40 },
-]
+type ReportRange = "24h" | "7d" | "30d" | "this_month"
 
-const categoryData = [
-  { name: 'Áo Nam', value: 400 },
-  { name: 'Váy Nữ', value: 300 },
-  { name: 'Phụ kiện', value: 300 },
-  { name: 'Giày dép', value: 200 },
-]
+interface OverviewKpiBlock {
+  current: number
+  previous: number
+  growth: number | null
+}
 
-const COLORS = ['#0f172a', '#334155', '#64748b', '#94a3b8'] // Slate color palette
+interface OverviewTimelinePoint {
+  label: string
+  revenue: number
+  orders: number
+}
 
-// Helper format tiền tệ VND
+interface ReportOverviewResponse {
+  range: ReportRange
+  generatedAt: string
+  kpis: {
+    revenue: OverviewKpiBlock
+    newOrders: OverviewKpiBlock
+    productsSold: OverviewKpiBlock
+    newCustomers: OverviewKpiBlock
+  }
+  timeline: {
+    granularity: "hour" | "day"
+    points: OverviewTimelinePoint[]
+  }
+}
+
+interface CategoryAnalyticsItem {
+  categoryId: number | null
+  name: string
+  revenue: number
+  percentage: number
+  orders: number
+  units: number
+}
+
+interface CategoryAnalyticsResponse {
+  range: ReportRange
+  generatedAt: string
+  totalRevenue: number
+  categories: CategoryAnalyticsItem[]
+}
+
+interface LocationAnalyticsItem {
+  location: string
+  orders: number
+  percentage: number
+}
+
+interface LocationAnalyticsResponse {
+  range: ReportRange
+  generatedAt: string
+  totalOrders: number
+  locations: LocationAnalyticsItem[]
+}
+
+interface PaymentAnalyticsItem {
+  method: string
+  methodLabel: string
+  total: number
+  succeeded: number
+  failed: number
+  successRate: number
+  revenue: number
+}
+
+interface PaymentAnalyticsResponse {
+  range: ReportRange
+  generatedAt: string
+  methods: PaymentAnalyticsItem[]
+}
+
+interface InventoryBestSellerItem {
+  productId: number
+  name: string
+  category: string | null
+  revenue: number
+  unitsSold: number
+  orders: number
+  inventory: number
+}
+
+interface InventoryAlertItem {
+  productId: number
+  name: string
+  inventory: number
+  severity: "medium" | "high"
+}
+
+interface InventoryAnalyticsResponse {
+  range: ReportRange
+  generatedAt: string
+  bestSellers: InventoryBestSellerItem[]
+  lowStockAlerts: InventoryAlertItem[]
+}
+
+interface VipCustomerItem {
+  userId: number
+  name: string
+  email: string
+  totalSpent: number
+  orders: number
+}
+
+interface VipCustomerResponse {
+  range: ReportRange
+  generatedAt: string
+  customers: VipCustomerItem[]
+}
+
+const COLORS = ["#0f172a", "#334155", "#64748b", "#94a3b8"]
+
 const formatCurrency = (value: number) =>
-  new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value)
+  new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(value)
+
+const formatGrowth = (growth: number | null) => {
+  if (growth === null) return { label: "Không đổi", trend: "neutral" as const }
+  const percent = (growth * 100).toFixed(1)
+  const label = `${growth >= 0 ? "+" : ""}${percent}%`
+  const trend = growth > 0 ? ("up" as const) : growth < 0 ? ("down" as const) : ("neutral" as const)
+  return { label, trend }
+}
 
 export default function ReportsPage() {
-  const [timeRange, setTimeRange] = useState("7d")
+  const [timeRange, setTimeRange] = useState<ReportRange>("7d")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const [overview, setOverview] = useState<ReportOverviewResponse | null>(null)
+  const [categories, setCategories] = useState<CategoryAnalyticsResponse | null>(null)
+  const [locations, setLocations] = useState<LocationAnalyticsResponse | null>(null)
+  const [payments, setPayments] = useState<PaymentAnalyticsResponse | null>(null)
+  const [inventory, setInventory] = useState<InventoryAnalyticsResponse | null>(null)
+  const [vipCustomers, setVipCustomers] = useState<VipCustomerResponse | null>(null)
+
+  useEffect(() => {
+    let isMounted = true
+    const fetchReports = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const [overviewRes, categoryRes, locationRes, paymentRes, inventoryRes, vipRes] = await Promise.all([
+          api.get<ReportOverviewResponse>("/admin/reports/overview", { params: { range: timeRange } }),
+          api.get<CategoryAnalyticsResponse>("/admin/reports/categories", { params: { range: timeRange } }),
+          api.get<LocationAnalyticsResponse>("/admin/reports/locations", { params: { range: timeRange } }),
+          api.get<PaymentAnalyticsResponse>("/admin/reports/payments", { params: { range: timeRange } }),
+          api.get<InventoryAnalyticsResponse>("/admin/reports/inventory", { params: { range: timeRange, limit: 5 } }),
+          api.get<VipCustomerResponse>("/admin/reports/vip-customers", { params: { range: timeRange, limit: 5 } }),
+        ])
+
+        if (!isMounted) return
+        setOverview(overviewRes.data)
+        setCategories(categoryRes.data)
+        setLocations(locationRes.data)
+        setPayments(paymentRes.data)
+        setInventory(inventoryRes.data)
+        setVipCustomers(vipRes.data)
+      } catch (err) {
+        console.error("Failed to fetch reports", err)
+        if (isMounted) setError("Không thể tải dữ liệu báo cáo. Vui lòng thử lại sau.")
+      } finally {
+        if (isMounted) setLoading(false)
+      }
+    }
+
+    fetchReports()
+    return () => {
+      isMounted = false
+    }
+  }, [timeRange])
+
+  const revenueChartData = useMemo(() => {
+    if (!overview) return []
+    return overview.timeline.points.map((point, index) => ({
+      name: point.label || `${index + 1}`,
+      revenue: point.revenue,
+      orders: point.orders,
+    }))
+  }, [overview])
+
+  const paymentSummary = useMemo(() => payments?.methods ?? [], [payments])
+  const topLocations = useMemo(() => locations?.locations ?? [], [locations])
+  const bestSellers = useMemo(() => inventory?.bestSellers ?? [], [inventory])
+  const lowStockAlerts = useMemo(() => inventory?.lowStockAlerts ?? [], [inventory])
 
   return (
     <div className="space-y-6">
-      {/* --- HEADER --- */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900">Báo cáo & Thống kê</h2>
-          <p className="text-sm text-slate-500">
-            Tổng quan tình hình kinh doanh, tồn kho và khách hàng.
-          </p>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900">Báo cáo &amp; Thống kê</h2>
+          <p className="text-sm text-slate-500">Tổng quan tình hình kinh doanh, tồn kho và khách hàng.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={timeRange} onValueChange={setTimeRange}>
+          <Select value={timeRange} onValueChange={(value) => setTimeRange(value as ReportRange)}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Chọn khoảng thời gian" />
             </SelectTrigger>
@@ -92,101 +217,92 @@ export default function ReportsPage() {
               <SelectItem value="this_month">Tháng này</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" className="gap-2">
-            <Download className="h-4 w-4" />
+          <Button variant="outline" className="gap-2" disabled>
             Xuất báo cáo
           </Button>
         </div>
       </div>
 
-      {/* --- TABS --- */}
+      {error && <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
+
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Tổng quan</TabsTrigger>
-          <TabsTrigger value="sales">Doanh thu & Đơn hàng</TabsTrigger>
-          <TabsTrigger value="products">Sản phẩm & Tồn kho</TabsTrigger>
+          <TabsTrigger value="sales">Doanh thu &amp; Đơn hàng</TabsTrigger>
+          <TabsTrigger value="products">Sản phẩm &amp; Tồn kho</TabsTrigger>
           <TabsTrigger value="customers">Khách hàng</TabsTrigger>
         </TabsList>
 
-        {/* ================= TAB: TỔNG QUAN ================= */}
         <TabsContent value="overview" className="space-y-4">
-          {/* KPI Cards */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <KPICard
               title="Tổng doanh thu"
-              value="45.231.000₫"
-              change="+20.1%"
-              trend="up"
+              value={overview ? formatCurrency(overview.kpis.revenue.current) : "—"}
+              change={formatGrowth(overview?.kpis.revenue.growth ?? null).label}
+              trend={formatGrowth(overview?.kpis.revenue.growth ?? null).trend}
               icon={<DollarSign className="h-4 w-4 text-slate-500" />}
+              loading={loading}
             />
             <KPICard
               title="Đơn hàng mới"
-              value="+573"
-              change="+180"
-              trend="up"
+              value={overview ? overview.kpis.newOrders.current.toLocaleString("vi-VN") : "—"}
+              change={formatGrowth(overview?.kpis.newOrders.growth ?? null).label}
+              trend={formatGrowth(overview?.kpis.newOrders.growth ?? null).trend}
               icon={<ShoppingBag className="h-4 w-4 text-slate-500" />}
+              loading={loading}
             />
             <KPICard
               title="Sản phẩm đã bán"
-              value="1,203"
-              change="-4%"
-              trend="down"
+              value={overview ? overview.kpis.productsSold.current.toLocaleString("vi-VN") : "—"}
+              change={formatGrowth(overview?.kpis.productsSold.growth ?? null).label}
+              trend={formatGrowth(overview?.kpis.productsSold.growth ?? null).trend}
               icon={<Package className="h-4 w-4 text-slate-500" />}
+              loading={loading}
             />
             <KPICard
               title="Khách hàng mới"
-              value="+20"
-              change="+12%"
-              trend="up"
+              value={overview ? overview.kpis.newCustomers.current.toLocaleString("vi-VN") : "—"}
+              change={formatGrowth(overview?.kpis.newCustomers.growth ?? null).label}
+              trend={formatGrowth(overview?.kpis.newCustomers.growth ?? null).trend}
               icon={<Users className="h-4 w-4 text-slate-500" />}
+              loading={loading}
             />
           </div>
 
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-            {/* Revenue Chart */}
             <Card className="col-span-4">
               <CardHeader>
                 <CardTitle>Biểu đồ doanh thu</CardTitle>
-                <CardDescription>Doanh thu theo ngày trong tuần qua</CardDescription>
+                <CardDescription>Doanh thu và số lượng đơn theo từng mốc thời gian</CardDescription>
               </CardHeader>
               <CardContent className="pl-2">
                 <div className="h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={revenueData}>
+                    <LineChart data={revenueChartData} margin={{ left: 8, right: 8 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                      <XAxis 
-                        dataKey="name" 
-                        stroke="#64748b" 
-                        fontSize={12} 
-                        tickLine={false} 
-                        axisLine={false} 
-                      />
-                      <YAxis 
-                        stroke="#64748b" 
-                        fontSize={12} 
-                        tickLine={false} 
-                        axisLine={false} 
-                        tickFormatter={(value) => `${value / 1000000}M`} 
+                      <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
+                      <YAxis
+                        stroke="#64748b"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => `${Math.round((value as number) / 1_000_000)}M`}
                       />
                       <Tooltip
-                        contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0' }}
-                        formatter={(value: number) => [formatCurrency(value), "Doanh thu"]}
+                        contentStyle={{ backgroundColor: "#fff", borderRadius: "8px", border: "1px solid #e2e8f0" }}
+                        formatter={(value: number, name) => [
+                          name === "revenue" ? formatCurrency(value) : value,
+                          name === "revenue" ? "Doanh thu" : "Đơn hàng",
+                        ]}
                       />
-                      <Line 
-                        type="monotone" 
-                        dataKey="revenue" 
-                        stroke="#0f172a" 
-                        strokeWidth={2} 
-                        dot={false} 
-                        activeDot={{ r: 6 }} 
-                      />
+                      <Line type="monotone" dataKey="revenue" stroke="#0f172a" strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
+                      <Line type="monotone" dataKey="orders" stroke="#f59e0b" strokeWidth={2} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Top Categories Pie Chart */}
             <Card className="col-span-3">
               <CardHeader>
                 <CardTitle>Doanh thu theo danh mục</CardTitle>
@@ -196,20 +312,12 @@ export default function ReportsPage() {
                 <div className="h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
-                      <Pie
-                        data={categoryData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {categoryData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      <Pie data={categories?.categories ?? []} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={4} dataKey="revenue">
+                        {(categories?.categories ?? []).map((entry, index) => (
+                          <Cell key={entry.name} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip formatter={(value) => [`${value} sản phẩm`, 'Số lượng']} />
+                      <Tooltip formatter={(value, name) => [formatCurrency(value as number), name as string]} />
                       <Legend verticalAlign="bottom" height={36} />
                     </PieChart>
                   </ResponsiveContainer>
@@ -219,86 +327,72 @@ export default function ReportsPage() {
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">
-            {/* Inventory Alerts */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
                   <CardTitle>Cảnh báo tồn kho</CardTitle>
-                  <CardDescription>Các SKU có số lượng thấp cần nhập thêm</CardDescription>
+                  <CardDescription>Các sản phẩm bán chạy có tồn kho thấp</CardDescription>
                 </div>
-                <Badge variant="destructive" className="flex gap-1 items-center">
+                <Badge variant="destructive" className="flex items-center gap-1">
                   <AlertTriangle size={12} /> Cần nhập hàng
                 </Badge>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
+                  {(lowStockAlerts.length ? lowStockAlerts : bestSellers.slice(0, 3)).map((item) => (
+                    <div key={item.productId} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-400">IMG</div>
+                        <div className="h-10 w-10 rounded bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-400">
+                          {item.name.charAt(0)}
+                        </div>
                         <div>
-                          <p className="text-sm font-medium text-slate-900">Áo Thun Basic - Trắng / L</p>
-                          <p className="text-xs text-slate-500">SKU: AT-WH-L</p>
+                          <p className="text-sm font-medium text-slate-900">{item.name}</p>
+                          <p className="text-xs text-slate-500">Tồn kho: {"inventory" in item ? item.inventory : "N/A"}</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-bold text-red-600">Còn 2</p>
-                        <p className="text-xs text-slate-500">Đã bán: 150</p>
+                        <p className={`text-sm font-bold ${"severity" in item && item.severity === "high" ? "text-red-600" : "text-amber-600"}`}>
+                          {"inventory" in item ? item.inventory : 0} cái
+                        </p>
+                        {"orders" in item && <p className="text-xs text-slate-500">Đã bán: {item.orders}</p>}
                       </div>
                     </div>
                   ))}
+                  {!lowStockAlerts.length && !bestSellers.length && <p className="text-sm text-slate-500">Không có dữ liệu tồn kho.</p>}
                 </div>
               </CardContent>
             </Card>
-            
-            {/* Top Locations */}
+
             <Card>
-                <CardHeader>
-                    <CardTitle>Khu vực mua hàng nhiều nhất</CardTitle>
-                    <CardDescription>Top tỉnh thành có lượng đơn cao</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700">1</span>
-                                <span className="text-sm font-medium">TP. Hồ Chí Minh</span>
-                            </div>
-                            <div className="w-32 h-2 rounded-full bg-slate-100 overflow-hidden">
-                                <div className="h-full bg-slate-800" style={{ width: '85%' }}></div>
-                            </div>
-                            <span className="text-sm font-medium">45%</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700">2</span>
-                                <span className="text-sm font-medium">Hà Nội</span>
-                            </div>
-                            <div className="w-32 h-2 rounded-full bg-slate-100 overflow-hidden">
-                                <div className="h-full bg-slate-800" style={{ width: '60%' }}></div>
-                            </div>
-                            <span className="text-sm font-medium">30%</span>
-                        </div>
-                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700">3</span>
-                                <span className="text-sm font-medium">Đà Nẵng</span>
-                            </div>
-                            <div className="w-32 h-2 rounded-full bg-slate-100 overflow-hidden">
-                                <div className="h-full bg-slate-800" style={{ width: '20%' }}></div>
-                            </div>
-                            <span className="text-sm font-medium">10%</span>
-                        </div>
+              <CardHeader>
+                <CardTitle>Khu vực mua hàng nhiều nhất</CardTitle>
+                <CardDescription>Top tỉnh thành có lượng đơn cao</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {topLocations.slice(0, 5).map((item, index) => (
+                    <div key={item.location} className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-bold text-slate-700">
+                          {index + 1}
+                        </span>
+                        <span className="text-sm font-medium">{item.location}</span>
+                      </div>
+                      <div className="w-32 h-2 rounded-full bg-slate-100 overflow-hidden">
+                        <div className="h-full bg-slate-800" style={{ width: `${item.percentage}%` }} />
+                      </div>
+                      <span className="text-sm font-medium">{item.percentage}%</span>
                     </div>
-                </CardContent>
+                  ))}
+                  {!topLocations.length && <p className="text-sm text-slate-500">Chưa có dữ liệu địa lý.</p>}
+                </div>
+              </CardContent>
             </Card>
           </div>
         </TabsContent>
 
-        {/* ================= TAB: DOANH THU & ĐƠN HÀNG ================= */}
         <TabsContent value="sales" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-7">
-            {/* Detailed Sales Chart */}
             <Card className="col-span-4">
               <CardHeader>
                 <CardTitle>Xu hướng dòng tiền</CardTitle>
@@ -307,120 +401,87 @@ export default function ReportsPage() {
               <CardContent className="pl-2">
                 <div className="h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                     <BarChart data={revenueData}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                        <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
-                        <YAxis yAxisId="left" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `${val/1000000}M`} />
-                        <YAxis yAxisId="right" orientation="right" fontSize={12} tickLine={false} axisLine={false} />
-                        <Tooltip 
-                            cursor={{fill: 'transparent'}}
-                            formatter={(value, name) => [name === 'revenue' ? formatCurrency(value as number) : value, name === 'revenue' ? 'Doanh thu' : 'Đơn hàng']}
-                        />
-                        <Bar yAxisId="left" dataKey="revenue" fill="#0f172a" radius={[4, 4, 0, 0]} barSize={20} />
-                        <Line yAxisId="right" type="monotone" dataKey="orders" stroke="#f59e0b" strokeWidth={2} />
-                     </BarChart>
+                    <BarChart data={revenueChartData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                      <XAxis dataKey="name" fontSize={12} tickLine={false} axisLine={false} />
+                      <YAxis yAxisId="left" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(val) => `${Math.round((val as number) / 1_000_000)}M`} />
+                      <YAxis yAxisId="right" orientation="right" fontSize={12} tickLine={false} axisLine={false} />
+                      <Tooltip
+                        cursor={{ fill: "transparent" }}
+                        formatter={(value, name) => [name === "revenue" ? formatCurrency(value as number) : value, name === "revenue" ? "Doanh thu" : "Đơn hàng"]}
+                      />
+                      <Bar yAxisId="left" dataKey="revenue" fill="#0f172a" radius={[4, 4, 0, 0]} barSize={20} />
+                      <Line yAxisId="right" type="monotone" dataKey="orders" stroke="#f59e0b" strokeWidth={2} />
+                    </BarChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Order Status & Payments */}
             <div className="col-span-3 space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Trạng thái đơn hàng</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {[
-                      { label: 'Hoàn thành (COMPLETED)', val: 65, color: 'bg-emerald-500' },
-                      { label: 'Đang giao (SHIPPED)', val: 20, color: 'bg-blue-500' },
-                      { label: 'Đang xử lý (PENDING)', val: 10, color: 'bg-amber-500' },
-                      { label: 'Đã huỷ/Hoàn (CANCELLED)', val: 5, color: 'bg-red-500' },
-                    ].map((item) => (
-                      <div key={item.label}>
-                        <div className="flex items-center justify-between text-sm mb-1">
-                          <span className="text-slate-600">{item.label}</span>
-                          <span className="font-medium">{item.val}%</span>
-                        </div>
-                        <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                          <div className={`h-full ${item.color}`} style={{ width: `${item.val}%` }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
                   <CardTitle>Phương thức thanh toán</CardTitle>
+                  <CardDescription>Tỷ lệ thanh toán thành công theo kênh</CardDescription>
                 </CardHeader>
-                <CardContent className="flex justify-between items-center text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-indigo-500 rounded-full" /> COD (60%)
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-pink-500 rounded-full" /> Momo/VNPay (30%)
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 bg-slate-500 rounded-full" /> Bank (10%)
-                  </div>
+                <CardContent className="space-y-3 text-sm">
+                  {paymentSummary.map((method) => (
+                    <div key={method.method} className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium text-slate-900">{method.methodLabel}</p>
+                        <p className="text-xs text-slate-500">{method.total} giao dịch</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-slate-900">{formatCurrency(method.revenue)}</p>
+                        <p className="text-xs text-slate-500">Tỉ lệ thành công: {method.successRate}%</p>
+                      </div>
+                    </div>
+                  ))}
+                  {!paymentSummary.length && <p className="text-sm text-slate-500">Chưa có dữ liệu thanh toán.</p>}
                 </CardContent>
               </Card>
             </div>
           </div>
         </TabsContent>
 
-        {/* ================= TAB: SẢN PHẨM & TỒN KHO ================= */}
         <TabsContent value="products" className="space-y-4">
-          {/* Top Selling */}
           <Card>
             <CardHeader>
               <CardTitle>Top sản phẩm bán chạy</CardTitle>
-              <CardDescription>Xếp hạng theo số lượng đã bán trong kỳ</CardDescription>
+              <CardDescription>Xếp hạng theo doanh thu trong kỳ</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                {[1, 2, 3].map((item, index) => (
-                  <div key={index} className="flex items-center justify-between group">
+                {bestSellers.map((item, index) => (
+                  <div key={item.productId} className="flex items-center justify-between group">
                     <div className="flex items-center gap-4">
-                      <div className="relative h-12 w-12 rounded-lg border bg-slate-100 flex items-center justify-center font-bold text-slate-400">
-                         {index + 1}
+                      <div className="relative h-12 w-12 rounded-lg border bg-slate-50 flex items-center justify-center font-bold text-slate-400">
+                        {index + 1}
                       </div>
                       <div>
-                        <p className="font-medium text-slate-900 group-hover:text-blue-600 transition-colors">
-                          Áo Thun Signature - Đen
-                        </p>
+                        <p className="font-medium text-slate-900 group-hover:text-blue-600 transition-colors">{item.name}</p>
                         <div className="flex gap-2 text-xs text-slate-500 mt-1">
-                          <Badge variant="secondary" className="font-normal">Size L</Badge>
-                          <span className="flex items-center">⭐ 4.8 (120 reviews)</span>
+                          {item.category && <Badge variant="secondary" className="font-normal">{item.category}</Badge>}
+                          <span className="flex items-center">Đơn: {item.orders}</span>
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-slate-900">1,200 đã bán</p>
-                      <p className="text-xs text-emerald-600 font-medium">Doanh thu: 120.000.000₫</p>
+                      <p className="font-bold text-slate-900">{item.unitsSold.toLocaleString("vi-VN")} đã bán</p>
+                      <p className="text-xs text-emerald-600 font-medium">Doanh thu: {formatCurrency(item.revenue)}</p>
                     </div>
                   </div>
                 ))}
+                {!bestSellers.length && <p className="text-sm text-slate-500">Chưa có sản phẩm nào trong kỳ.</p>}
               </div>
             </CardContent>
           </Card>
 
-          {/* Inventory Table */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
                 <CardTitle>Trạng thái kho hàng</CardTitle>
-                <CardDescription>Theo dõi biến động và cảnh báo nhập hàng</CardDescription>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="gap-2">
-                    <Filter className="h-3 w-3"/>
-                    Lọc: Sắp hết hàng
-                </Button>
-                <Button variant="outline" size="sm">Xuất Excel</Button>
+                <CardDescription>Theo dõi tồn kho của sản phẩm bán chạy</CardDescription>
               </div>
             </CardHeader>
             <CardContent>
@@ -428,32 +489,44 @@ export default function ReportsPage() {
                 <table className="w-full text-sm text-left caption-bottom">
                   <thead className="[&_tr]:border-b">
                     <tr className="border-b transition-colors hover:bg-slate-100/50 data-[state=selected]:bg-slate-100">
-                      <th className="h-12 px-4 text-left align-middle font-medium text-slate-500">Sản phẩm / Biến thể</th>
-                      <th className="h-12 px-4 text-left align-middle font-medium text-slate-500">SKU</th>
+                      <th className="h-12 px-4 text-left align-middle font-medium text-slate-500">Sản phẩm</th>
                       <th className="h-12 px-4 text-center align-middle font-medium text-slate-500">Đã bán</th>
+                      <th className="h-12 px-4 text-center align-middle font-medium text-slate-500">Đơn hàng</th>
                       <th className="h-12 px-4 text-center align-middle font-medium text-slate-500">Tồn kho</th>
                       <th className="h-12 px-4 text-right align-middle font-medium text-slate-500">Trạng thái</th>
                     </tr>
                   </thead>
                   <tbody className="[&_tr:last-child]:border-0">
-                    <tr className="border-b transition-colors hover:bg-slate-100/50">
-                      <td className="p-4 align-middle font-medium">Quần Jeans Slimfit - Xanh / 32</td>
-                      <td className="p-4 align-middle text-slate-500">JEA-BLU-32</td>
-                      <td className="p-4 align-middle text-center">450</td>
-                      <td className="p-4 align-middle text-center font-bold text-red-600">3</td>
-                      <td className="p-4 align-middle text-right">
-                        <Badge variant="destructive">Sắp hết</Badge>
-                      </td>
-                    </tr>
-                    <tr className="border-b transition-colors hover:bg-slate-100/50">
-                      <td className="p-4 align-middle font-medium">Áo Khoác Bomber - Xám / XL</td>
-                      <td className="p-4 align-middle text-slate-500">JKT-GRY-XL</td>
-                      <td className="p-4 align-middle text-center">120</td>
-                      <td className="p-4 align-middle text-center font-bold text-slate-900">50</td>
-                      <td className="p-4 align-middle text-right">
-                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">Có sẵn</Badge>
-                      </td>
-                    </tr>
+                    {bestSellers.map((item) => (
+                      <tr key={item.productId} className="border-b transition-colors hover:bg-slate-100/50">
+                        <td className="p-4 align-middle font-medium">{item.name}</td>
+                        <td className="p-4 align-middle text-center">{item.unitsSold.toLocaleString("vi-VN")}</td>
+                        <td className="p-4 align-middle text-center">{item.orders.toLocaleString("vi-VN")}</td>
+                        <td className={`p-4 align-middle text-center font-bold ${item.inventory <= 5 ? "text-red-600" : item.inventory <= 20 ? "text-amber-600" : "text-slate-900"}`}>
+                          {item.inventory}
+                        </td>
+                        <td className="p-4 align-middle text-right">
+                          {item.inventory <= 5 ? (
+                            <Badge variant="destructive">Cực thấp</Badge>
+                          ) : item.inventory <= 20 ? (
+                            <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
+                              Sắp hết
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                              Đủ hàng
+                            </Badge>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {!bestSellers.length && (
+                      <tr>
+                        <td className="p-4 text-center text-slate-500" colSpan={5}>
+                          Không có dữ liệu sản phẩm.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -461,43 +534,37 @@ export default function ReportsPage() {
           </Card>
         </TabsContent>
 
-        {/* ================= TAB: KHÁCH HÀNG ================= */}
         <TabsContent value="customers" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-5">
-            {/* VIP Customers */}
             <Card className="col-span-2">
               <CardHeader>
                 <CardTitle>Khách hàng VIP</CardTitle>
-                <CardDescription>Top chi tiêu tháng này</CardDescription>
+                <CardDescription>Top chi tiêu trong kỳ</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-5">
-                  {[
-                    { name: "Nguyễn Văn A", mail: "nva@gmail.com", spent: "5.200.000₫", orders: 3 },
-                    { name: "Trần Thị B", mail: "ttb@outlook.com", spent: "3.150.000₫", orders: 2 },
-                    { name: "Lê C", mail: "lec@yahoo.com", spent: "2.800.000₫", orders: 1 },
-                  ].map((user, i) => (
-                    <div key={i} className="flex items-center justify-between">
+                  {(vipCustomers?.customers ?? []).map((user) => (
+                    <div key={user.userId} className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="h-9 w-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs">
                           {user.name.charAt(0)}
                         </div>
                         <div>
                           <p className="text-sm font-medium leading-none">{user.name}</p>
-                          <p className="text-xs text-slate-500 mt-1">{user.mail}</p>
+                          <p className="text-xs text-slate-500 mt-1">{user.email}</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm font-bold">{user.spent}</p>
+                        <p className="text-sm font-bold">{formatCurrency(user.totalSpent)}</p>
                         <p className="text-xs text-slate-500">{user.orders} đơn</p>
                       </div>
                     </div>
                   ))}
+                  {(!vipCustomers || vipCustomers.customers.length === 0) && <p className="text-sm text-slate-500">Chưa có khách hàng VIP.</p>}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Demographics */}
             <div className="col-span-3 space-y-4">
               <Card>
                 <CardHeader>
@@ -506,43 +573,31 @@ export default function ReportsPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="flex items-center text-sm">
-                      <div className="w-24 font-medium text-slate-600">Hồ Chí Minh</div>
-                      <div className="flex-1 mx-3 h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-slate-800" style={{ width: '60%' }}></div>
+                    {topLocations.slice(0, 6).map((item) => (
+                      <div key={item.location} className="flex items-center text-sm">
+                        <div className="w-32 font-medium text-slate-600">{item.location}</div>
+                        <div className="flex-1 mx-3 h-2 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-slate-800" style={{ width: `${item.percentage}%` }} />
+                        </div>
+                        <div className="w-12 text-right font-bold">{item.percentage}%</div>
                       </div>
-                      <div className="w-12 text-right font-bold">60%</div>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <div className="w-24 font-medium text-slate-600">Hà Nội</div>
-                      <div className="flex-1 mx-3 h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-slate-800" style={{ width: '25%' }}></div>
-                      </div>
-                      <div className="w-12 text-right font-bold">25%</div>
-                    </div>
-                    <div className="flex items-center text-sm">
-                      <div className="w-24 font-medium text-slate-600">Đà Nẵng</div>
-                      <div className="flex-1 mx-3 h-2 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-slate-800" style={{ width: '15%' }}></div>
-                      </div>
-                      <div className="w-12 text-right font-bold">15%</div>
-                    </div>
+                    ))}
+                    {!topLocations.length && <p className="text-sm text-slate-500">Không có dữ liệu địa lý.</p>}
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Retention Stats */}
               <div className="grid grid-cols-2 gap-4">
                 <Card className="bg-slate-50 border-dashed">
                   <CardContent className="pt-6 text-center">
-                    <div className="text-2xl font-bold text-indigo-600">85%</div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide mt-1">Khách cũ quay lại</p>
+                    <div className="text-xs text-slate-500 uppercase tracking-wide">Tổng đơn hàng</div>
+                    <div className="text-2xl font-bold text-indigo-600 mt-1">{locations?.totalOrders ?? 0}</div>
                   </CardContent>
                 </Card>
                 <Card className="bg-slate-50 border-dashed">
                   <CardContent className="pt-6 text-center">
-                    <div className="text-2xl font-bold text-emerald-600">15%</div>
-                    <p className="text-xs text-slate-500 uppercase tracking-wide mt-1">Khách hàng mới</p>
+                    <div className="text-xs text-slate-500 uppercase tracking-wide">Tổng doanh thu</div>
+                    <div className="text-2xl font-bold text-emerald-600 mt-1">{categories ? formatCurrency(categories.totalRevenue) : "—"}</div>
                   </CardContent>
                 </Card>
               </div>
@@ -554,21 +609,23 @@ export default function ReportsPage() {
   )
 }
 
-// --- SUB-COMPONENTS ---
-
 function KPICard({
   title,
   value,
   change,
   trend,
   icon,
+  loading,
 }: {
   title: string
   value: string
   change: string
-  trend: "up" | "down"
+  trend: "up" | "down" | "neutral"
   icon: React.ReactNode
+  loading: boolean
 }) {
+  const changeColor = trend === "up" ? "text-emerald-600" : trend === "down" ? "text-red-600" : "text-slate-500"
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -576,21 +633,15 @@ function KPICard({
         {icon}
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold text-slate-900">{value}</div>
+        <div className="text-2xl font-bold text-slate-900">{loading ? "…" : value}</div>
         <p className="text-xs text-slate-500 mt-1 flex items-center">
-          <span
-            className={`flex items-center ${
-              trend === "up" ? "text-emerald-600" : "text-red-600"
-            } font-medium mr-1`}
-          >
-            {trend === "up" ? (
-              <ArrowUpRight className="h-3 w-3 mr-1" />
-            ) : (
-              <ArrowDownRight className="h-3 w-3 mr-1" />
-            )}
+          <span className={`flex items-center ${changeColor} font-medium mr-1`}>
+            {trend === "up" && <ArrowUpRight className="h-3 w-3 mr-1" />}
+            {trend === "down" && <ArrowDownRight className="h-3 w-3 mr-1" />}
+            {trend === "neutral" && <span className="mr-1">—</span>}
             {change}
           </span>
-          so với tháng trước
+          so với kỳ trước
         </p>
       </CardContent>
     </Card>
