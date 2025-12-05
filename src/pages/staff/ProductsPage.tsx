@@ -1,14 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import axios from "axios"
 import { useOutletContext } from "react-router-dom";
-import {
-  Search,
-  Package,
-  Boxes,
-  RefreshCw,
-  AlertTriangle,
-  Tag,
-  Layers,
-} from "lucide-react";
+import { Search, Package, Boxes, RefreshCw, AlertTriangle, Tag, Layers } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,136 +9,129 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { cn } from "@/lib/utils";
-
-// --- 1. ĐỊNH NGHĨA TYPES (Giữ nguyên cấu trúc chuẩn bị cho API sau này) ---
-interface ProductVariant {
-  id: number;
-  sku: string | null;
-  price: number | null;
-  stock: number;
-  isActive: boolean;
-  size?: { name: string };
-  color?: { name: string; hex: string };
-}
-
-interface ProductDetail {
-  id: number;
-  name: string;
-  category?: { name: string };
-  basePrice: number;
-  totalStock: number;
-  variants: ProductVariant[];
-  images?: { url: string }[];
-}
-
-interface StaffOutletContext {
-  formatCurrency: (value: number) => string;
-  showToast: (props: any) => void;
-}
-
-// --- 2. DỮ LIỆU GIẢ (MOCK DATA) ---
-const MOCK_PRODUCTS: ProductDetail[] = [
-  {
-    id: 101,
-    name: "Áo Thun Cotton Basic - Form Rộng",
-    category: { name: "Áo Nam" },
-    basePrice: 150000,
-    totalStock: 85,
-    images: [], // Để trống để test icon mặc định
-    variants: [
-      { id: 1, sku: "AT-01-W-S", price: 150000, stock: 20, isActive: true, size: { name: "S" }, color: { name: "Trắng", hex: "#FFFFFF" } },
-      { id: 2, sku: "AT-01-W-M", price: 150000, stock: 45, isActive: true, size: { name: "M" }, color: { name: "Trắng", hex: "#FFFFFF" } },
-      { id: 3, sku: "AT-01-B-S", price: 160000, stock: 5, isActive: true, size: { name: "S" }, color: { name: "Đen", hex: "#000000" } }, // Sắp hết
-      { id: 4, sku: "AT-01-B-M", price: 160000, stock: 15, isActive: true, size: { name: "M" }, color: { name: "Đen", hex: "#000000" } },
-    ]
-  },
-  {
-    id: 102,
-    name: "Quần Jeans Slim Fit Rách Gối",
-    category: { name: "Quần Nam" },
-    basePrice: 450000,
-    totalStock: 8, // Tổng thấp -> Cảnh báo vàng
-    images: [{ url: "https://placehold.co/100x100/png?text=Jeans" }],
-    variants: [
-      { id: 5, sku: "QJ-02-29", price: 450000, stock: 0, isActive: true, size: { name: "29" }, color: { name: "Xanh Nhạt", hex: "#87CEEB" } }, // Hết hàng
-      { id: 6, sku: "QJ-02-30", price: 450000, stock: 3, isActive: true, size: { name: "30" }, color: { name: "Xanh Nhạt", hex: "#87CEEB" } },
-      { id: 7, sku: "QJ-02-31", price: 450000, stock: 5, isActive: true, size: { name: "31" }, color: { name: "Xanh Nhạt", hex: "#87CEEB" } },
-    ]
-  },
-  {
-    id: 103,
-    name: "Áo Khoác Bomber Kaki - Limited",
-    category: { name: "Áo Khoác" },
-    basePrice: 650000,
-    totalStock: 0, // Hết hàng toàn bộ -> Cảnh báo đỏ
-    images: [{ url: "https://placehold.co/100x100/png?text=Jacket" }],
-    variants: [
-      { id: 8, sku: "JK-03-L", price: 650000, stock: 0, isActive: false, size: { name: "L" }, color: { name: "Rêu", hex: "#556B2F" } },
-      { id: 9, sku: "JK-03-XL", price: 650000, stock: 0, isActive: false, size: { name: "XL" }, color: { name: "Rêu", hex: "#556B2F" } },
-    ]
-  },
-  {
-    id: 104,
-    name: "Sơ Mi Oxford Cổ Trụ",
-    category: { name: "Sơ Mi" },
-    basePrice: 320000,
-    totalStock: 120,
-    images: [{ url: "https://placehold.co/100x100/png?text=Shirt" }],
-    variants: [
-      { id: 10, sku: "SM-04-L", price: 320000, stock: 60, isActive: true, size: { name: "L" }, color: { name: "Xanh Biển", hex: "#4682B4" } },
-      { id: 11, sku: "SM-04-XL", price: 320000, stock: 60, isActive: true, size: { name: "XL" }, color: { name: "Xanh Biển", hex: "#4682B4" } },
-    ]
-  }
-];
+import api from "@/utils/axios"
+import type {
+  AdminProductDetail,
+  AdminProductListItem,
+  AdminProductListResponse,
+  AdminProductStockStatus,
+} from "@/types/adminType"
+import type { StaffOutletContext } from "./StaffLayout"
 
 export default function StaffProductsPage() {
   const { formatCurrency, showToast } = useOutletContext<StaffOutletContext>();
 
   // --- STATE ---
-  const [products, setProducts] = useState<ProductDetail[]>([]);
+  const [products, setProducts] = useState<AdminProductListItem[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
-  const [selectedProduct, setSelectedProduct] = useState<ProductDetail | null>(null);
-  
+  const [selectedProduct, setSelectedProduct] = useState<AdminProductDetail | null>(null);
+
   const [isLoadingList, setIsLoadingList] = useState(false);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [stockFilter, setStockFilter] = useState<"all" | "low" | "out">("all");
+  const detailAbortRef = useRef<AbortController | null>(null);
 
-  // --- ACTIONS (MOCK IMPLEMENTATION) ---
-
-  // 1. Fetch danh sách (Giả lập)
-  const fetchProducts = async () => {
-    setIsLoadingList(true);
-    // Giả lập delay mạng 0.5s để test Loading UI
-    setTimeout(() => {
-      setProducts(MOCK_PRODUCTS);
-      setIsLoadingList(false);
-      
-      // Tự động chọn sản phẩm đầu tiên nếu chưa chọn (UX tốt hơn)
-      // if (MOCK_PRODUCTS.length > 0 && !selectedProductId) {
-      //   handleSelectProduct(MOCK_PRODUCTS[0].id);
-      // }
-    }, 500); 
-  };
-
-  // 2. Fetch chi tiết (Giả lập)
-  const fetchProductDetail = async (id: number) => {
-    setIsLoadingDetail(true);
-    // Giả lập delay mạng 0.3s
-    setTimeout(() => {
-      const found = MOCK_PRODUCTS.find(p => p.id === id);
-      if (found) {
-        setSelectedProduct(found);
-      } else {
-        showToast({ title: "Lỗi", description: "Không tìm thấy sản phẩm", type: "error" });
-      }
-      setIsLoadingDetail(false);
-    }, 300);
+  const mapStockFilterToStatus = (
+    filter: "all" | "low" | "out",
+  ): AdminProductStockStatus | undefined => {
+    if (filter === "low") return "low-stock";
+    if (filter === "out") return "out-of-stock";
+    return undefined;
   };
 
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    const handle = window.setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim());
+    }, 400);
+
+    return () => window.clearTimeout(handle);
+  }, [searchTerm]);
+
+  const fetchProductDetail = async (id: number) => {
+    if (!id) return;
+    detailAbortRef.current?.abort();
+
+    const controller = new AbortController();
+    detailAbortRef.current = controller;
+
+    setIsLoadingDetail(true);
+
+    try {
+      const response = await api.get<AdminProductDetail>(`/admin/products/${id}`, {
+        signal: controller.signal,
+      });
+      setSelectedProduct(response.data);
+    } catch (error) {
+      if (axios.isCancel(error)) return;
+      console.error("Failed to load product detail", error);
+      setSelectedProduct(null);
+      showToast({
+        title: "Lỗi",
+        description:
+          (axios.isAxiosError(error) && error.response?.data?.message) ||
+          "Không thể tải chi tiết sản phẩm",
+        type: "error",
+      });
+    } finally {
+      setIsLoadingDetail(false);
+      if (detailAbortRef.current === controller) {
+        detailAbortRef.current = null;
+      }
+    }
+  };
+
+  const fetchProducts = async (signal?: AbortSignal) => {
+    setIsLoadingList(true);
+
+    try {
+      const response = await api.get<AdminProductListResponse>("/admin/products", {
+        params: {
+          page: 1,
+          pageSize: 50,
+          search: debouncedSearch || undefined,
+          status: mapStockFilterToStatus(stockFilter),
+        },
+        signal,
+      });
+
+      const items = response.data.products;
+      setProducts(items);
+
+      if (!items.length) {
+        setSelectedProduct(null);
+        setSelectedProductId(null);
+        return;
+      }
+
+      // Auto-select the first item if none selected or previous selection no longer exists
+      if (!selectedProductId || !items.some((item) => item.id === selectedProductId)) {
+        const firstId = items[0].id;
+        setSelectedProductId(firstId);
+        fetchProductDetail(firstId);
+      }
+    } catch (error) {
+      if (axios.isCancel(error)) return;
+      console.error("Failed to load product list", error);
+      setProducts([]);
+      showToast({
+        title: "Lỗi",
+        description:
+          (axios.isAxiosError(error) && error.response?.data?.message) ||
+          "Không thể tải danh sách sản phẩm",
+        type: "error",
+      });
+    } finally {
+      setIsLoadingList(false);
+    }
+  };
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchProducts(controller.signal);
+    return () => controller.abort();
+  }, [debouncedSearch, stockFilter, selectedProductId]);
 
   const handleSelectProduct = (id: number) => {
     if (selectedProductId === id) return;
@@ -153,35 +139,27 @@ export default function StaffProductsPage() {
     fetchProductDetail(id);
   };
 
+  useEffect(() => {
+    return () => {
+      detailAbortRef.current?.abort();
+    };
+  }, []);
+
   // --- HELPER: Tính toán màu sắc hiển thị ---
-  
+
   const getStockStatusColor = (stock: number) => {
     if (stock === 0) return "bg-red-500";
     if (stock < 10) return "bg-yellow-500";
     return "bg-[#1f1b16]"; // Màu đen brand
   };
 
-  const getStockBadgeVariant = (stock: number) => {
-    if (stock === 0) return "destructive"; // Đỏ
-    if (stock < 10) return "secondary"; // Xám/Vàng nhẹ
+  const getStockBadgeVariant = (status: AdminProductStockStatus) => {
+    if (status === "out-of-stock") return "destructive"; // Đỏ
+    if (status === "low-stock") return "secondary"; // Xám/Vàng nhẹ
     return "outline"; // Viền thường
   };
 
-  // --- FILTERING LOGIC ---
-  const filteredProducts = useMemo(() => {
-    return products.filter((p) => {
-      // 1. Search Logic
-      const matchSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          p.id.toString().includes(searchTerm);
-      
-      // 2. Filter Stock Logic
-      let matchFilter = true;
-      if (stockFilter === "out") matchFilter = (p.totalStock === 0);
-      if (stockFilter === "low") matchFilter = (p.totalStock > 0 && p.totalStock < 10);
-
-      return matchSearch && matchFilter;
-    });
-  }, [products, searchTerm, stockFilter]);
+  const filteredProducts = products;
 
   return (
     <div className="space-y-6 h-[calc(100vh-6rem)] flex flex-col">
@@ -191,7 +169,7 @@ export default function StaffProductsPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[#b8a47a]">Inventory</p>
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-bold text-[#1f1b16]">Kho hàng & Sản phẩm</h2>
-            <Button variant="ghost" size="icon" onClick={fetchProducts} disabled={isLoadingList} title="Làm mới">
+            <Button variant="ghost" size="icon" onClick={() => fetchProducts()} disabled={isLoadingList} title="Làm mới">
               <RefreshCw className={cn("h-4 w-4", isLoadingList && "animate-spin")} />
             </Button>
           </div>
@@ -257,7 +235,6 @@ export default function StaffProductsPage() {
               <div className="divide-y divide-[#f0e4cc]">
                 {filteredProducts.map((product) => {
                   const isSelected = selectedProductId === product.id;
-                  const stock = product.totalStock || 0; 
 
                   return (
                     <div
@@ -270,8 +247,8 @@ export default function StaffProductsPage() {
                     >
                       {/* Ảnh Thumbnail */}
                       <div className="h-14 w-14 rounded-lg bg-[#f4f1ea] border border-[#e6decb] flex items-center justify-center overflow-hidden flex-shrink-0">
-                        {product.images && product.images[0] ? (
-                          <img src={product.images[0].url} alt="" className="h-full w-full object-cover" />
+                        {product.imageUrl ? (
+                          <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
                         ) : (
                           <Package className="h-6 w-6 text-[#d1c4a7]" />
                         )}
@@ -284,8 +261,8 @@ export default function StaffProductsPage() {
                             {product.name}
                           </h4>
                           {/* Badge Tồn kho Summary */}
-                          <Badge variant={getStockBadgeVariant(stock)} className="ml-auto flex-shrink-0">
-                            Kho: {stock}
+                          <Badge variant={getStockBadgeVariant(product.stockStatus)} className="ml-auto flex-shrink-0">
+                            Kho: {product.totalStock}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-[#6c6252]">
@@ -293,7 +270,7 @@ export default function StaffProductsPage() {
                           <span className="w-1 h-1 rounded-full bg-[#d1c4a7]" />
                           <span>{product.category?.name || "Chưa phân loại"}</span>
                           <span className="w-1 h-1 rounded-full bg-[#d1c4a7]" />
-                          <span className="font-medium text-[#1f1b16]">{formatCurrency(Number(product.basePrice))}</span>
+                          <span className="font-medium text-[#1f1b16]">{formatCurrency(Number(product.price))}</span>
                         </div>
                       </div>
                     </div>
@@ -360,14 +337,14 @@ export default function StaffProductsPage() {
                             {/* Cột trái: Thông tin biến thể */}
                             <div className="flex items-center gap-3">
                               {/* Ô màu */}
-                              <div 
-                                className="w-8 h-8 rounded-full border border-gray-200 shadow-sm" 
-                                style={{ backgroundColor: variant.color?.hex || "#eee" }} 
-                                title={variant.color?.name}
+                              <div
+                                className="w-8 h-8 rounded-full border border-gray-200 shadow-sm"
+                                style={{ backgroundColor: variant.colorHex || "#eee" }}
+                                title={variant.colorName ?? undefined}
                               />
                               <div>
                                 <p className="font-bold text-[#1f1b16] text-sm">
-                                  {variant.size?.name || "Free"} - {variant.color?.name || "Mặc định"}
+                                  {variant.sizeName || "Free"} - {variant.colorName || "Mặc định"}
                                 </p>
                                 <p className="text-xs text-[#9a8f7f] font-mono">
                                   SKU: {variant.sku || "N/A"}
@@ -397,7 +374,7 @@ export default function StaffProductsPage() {
                           
                           {/* Footer nhỏ của card variant */}
                           <div className="flex justify-between items-center mt-2 text-[10px] text-[#9a8f7f]">
-                            <span>Giá: {formatCurrency(Number(variant.price || selectedProduct.basePrice))}</span>
+                            <span>Giá: {formatCurrency(Number(variant.price ?? selectedProduct.basePrice))}</span>
                             <span className={cn(
                               "px-1.5 py-0.5 rounded text-[10px] font-medium",
                               variant.isActive ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"

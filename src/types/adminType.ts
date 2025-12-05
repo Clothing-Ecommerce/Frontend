@@ -145,6 +145,7 @@ export interface AdminProductDetail {
   slug: string
   description: string | null
   basePrice: number
+  totalStock: number
   category: { id: number; name: string } | null
   brand: { id: number; name: string } | null
   features: unknown
