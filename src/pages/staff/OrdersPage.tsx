@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import axios from "axios"
 import { useOutletContext } from "react-router-dom";
 import {
   Filter,
@@ -35,6 +36,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import api from "@/utils/axios";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import type {
+  AdminOrderDetailResponse,
+  AdminOrderListResult,
+  AdminOrderStatus,
+  AdminOrderSummary,
+  AdminOrderStatusUpdateResponse,
+} from "@/types/adminType";
 
 import type { StaffOutletContext } from "./StaffLayout";
 import {
@@ -59,8 +69,19 @@ export default function StaffOrdersPage() {
     showToast,
   } = useOutletContext<StaffOutletContext>();
 
+  type StaffStatus = Exclude<StaffOutletContext["orderStatusFilter"], "all">;
+
+  const [isListLoading, setIsListLoading] = useState(false);
+  const [listError, setListError] = useState<string | null>(null);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [orderDetail, setOrderDetail] = useState<(typeof orders)[number] | null>(null);
+  const [debouncedSearch, setDebouncedSearch] = useState(orderSearchTerm);
+
   // State cho Dialog cập nhật trạng thái
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [isStatusSaving, setIsStatusSaving] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
 
   // State cho Dialog yêu cầu hoàn tiền
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
@@ -68,73 +89,273 @@ export default function StaffOrdersPage() {
 
   // State cho ghi chú nội bộ
   // const [orderNoteDraft, setOrderNoteDraft] = useState("")
+  const mapAdminStatusToStaff = (status: AdminOrderStatus): StaffStatus => {
+    switch (status) {
+      case "pending":
+        return "new";
+      case "processing":
+      case "packed":
+      case "shipping":
+        return "processing";
+      case "completed":
+        return "delivered";
+      default:
+        return "returned";
+    }
+  };
 
-  // Lọc danh sách đơn hàng
-  const filteredOrders = useMemo(() => {
-    return orders.filter((order) => {
-      const matchesStatus =
-        orderStatusFilter === "all" || order.status === orderStatusFilter;
-      const keyword = orderSearchTerm.trim().toLowerCase();
-      const matchesKeyword =
-        keyword.length === 0 ||
-        order.id.toLowerCase().includes(keyword) ||
-        order.customerName.toLowerCase().includes(keyword) ||
-        formatDateTime(order.createdAt).toLowerCase().includes(keyword);
-      return matchesStatus && matchesKeyword;
-    });
-  }, [orders, orderStatusFilter, orderSearchTerm, formatDateTime]);
+  const staffStatusToAdmin = (status: StaffStatus): AdminOrderStatus => {
+    switch (status) {
+      case "new":
+        return "pending";
+      case "processing":
+        return "processing";
+      case "delivered":
+        return "completed";
+      case "returned":
+        return "cancelled";
+    }
+  };
 
-  // Tự động chọn đơn đầu tiên nếu chưa chọn
+  const buildStatusFilterParam = (
+    status: StaffOutletContext["orderStatusFilter"],
+  ): string | undefined => {
+    if (status === "all") return undefined;
+    const adminStatuses =
+      status === "new"
+        ? ["pending"]
+        : status === "processing"
+        ? ["processing", "packed", "shipping"]
+        : status === "delivered"
+        ? ["completed"]
+        : ["cancelled", "refunded"];
+
+    return adminStatuses.join(",");
+  };
+
+  const mapSummaryToOrder = (summary: AdminOrderSummary) => ({
+    id: String(summary.id),
+    adminId: summary.id,
+    code: summary.code,
+    customerName: summary.customer,
+    customerEmail: summary.customerEmail,
+    customerPhone: summary.customerPhone,
+    status: mapAdminStatusToStaff(summary.status),
+    adminStatus: summary.status,
+    total: summary.value,
+    createdAt: summary.createdAt,
+    address: "",
+    items: [],
+    notes: [],
+    isReturnRequested:
+      summary.status === "cancelled" || summary.status === "refunded",
+    timeline: [],
+  });
+
+  const mapDetailToOrder = (detail: AdminOrderDetailResponse) => ({
+    id: String(detail.id),
+    adminId: detail.id,
+    code: detail.code,
+    customerName: detail.customer.name,
+    customerEmail: detail.customer.email,
+    customerPhone: detail.customer.phone,
+    status: mapAdminStatusToStaff(detail.status),
+    adminStatus: detail.status,
+    total: detail.totals.total,
+    createdAt: detail.createdAt,
+    address: detail.address?.line ?? "Không có địa chỉ giao hàng",
+    items: detail.items.map((item) => ({
+      name: item.name,
+      sku: item.sku ?? "N/A",
+      quantity: item.quantity,
+      price: item.price,
+    })),
+    notes: detail.notes,
+    isReturnRequested:
+      detail.status === "cancelled" || detail.status === "refunded",
+    timeline: detail.timeline.map((entry) => ({
+      label: entry.label,
+      time: formatDateTime(entry.at),
+    })),
+  });
+
   useEffect(() => {
-    if (filteredOrders.length === 0) {
-      setSelectedOrderId(null);
+    const handle = window.setTimeout(() => {
+      setDebouncedSearch(orderSearchTerm.trim());
+    }, 400);
+
+    return () => window.clearTimeout(handle);
+  }, [orderSearchTerm]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setIsListLoading(true);
+    setListError(null);
+
+    api
+      .get<AdminOrderListResult>("/admin/orders", {
+        params: {
+          page: 1,
+          pageSize: 50,
+          search: debouncedSearch || undefined,
+          status: buildStatusFilterParam(orderStatusFilter),
+        },
+        signal: controller.signal,
+      })
+      .then((response) => {
+        const mapped = response.data.orders.map(mapSummaryToOrder);
+        setOrders(mapped);
+
+        if (!selectedOrderId && mapped.length) {
+          setSelectedOrderId(mapped[0].id);
+          return;
+        }
+
+        if (
+          selectedOrderId &&
+          mapped.every((order) => order.id !== selectedOrderId)
+        ) {
+          setSelectedOrderId(mapped[0]?.id ?? null);
+        }
+      })
+      .catch((error) => {
+        if (axios.isCancel(error)) return;
+        const message =
+          axios.isAxiosError(error) && error.response?.data?.message
+            ? error.response.data.message
+            : "Không thể tải danh sách đơn hàng";
+        setListError(message);
+        setOrders([]);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setIsListLoading(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, [
+    debouncedSearch,
+    orderStatusFilter,
+    selectedOrderId,
+    setOrders,
+    setSelectedOrderId,
+  ]);
+
+  const filteredOrders = useMemo(() => orders, [orders]);
+
+  const selectedOrderSummary = useMemo(
+    () => orders.find((order) => order.id === selectedOrderId) ?? null,
+    [orders, selectedOrderId],
+  );
+
+  const selectedOrder = orderDetail ?? selectedOrderSummary;
+
+  useEffect(() => {
+    if (!selectedOrderSummary) {
+      setOrderDetail(null);
+      setDetailError(null);
       return;
     }
-    if (
-      selectedOrderId &&
-      !filteredOrders.some((o) => o.id === selectedOrderId)
-    ) {
-      // Giữ nguyên selection nếu vẫn còn trong list lọc, nếu không thì reset hoặc chọn cái đầu
-      // Ở đây ta có thể chọn null hoặc cái đầu tiên. Chọn null an toàn hơn.
-    }
-  }, [filteredOrders, selectedOrderId, setSelectedOrderId]);
 
-  const selectedOrder =
-    orders.find((order) => order.id === selectedOrderId) ?? null;
+    if (orderDetail?.adminId === selectedOrderSummary.adminId) {
+      return;
+    }
+
+    const orderKey = selectedOrderSummary.adminId ?? Number(selectedOrderSummary.id);
+    if (!Number.isFinite(orderKey) || orderKey <= 0) return;
+
+    const controller = new AbortController();
+    setIsDetailLoading(true);
+    setDetailError(null);
+
+    api
+      .get<AdminOrderDetailResponse>(`/admin/orders/${orderKey}`, {
+        signal: controller.signal,
+      })
+      .then((response) => {
+        const mapped = mapDetailToOrder(response.data);
+        setOrderDetail(mapped);
+      })
+      .catch((error) => {
+        if (axios.isCancel(error)) return;
+        const message =
+          axios.isAxiosError(error) && error.response?.data?.message
+            ? error.response.data.message
+            : "Không thể tải chi tiết đơn hàng";
+        setDetailError(message);
+        setOrderDetail(selectedOrderSummary);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setIsDetailLoading(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, [selectedOrderSummary, formatDateTime, orderDetail]);
+
+  useEffect(() => {
+    if (statusDialogOpen) {
+      setStatusError(null);
+    }
+  }, [statusDialogOpen]);
 
   const openOrderDetail = (orderId: string) => {
     setSelectedOrderId(orderId);
-    // setOrderNoteDraft("")
+  };
+
+  const applyOrderUpdate = (payload: AdminOrderStatusUpdateResponse) => {
+    const mappedSummary = mapSummaryToOrder(payload.summary);
+    setOrders((prev) =>
+      prev.map((order) =>
+        order.id === mappedSummary.id
+          ? {
+              ...order,
+              ...mappedSummary,
+            }
+          : order,
+      ),
+    );
+
+    const mappedDetail = mapDetailToOrder(payload.order);
+    setOrderDetail(mappedDetail);
+    setSelectedOrderId(mappedDetail.id);
+    return mappedDetail;
   };
 
   // Chức năng: Cập nhật trạng thái đơn hàng (Quy trình bình thường)
   const updateOrderStatus = (status: (typeof orders)[number]["status"]) => {
-    if (!selectedOrder) return;
+    if (!selectedOrder?.adminId) return;
 
-    setOrders((prev) =>
-      prev.map((order) =>
-        order.id === selectedOrder.id
-          ? {
-              ...order,
-              status,
-              // Thêm log vào timeline hoặc notes nếu cần (tùy backend)
-              timeline: [
-                ...order.timeline,
-                {
-                  label: `Đã chuyển sang ${orderStatusLabel[status]}`,
-                  time: formatDateTime(new Date().toISOString()),
-                },
-              ],
-            }
-          : order
+    const adminStatus = staffStatusToAdmin(status as StaffStatus);
+    setIsStatusSaving(true);
+    setStatusError(null);
+
+    api
+      .patch<AdminOrderStatusUpdateResponse>(
+        `/admin/orders/${selectedOrder.adminId}/status`,
+        { status: adminStatus },
       )
-    );
-    setStatusDialogOpen(false);
-    showToast({
-      title: "Cập nhật thành công",
-      description: `Đơn ${selectedOrder.id} đã chuyển sang "${orderStatusLabel[status]}"`,
-      type: "success",
-    });
+      .then((response) => {
+        const updated = applyOrderUpdate(response.data);
+        setStatusDialogOpen(false);
+        showToast({
+          title: "Cập nhật thành công",
+          description: `Đơn ${updated.code ?? updated.id} đã chuyển sang "${
+            orderStatusLabel[updated.status]
+          }"`,
+          type: "success",
+        });
+      })
+      .catch((error) => {
+        const message =
+          axios.isAxiosError(error) && error.response?.data?.message
+            ? error.response.data.message
+            : "Không thể cập nhật trạng thái đơn hàng";
+        setStatusError(message);
+      })
+      .finally(() => setIsStatusSaving(false));
   };
 
   // Chức năng: Thêm ghi chú nội bộ
@@ -160,29 +381,46 @@ export default function StaffOrdersPage() {
 
   // Chức năng: Gửi yêu cầu hoàn tiền (Gửi cho Admin duyệt)
   const submitRefundRequest = () => {
-    if (!selectedOrder || !refundReason.trim()) return;
+    if (!selectedOrder?.adminId || !refundReason.trim()) return;
 
-    setOrders((prev) =>
-      prev.map((order) =>
-        order.id === selectedOrder.id
-          ? {
-              ...order,
-              isReturnRequested: true, // Đánh dấu flag để UI hiển thị
-              notes: [
-                ...order.notes,
-                `[YÊU CẦU HOÀN TIỀN]: ${refundReason} - Chờ Admin phê duyệt.`,
-              ],
-            }
-          : order
+    const currentAdminStatus =
+      (selectedOrder.adminStatus as AdminOrderStatus | undefined) ??
+      staffStatusToAdmin(selectedOrder.status as StaffStatus);
+
+    setIsDetailLoading(true);
+
+    api
+      .patch<AdminOrderStatusUpdateResponse>(
+        `/admin/orders/${selectedOrder.adminId}/status`,
+        {
+          status: currentAdminStatus,
+          note: `[YÊU CẦU HOÀN TIỀN]: ${refundReason.trim()}`,
+        },
       )
-    );
-    setRefundDialogOpen(false);
-    setRefundReason("");
-    showToast({
-      title: "Đã gửi yêu cầu",
-      description: `Yêu cầu hoàn tiền cho đơn ${selectedOrder.id} đã được gửi tới Admin.`,
-      type: "success",
-    });
+      .then((response) => {
+        applyOrderUpdate(response.data);
+        setRefundDialogOpen(false);
+        setRefundReason("");
+        showToast({
+          title: "Đã gửi yêu cầu",
+          description: `Yêu cầu hoàn tiền cho đơn ${
+            response.data.order.code ?? response.data.order.id
+          } đã được ghi nhận.`,
+          type: "success",
+        });
+      })
+      .catch((error) => {
+        const message =
+          axios.isAxiosError(error) && error.response?.data?.message
+            ? error.response.data.message
+            : "Không thể gửi yêu cầu hoàn tiền";
+        showToast({
+          title: "Gửi yêu cầu thất bại",
+          description: message,
+          type: "error",
+        });
+      })
+      .finally(() => setIsDetailLoading(false));
   };
 
   return (
@@ -261,7 +499,22 @@ export default function StaffOrdersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#f0e4cc]">
-                {filteredOrders.length === 0 ? (
+                {isListLoading ? (
+                  <tr>
+                    <td colSpan={5} className="py-10 text-center">
+                      <LoadingSpinner className="mx-auto text-[#c87d2f]" />
+                    </td>
+                  </tr>
+                ) : listError ? (
+                  <tr>
+                    <td
+                      colSpan={5}
+                      className="py-10 text-center text-sm text-red-600"
+                    >
+                      {listError}
+                    </td>
+                  </tr>
+                ) : filteredOrders.length === 0 ? (
                   <tr>
                     <td
                       colSpan={5}
@@ -285,7 +538,7 @@ export default function StaffOrdersPage() {
                         )}
                       >
                         <td className="px-4 py-4 font-medium text-[#1f1b16]">
-                          #{order.id}
+                          #{order.code ?? order.id}
                           {order.isReturnRequested && (
                             <span
                               className="ml-2 inline-block h-2 w-2 rounded-full bg-red-500 animate-pulse"
@@ -339,7 +592,7 @@ export default function StaffOrdersPage() {
                         variant="outline"
                         className="border-[#b8a47a] text-[#8b7e66]"
                       >
-                        #{selectedOrder.id}
+                        #{selectedOrder.code ?? selectedOrder.id}
                       </Badge>
                       {selectedOrder.isReturnRequested && (
                         <Badge variant="destructive" className="animate-pulse">
@@ -390,6 +643,18 @@ export default function StaffOrdersPage() {
 
               {/* Detail Scrollable Content */}
               <div className="p-6 space-y-6">
+                {detailError && (
+                  <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                    {detailError}
+                  </div>
+                )}
+                {isDetailLoading && (
+                  <div className="flex items-center gap-2 text-sm text-[#7a6f60]">
+                    <LoadingSpinner className="h-4 w-4 text-[#c87d2f]" />
+                    Đang tải chi tiết đơn hàng...
+                  </div>
+                )}
+
                 {/* Shipping Info */}
                 <div>
                   <h4 className="flex items-center gap-2 text-sm font-semibold text-[#1f1b16] mb-3">
@@ -397,7 +662,9 @@ export default function StaffOrdersPage() {
                     nhận
                   </h4>
                   <div className="text-sm text-[#6c6252] pl-6 leading-relaxed">
-                    <p>{selectedOrder.address}</p>
+                    <p>
+                      {selectedOrder.address || "Không có địa chỉ giao hàng"}
+                    </p>
                     <p className="text-[#9a8f7f] text-xs mt-1">
                       Giao hàng tiêu chuẩn (COD)
                     </p>
@@ -410,67 +677,40 @@ export default function StaffOrdersPage() {
                     <Package className="h-4 w-4 text-[#c87d2f]" /> Sản phẩm (
                     {selectedOrder.items.length})
                   </h4>
-                  <div className="space-y-3 pl-2">
-                    {selectedOrder.items.map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="flex gap-3 p-3 rounded-xl border border-[#f0e4cc] bg-white"
-                      >
-                        {/* Placeholder image - replace with item.image if available */}
-                        <div className="h-12 w-12 rounded-lg bg-[#f4f1ea] flex items-center justify-center flex-shrink-0">
-                          <Package className="h-6 w-6 text-[#d1c4a7]" />
+                  {selectedOrder.items.length === 0 ? (
+                    <p className="pl-2 text-sm text-[#9a8f7f]">
+                      Chưa có sản phẩm nào trong đơn.
+                    </p>
+                  ) : (
+                    <div className="space-y-3 pl-2">
+                      {selectedOrder.items.map((item, idx) => (
+                        <div
+                          key={idx}
+                          className="flex gap-3 p-3 rounded-xl border border-[#f0e4cc] bg-white"
+                        >
+                          {/* Placeholder image - replace with item.image if available */}
+                          <div className="h-12 w-12 rounded-lg bg-[#f4f1ea] flex items-center justify-center flex-shrink-0">
+                            <Package className="h-6 w-6 text-[#d1c4a7]" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-[#1f1b16] truncate">
+                              {item.name}
+                            </p>
+                            <p className="text-xs text-[#9a8f7f] mt-0.5">
+                              SKU: {item.sku || "N/A"}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-medium">
+                              {formatCurrency(item.price)}
+                            </p>
+                            <p className="text-xs text-[#9a8f7f]">x{item.quantity}</p>
+                          </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-[#1f1b16] truncate">
-                            {item.name}
-                          </p>
-                          <p className="text-xs text-[#9a8f7f] mt-0.5">
-                            {/* Mock variants display */}
-                            Size: L • Màu: Đen
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium">
-                            {formatCurrency(item.price)}
-                          </p>
-                          <p className="text-xs text-[#9a8f7f]">
-                            x{item.quantity}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-
-                {/* Internal Notes */}
-                {/* <div>
-                     <h4 className="text-sm font-semibold text-[#1f1b16] mb-3">Ghi chú nội bộ</h4>
-                     <div className="bg-[#f9f8f4] rounded-xl border border-[#f0e4cc] p-4 space-y-3">
-                        {selectedOrder.notes.length > 0 ? (
-                            <ul className="space-y-2">
-                                {selectedOrder.notes.map((note, i) => (
-                                    <li key={i} className="text-xs text-[#6c6252] flex gap-2">
-                                        <span className="text-[#c87d2f]">•</span> {note}
-                                    </li>
-                                ))}
-                            </ul>
-                        ) : (
-                            <p className="text-xs text-[#9a8f7f] italic">Chưa có ghi chú nào.</p>
-                        )}
-                        <div className="flex gap-2 mt-3 pt-3 border-t border-[#e6decb]">
-                            <Input 
-                                className="h-8 text-xs bg-white" 
-                                placeholder="Nhập ghi chú nhanh..." 
-                                value={orderNoteDraft}
-                                onChange={(e) => setOrderNoteDraft(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && appendOrderNote()}
-                            />
-                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={appendOrderNote}>
-                                <Send className="h-4 w-4 text-[#1f1b16]" />
-                            </Button>
-                        </div>
-                     </div>
-                </div> */}
               </div>
 
               {/* Detail Footer Actions */}
@@ -480,6 +720,7 @@ export default function StaffOrdersPage() {
                   <Button
                     className="bg-[#1f1b16] text-white hover:bg-[#332b22] rounded-full"
                     onClick={() => setStatusDialogOpen(true)}
+                    disabled={isDetailLoading || isStatusSaving}
                   >
                     Cập nhật trạng thái
                   </Button>
@@ -490,6 +731,7 @@ export default function StaffOrdersPage() {
                       <Button
                         variant="outline"
                         className="rounded-full border-[#ead7b9] hover:bg-[#fcf9f4]"
+                        disabled={isDetailLoading}
                       >
                         Hành động khác <MoreVertical className="ml-2 h-4 w-4" />
                       </Button>
@@ -531,9 +773,14 @@ export default function StaffOrdersPage() {
           <DialogHeader>
             <DialogTitle>Cập nhật trạng thái đơn hàng</DialogTitle>
             <DialogDescription>
-              Thay đổi trạng thái hiện tại của đơn #{selectedOrder?.id}
+              Thay đổi trạng thái hiện tại của đơn #{
+                selectedOrder?.code ?? selectedOrder?.id
+              }
             </DialogDescription>
           </DialogHeader>
+          {statusError && (
+            <p className="text-sm text-red-600">{statusError}</p>
+          )}
           <div className="grid gap-2 py-4">
             {(["new", "processing", "delivered", "returned"] as const).map(
               (status) => (
@@ -548,6 +795,7 @@ export default function StaffOrdersPage() {
                       "border-[#c87d2f] bg-[#fdfbf7]"
                   )}
                   onClick={() => updateOrderStatus(status)}
+                  disabled={isStatusSaving}
                 >
                   <div className="flex items-center gap-3">
                     <div

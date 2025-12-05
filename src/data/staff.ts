@@ -19,7 +19,21 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
+  /**
+   * ID dạng số trong hệ thống admin, phục vụ gọi API.
+   */
+  adminId?: number;
+  /**
+   * Mã hiển thị (code) trả về từ API admin, ví dụ ORD-000000001.
+   */
+  code?: string;
+  /**
+   * Trạng thái gốc (chuẩn admin) giúp đồng bộ với backend.
+   */
+  adminStatus?: string;
   customerName: string;
+  customerEmail?: string | null;
+  customerPhone?: string | null;
   status: OrderStatus;
   total: number;
   createdAt: string;
