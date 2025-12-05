@@ -39,88 +39,89 @@ import { cn } from "@/lib/utils";
 import api from "@/utils/axios";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import type {
-  AdminOrderDetailResponse,
-  AdminOrderListResult,
-  AdminOrderStatus,
-  AdminOrderSummary,
-  AdminOrderStatusUpdateResponse,
-} from "@/types/adminType";
+  StaffOrderDetail,
+  StaffOrderDisplayStatus,
+  StaffOrderListResult,
+  StaffOrderStatus,
+  StaffOrderStatusUpdateResponse,
+  StaffOrderSummary,
+} from "@/types/staffType"
 
-import type { StaffOutletContext } from "./StaffLayout";
+import type { StaffOutletContext } from "./StaffLayout"
 import {
   orderStatusAccent,
   orderStatusBadge,
   orderStatusLabel,
-} from "./StaffLayout";
+} from "./StaffLayout"
 
 export default function StaffOrdersPage() {
-  const {
-    orders,
-    setOrders,
-    orderStatusFilter,
-    setOrderStatusFilter,
-    orderSearchTerm,
-    setOrderSearchTerm,
-    selectedOrderId,
-    setSelectedOrderId,
-    formatCurrency,
-    formatDateTime,
-    getInitials,
-    showToast,
-  } = useOutletContext<StaffOutletContext>();
+  const { formatCurrency, formatDateTime, showToast } = useOutletContext<StaffOutletContext>()
 
-  type StaffStatus = Exclude<StaffOutletContext["orderStatusFilter"], "all">;
+  const [orders, setOrders] = useState<StaffOrderSummary[]>([])
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null)
+  const [orderStatusFilter, setOrderStatusFilter] = useState<StaffOrderDisplayStatus | "all">("all")
+  const [orderSearchTerm, setOrderSearchTerm] = useState("")
+  const [selectedOrder, setSelectedOrder] = useState<StaffOrderDetail | null>(null)
 
-  const [isListLoading, setIsListLoading] = useState(false);
-  const [listError, setListError] = useState<string | null>(null);
-  const [isDetailLoading, setIsDetailLoading] = useState(false);
-  const [detailError, setDetailError] = useState<string | null>(null);
-  const [orderDetail, setOrderDetail] = useState<(typeof orders)[number] | null>(null);
-  const [debouncedSearch, setDebouncedSearch] = useState(orderSearchTerm);
+  const [isListLoading, setIsListLoading] = useState(false)
+  const [listError, setListError] = useState<string | null>(null)
+  const [isDetailLoading, setIsDetailLoading] = useState(false)
+  const [detailError, setDetailError] = useState<string | null>(null)
+  const [debouncedSearch, setDebouncedSearch] = useState("")
 
   // State cho Dialog cập nhật trạng thái
-  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
-  const [isStatusSaving, setIsStatusSaving] = useState(false);
-  const [statusError, setStatusError] = useState<string | null>(null);
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false)
+  const [isStatusSaving, setIsStatusSaving] = useState(false)
+  const [statusError, setStatusError] = useState<string | null>(null)
 
   // State cho Dialog yêu cầu hoàn tiền
-  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
-  const [refundReason, setRefundReason] = useState("");
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false)
+  const [refundReason, setRefundReason] = useState("")
+
+  const getInitials = (name: string) =>
+    name
+      .split(" ")
+      .filter(Boolean)
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("")
+      .slice(0, 2) || "ST"
 
   // State cho ghi chú nội bộ
   // const [orderNoteDraft, setOrderNoteDraft] = useState("")
-  const mapAdminStatusToStaff = (status: AdminOrderStatus): StaffStatus => {
+  const mapAdminStatusToStaff = (
+    status: StaffOrderStatus,
+  ): StaffOrderDisplayStatus => {
     switch (status) {
       case "pending":
-        return "new";
+        return "new"
       case "processing":
       case "packed":
       case "shipping":
-        return "processing";
+        return "processing"
       case "completed":
-        return "delivered";
+        return "delivered"
       default:
-        return "returned";
+        return "returned"
     }
-  };
+  }
 
-  const staffStatusToAdmin = (status: StaffStatus): AdminOrderStatus => {
+  const staffStatusToAdmin = (status: StaffOrderDisplayStatus): StaffOrderStatus => {
     switch (status) {
       case "new":
-        return "pending";
+        return "pending"
       case "processing":
-        return "processing";
+        return "processing"
       case "delivered":
-        return "completed";
+        return "completed"
       case "returned":
-        return "cancelled";
+        return "cancelled"
     }
-  };
+  }
 
   const buildStatusFilterParam = (
-    status: StaffOutletContext["orderStatusFilter"],
+    status: StaffOrderDisplayStatus | "all",
   ): string | undefined => {
-    if (status === "all") return undefined;
+    if (status === "all") return undefined
     const adminStatuses =
       status === "new"
         ? ["pending"]
@@ -128,72 +129,26 @@ export default function StaffOrdersPage() {
         ? ["processing", "packed", "shipping"]
         : status === "delivered"
         ? ["completed"]
-        : ["cancelled", "refunded"];
+        : ["cancelled", "refunded"]
 
-    return adminStatuses.join(",");
-  };
-
-  const mapSummaryToOrder = (summary: AdminOrderSummary) => ({
-    id: String(summary.id),
-    adminId: summary.id,
-    code: summary.code,
-    customerName: summary.customer,
-    customerEmail: summary.customerEmail,
-    customerPhone: summary.customerPhone,
-    status: mapAdminStatusToStaff(summary.status),
-    adminStatus: summary.status,
-    total: summary.value,
-    createdAt: summary.createdAt,
-    address: "",
-    items: [],
-    notes: [],
-    isReturnRequested:
-      summary.status === "cancelled" || summary.status === "refunded",
-    timeline: [],
-  });
-
-  const mapDetailToOrder = (detail: AdminOrderDetailResponse) => ({
-    id: String(detail.id),
-    adminId: detail.id,
-    code: detail.code,
-    customerName: detail.customer.name,
-    customerEmail: detail.customer.email,
-    customerPhone: detail.customer.phone,
-    status: mapAdminStatusToStaff(detail.status),
-    adminStatus: detail.status,
-    total: detail.totals.total,
-    createdAt: detail.createdAt,
-    address: detail.address?.line ?? "Không có địa chỉ giao hàng",
-    items: detail.items.map((item) => ({
-      name: item.name,
-      sku: item.sku ?? "N/A",
-      quantity: item.quantity,
-      price: item.price,
-    })),
-    notes: detail.notes,
-    isReturnRequested:
-      detail.status === "cancelled" || detail.status === "refunded",
-    timeline: detail.timeline.map((entry) => ({
-      label: entry.label,
-      time: formatDateTime(entry.at),
-    })),
-  });
+    return adminStatuses.join(",")
+  }
 
   useEffect(() => {
     const handle = window.setTimeout(() => {
-      setDebouncedSearch(orderSearchTerm.trim());
-    }, 400);
+      setDebouncedSearch(orderSearchTerm.trim())
+    }, 400)
 
-    return () => window.clearTimeout(handle);
-  }, [orderSearchTerm]);
+    return () => window.clearTimeout(handle)
+  }, [orderSearchTerm])
 
   useEffect(() => {
-    const controller = new AbortController();
-    setIsListLoading(true);
-    setListError(null);
+    const controller = new AbortController()
+    setIsListLoading(true)
+    setListError(null)
 
     api
-      .get<AdminOrderListResult>("/admin/orders", {
+      .get<StaffOrderListResult>("/admin/orders", {
         params: {
           page: 1,
           pageSize: 50,
@@ -203,204 +158,183 @@ export default function StaffOrdersPage() {
         signal: controller.signal,
       })
       .then((response) => {
-        const mapped = response.data.orders.map(mapSummaryToOrder);
-        setOrders(mapped);
+        setOrders(response.data.orders)
 
-        if (!selectedOrderId && mapped.length) {
-          setSelectedOrderId(mapped[0].id);
-          return;
+        if (!selectedOrderId && response.data.orders.length) {
+          setSelectedOrderId(response.data.orders[0].id)
+          return
         }
 
         if (
           selectedOrderId &&
-          mapped.every((order) => order.id !== selectedOrderId)
+          response.data.orders.every((order) => order.id !== selectedOrderId)
         ) {
-          setSelectedOrderId(mapped[0]?.id ?? null);
+          setSelectedOrderId(response.data.orders[0]?.id ?? null)
         }
       })
       .catch((error) => {
-        if (axios.isCancel(error)) return;
+        if (axios.isCancel(error)) return
         const message =
           axios.isAxiosError(error) && error.response?.data?.message
             ? error.response.data.message
-            : "Không thể tải danh sách đơn hàng";
-        setListError(message);
-        setOrders([]);
+            : "Không thể tải danh sách đơn hàng"
+        setListError(message)
+        setOrders([])
       })
       .finally(() => {
         if (!controller.signal.aborted) {
-          setIsListLoading(false);
+          setIsListLoading(false)
         }
-      });
+      })
 
-    return () => controller.abort();
+    return () => controller.abort()
   }, [
     debouncedSearch,
     orderStatusFilter,
     selectedOrderId,
-    setOrders,
     setSelectedOrderId,
-  ]);
+  ])
 
-  const filteredOrders = useMemo(() => orders, [orders]);
-
-  const selectedOrderSummary = useMemo(
-    () => orders.find((order) => order.id === selectedOrderId) ?? null,
-    [orders, selectedOrderId],
-  );
-
-  const selectedOrder = orderDetail ?? selectedOrderSummary;
+  const filteredOrders = useMemo(() => orders, [orders])
 
   useEffect(() => {
-    if (!selectedOrderSummary) {
-      setOrderDetail(null);
-      setDetailError(null);
-      return;
+    if (!selectedOrderId) {
+      setSelectedOrder(null)
+      setDetailError(null)
+      return
     }
 
-    if (orderDetail?.adminId === selectedOrderSummary.adminId) {
-      return;
-    }
-
-    const orderKey = selectedOrderSummary.adminId ?? Number(selectedOrderSummary.id);
-    if (!Number.isFinite(orderKey) || orderKey <= 0) return;
-
-    const controller = new AbortController();
-    setIsDetailLoading(true);
-    setDetailError(null);
+    const controller = new AbortController()
+    setIsDetailLoading(true)
+    setDetailError(null)
 
     api
-      .get<AdminOrderDetailResponse>(`/admin/orders/${orderKey}`, {
+      .get<StaffOrderDetail>(`/admin/orders/${selectedOrderId}`, {
         signal: controller.signal,
       })
       .then((response) => {
-        const mapped = mapDetailToOrder(response.data);
-        setOrderDetail(mapped);
+        setSelectedOrder(response.data)
       })
       .catch((error) => {
-        if (axios.isCancel(error)) return;
+        if (axios.isCancel(error)) return
         const message =
           axios.isAxiosError(error) && error.response?.data?.message
             ? error.response.data.message
-            : "Không thể tải chi tiết đơn hàng";
-        setDetailError(message);
-        setOrderDetail(selectedOrderSummary);
+            : "Không thể tải chi tiết đơn hàng"
+        setDetailError(message)
+        setSelectedOrder(null)
       })
       .finally(() => {
         if (!controller.signal.aborted) {
-          setIsDetailLoading(false);
+          setIsDetailLoading(false)
         }
-      });
+      })
 
-    return () => controller.abort();
-  }, [selectedOrderSummary, formatDateTime, orderDetail]);
+    return () => controller.abort()
+  }, [selectedOrderId])
 
   useEffect(() => {
     if (statusDialogOpen) {
-      setStatusError(null);
+      setStatusError(null)
     }
-  }, [statusDialogOpen]);
+  }, [statusDialogOpen])
 
-  const openOrderDetail = (orderId: string) => {
-    setSelectedOrderId(orderId);
-  };
+  const openOrderDetail = (orderId: number) => {
+    setSelectedOrderId(orderId)
+  }
 
-  const applyOrderUpdate = (payload: AdminOrderStatusUpdateResponse) => {
-    const mappedSummary = mapSummaryToOrder(payload.summary);
+  const applyOrderUpdate = (payload: StaffOrderStatusUpdateResponse) => {
     setOrders((prev) =>
-      prev.map((order) =>
-        order.id === mappedSummary.id
-          ? {
-              ...order,
-              ...mappedSummary,
-            }
-          : order,
-      ),
-    );
+      prev.map((order) => (order.id === payload.summary.id ? payload.summary : order)),
+    )
 
-    const mappedDetail = mapDetailToOrder(payload.order);
-    setOrderDetail(mappedDetail);
-    setSelectedOrderId(mappedDetail.id);
-    return mappedDetail;
-  };
+    setSelectedOrder(payload.order)
+    setSelectedOrderId(payload.order.id)
+    return payload.order
+  }
 
   // Chức năng: Cập nhật trạng thái đơn hàng (Quy trình bình thường)
-  const updateOrderStatus = (status: (typeof orders)[number]["status"]) => {
-    if (!selectedOrder?.adminId) return;
+  const updateOrderStatus = (status: StaffOrderDisplayStatus) => {
+    if (!selectedOrder?.id) return
 
-    const adminStatus = staffStatusToAdmin(status as StaffStatus);
-    setIsStatusSaving(true);
-    setStatusError(null);
+    const adminStatus = staffStatusToAdmin(status)
+    setIsStatusSaving(true)
+    setStatusError(null)
 
     api
-      .patch<AdminOrderStatusUpdateResponse>(
-        `/admin/orders/${selectedOrder.adminId}/status`,
+      .patch<StaffOrderStatusUpdateResponse>(
+        `/admin/orders/${selectedOrder.id}/status`,
         { status: adminStatus },
       )
       .then((response) => {
-        const updated = applyOrderUpdate(response.data);
-        setStatusDialogOpen(false);
+        const updated = applyOrderUpdate(response.data)
+        setStatusDialogOpen(false)
         showToast({
           title: "Cập nhật thành công",
           description: `Đơn ${updated.code ?? updated.id} đã chuyển sang "${
-            orderStatusLabel[updated.status]
+            orderStatusLabel[mapAdminStatusToStaff(updated.status)]
           }"`,
           type: "success",
-        });
+        })
       })
       .catch((error) => {
         const message =
           axios.isAxiosError(error) && error.response?.data?.message
             ? error.response.data.message
-            : "Không thể cập nhật trạng thái đơn hàng";
-        setStatusError(message);
+            : "Không thể cập nhật trạng thái đơn hàng"
+        setStatusError(message)
       })
-      .finally(() => setIsStatusSaving(false));
-  };
+      .finally(() => setIsStatusSaving(false))
+  }
 
   // Chức năng: Gửi yêu cầu hoàn tiền (Gửi cho Admin duyệt)
   const submitRefundRequest = () => {
-    if (!selectedOrder?.adminId || !refundReason.trim()) return;
+    if (!selectedOrder?.id || !refundReason.trim()) return
 
-    const currentAdminStatus =
-      (selectedOrder.adminStatus as AdminOrderStatus | undefined) ??
-      staffStatusToAdmin(selectedOrder.status as StaffStatus);
+    const currentAdminStatus = selectedOrder.status
 
-    setIsDetailLoading(true);
+    setIsDetailLoading(true)
 
     api
-      .patch<AdminOrderStatusUpdateResponse>(
-        `/admin/orders/${selectedOrder.adminId}/status`,
+      .patch<StaffOrderStatusUpdateResponse>(
+        `/admin/orders/${selectedOrder.id}/status`,
         {
           status: currentAdminStatus,
           note: `[YÊU CẦU HOÀN TIỀN]: ${refundReason.trim()}`,
         },
       )
       .then((response) => {
-        applyOrderUpdate(response.data);
-        setRefundDialogOpen(false);
-        setRefundReason("");
+        applyOrderUpdate(response.data)
+        setRefundDialogOpen(false)
+        setRefundReason("")
         showToast({
           title: "Đã gửi yêu cầu",
           description: `Yêu cầu hoàn tiền cho đơn ${
             response.data.order.code ?? response.data.order.id
           } đã được ghi nhận.`,
           type: "success",
-        });
+        })
       })
       .catch((error) => {
         const message =
           axios.isAxiosError(error) && error.response?.data?.message
             ? error.response.data.message
-            : "Không thể gửi yêu cầu hoàn tiền";
+            : "Không thể gửi yêu cầu hoàn tiền"
         showToast({
           title: "Gửi yêu cầu thất bại",
           description: message,
           type: "error",
-        });
+        })
       })
-      .finally(() => setIsDetailLoading(false));
-  };
+      .finally(() => setIsDetailLoading(false))
+  }
+
+  const selectedOrderStatus = selectedOrder
+    ? mapAdminStatusToStaff(selectedOrder.status)
+    : null
+  const selectedOrderReturnRequested = selectedOrder
+    ? selectedOrder.status === "cancelled" || selectedOrder.status === "refunded"
+    : false
 
   return (
     <div className="space-y-6">
@@ -505,6 +439,9 @@ export default function StaffOrdersPage() {
                 ) : (
                   filteredOrders.map((order) => {
                     const isSelected = order.id === selectedOrderId;
+                    const staffStatus = mapAdminStatusToStaff(order.status);
+                    const isReturnRequested =
+                      order.status === "cancelled" || order.status === "refunded"
                     return (
                       <tr
                         key={order.id}
@@ -518,7 +455,7 @@ export default function StaffOrdersPage() {
                       >
                         <td className="px-4 py-4 font-medium text-[#1f1b16]">
                           #{order.code ?? order.id}
-                          {order.isReturnRequested && (
+                          {isReturnRequested && (
                             <span
                               className="ml-2 inline-block h-2 w-2 rounded-full bg-red-500 animate-pulse"
                               title="Có yêu cầu hoàn tiền"
@@ -527,7 +464,7 @@ export default function StaffOrdersPage() {
                         </td>
                         <td className="px-4 py-4">
                           <div className="font-medium">
-                            {order.customerName}
+                            {order.customer}
                           </div>
                           <div className="text-xs text-[#9a8f7f] md:hidden">
                             {formatDateTime(order.createdAt)}
@@ -537,16 +474,16 @@ export default function StaffOrdersPage() {
                           {formatDateTime(order.createdAt)}
                         </td>
                         <td className="px-4 py-4 text-right font-medium text-[#1f1b16]">
-                          {formatCurrency(order.total)}
+                          {formatCurrency(order.value)}
                         </td>
                         <td className="px-4 py-4 text-center">
                           <Badge
                             className={cn(
                               "border font-normal",
-                              orderStatusBadge[order.status]
+                              orderStatusBadge[staffStatus]
                             )}
                           >
-                            {orderStatusLabel[order.status]}
+                            {orderStatusLabel[staffStatus]}
                           </Badge>
                         </td>
                       </tr>
@@ -573,14 +510,14 @@ export default function StaffOrdersPage() {
                       >
                         #{selectedOrder.code ?? selectedOrder.id}
                       </Badge>
-                      {selectedOrder.isReturnRequested && (
+                      {selectedOrderReturnRequested && (
                         <Badge variant="destructive" className="animate-pulse">
                           Yêu cầu hoàn tiền
                         </Badge>
                       )}
                     </div>
                     <h3 className="text-xl font-bold text-[#1f1b16]">
-                      {selectedOrder.customerName}
+                      {selectedOrder.customer.name}
                     </h3>
                     <div className="flex items-center gap-1 text-xs text-[#7a6f60] mt-1">
                       <Clock className="h-3 w-3" />
@@ -588,7 +525,7 @@ export default function StaffOrdersPage() {
                     </div>
                   </div>
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#1f1b16] text-white text-sm font-bold">
-                    {getInitials(selectedOrder.customerName)}
+                    {getInitials(selectedOrder.customer.name)}
                   </div>
                 </div>
 
@@ -601,11 +538,11 @@ export default function StaffOrdersPage() {
                       <span
                         className={cn(
                           "h-2.5 w-2.5 rounded-full",
-                          orderStatusAccent[selectedOrder.status]
+                          orderStatusAccent[selectedOrderStatus ?? "new"]
                         )}
                       />
                       <span className="font-medium text-sm">
-                        {orderStatusLabel[selectedOrder.status]}
+                        {selectedOrderStatus ? orderStatusLabel[selectedOrderStatus] : "--"}
                       </span>
                     </div>
                   </div>
@@ -614,7 +551,7 @@ export default function StaffOrdersPage() {
                       Tổng thanh toán
                     </p>
                     <p className="font-bold text-[#c87d2f] text-sm">
-                      {formatCurrency(selectedOrder.total)}
+                      {formatCurrency(selectedOrder.totals.total)}
                     </p>
                   </div>
                 </div>
@@ -642,7 +579,7 @@ export default function StaffOrdersPage() {
                   </h4>
                   <div className="text-sm text-[#6c6252] pl-6 leading-relaxed">
                     <p>
-                      {selectedOrder.address || "Không có địa chỉ giao hàng"}
+                      {selectedOrder.address?.line || "Không có địa chỉ giao hàng"}
                     </p>
                     <p className="text-[#9a8f7f] text-xs mt-1">
                       Giao hàng tiêu chuẩn (COD)
@@ -761,11 +698,11 @@ export default function StaffOrdersPage() {
                 <Button
                   key={status}
                   variant={
-                    selectedOrder?.status === status ? "secondary" : "outline"
+                    selectedOrderStatus === status ? "secondary" : "outline"
                   }
                   className={cn(
                     "justify-start h-auto py-3 px-4",
-                    selectedOrder?.status === status &&
+                    selectedOrderStatus === status &&
                       "border-[#c87d2f] bg-[#fdfbf7]"
                   )}
                   onClick={() => updateOrderStatus(status)}
@@ -792,7 +729,7 @@ export default function StaffOrdersPage() {
                       </span>
                     </div>
                   </div>
-                  {selectedOrder?.status === status && (
+                  {selectedOrderStatus === status && (
                     <CheckCircle2 className="ml-auto h-4 w-4 text-[#c87d2f]" />
                   )}
                 </Button>

@@ -6,7 +6,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import { staffMockData } from "@/data/staff"
 import type { StaffOutletContext } from "./StaffLayout"
-import { rangeLabel } from "./StaffLayout"
+// import { rangeLabel } from "./StaffLayout"
 
 export default function StaffReportsPage() {
   const { reportRange, setReportRange, formatDate } = useOutletContext<StaffOutletContext>()

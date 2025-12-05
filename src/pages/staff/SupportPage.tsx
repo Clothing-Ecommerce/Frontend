@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 
 import type { StaffOutletContext } from "./StaffLayout"
-import { ticketPriorityBadge, ticketStatusLabel } from "./StaffLayout"
+// import { ticketPriorityBadge, ticketStatusLabel } from "./StaffLayout"
 
 export default function StaffSupportPage() {
   const { tickets, setTickets, reviews, setReviews, formatDateTime, showToast } =
