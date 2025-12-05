@@ -138,9 +138,9 @@ const navItems: Array<{ key: StaffSectionKey; label: string; icon: React.Element
   { key: "orders", label: "Đơn Hàng", icon: ClipboardList, to: "/staff/orders" },
   { key: "inventory", label: "Kho hàng (admin)", icon: Boxes, to: "/staff/inventory" },
   { key: "products", label: "Sản Phẩm", icon: Tag, to: "/staff/products" },
-  { key: "customers", label: "Khách Hàng", icon: Users, to: "/staff/customers" },
-  { key: "support", label: "Hỗ Trợ", icon: LifeBuoy, to: "/staff/support" },
-  { key: "reports", label: "Báo Cáo", icon: BarChart3, to: "/staff/reports" },
+  { key: "customers", label: "Khách Hàng (bỏ)", icon: Users, to: "/staff/customers" },
+  { key: "support", label: "Hỗ Trợ (bỏ)", icon: LifeBuoy, to: "/staff/support" },
+  { key: "reports", label: "Báo Cáo (bỏ)", icon: BarChart3, to: "/staff/reports" },
   { key: "profile", label: "Hồ Sơ", icon: UserCog, to: "/staff/profile" },
 ]
 

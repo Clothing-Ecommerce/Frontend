@@ -1,14 +1,23 @@
 import { useMemo } from "react";
 
+// Định nghĩa Interface cho User trong localStorage
+// Đảm bảo khi Login, backend trả về JSON có chứa field "role"
+export interface AuthUser {
+  id: number;
+  email: string;
+  username: string;
+  role: "ADMIN" | "STAFF" | "CUSTOMER"; // Khớp với Enum của Prisma/Backend
+  avatar?: string | null;
+}
+
 export const useAuth = () => {
   const token = localStorage.getItem("token");
   const userData = localStorage.getItem("user");
 
-  const user = useMemo(() => {
+  const user = useMemo<AuthUser | null>(() => {
     if (!userData) return null;
     try {
       return JSON.parse(userData);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (e) {
       return null;
     }
@@ -16,19 +25,16 @@ export const useAuth = () => {
 
   const isAuthenticated = !!token;
 
+  // Giả lập isLoading = false vì đang đọc từ localStorage (đồng bộ).
+  // Nếu sau này bạn gọi API /auth/me để lấy user, biến này sẽ hữu dụng.
+  const isLoading = false;
+
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    // sử dụng tạm
-    window.location.href = "/"; // hoặc dùng useNavigate()
-
-    // kiểm tra lại
-    // const navigate = useNavigate();
-    // logout = () => {
-    //   localStorage.clear();
-    //   navigate("/auth/login");
-    // };
+    // Hard reload để clear toàn bộ state của ứng dụng
+    window.location.href = "/auth/login"; 
   };
 
-  return { token, user, isAuthenticated, logout };
+  return { token, user, isAuthenticated, isLoading, logout };
 };
