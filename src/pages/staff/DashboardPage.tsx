@@ -17,7 +17,6 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 
-import { staffMockData } from "@/data/staff"
 import type { StaffOutletContext } from "./StaffLayout"
 
 function renderSparkline(values: number[]) {

@@ -4,7 +4,6 @@ import { useOutletContext } from "react-router-dom"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
-import { staffMockData } from "@/data/staff"
 import type { StaffOutletContext } from "./StaffLayout"
 // import { rangeLabel } from "./StaffLayout"
 
