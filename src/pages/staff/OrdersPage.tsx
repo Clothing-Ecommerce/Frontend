@@ -358,27 +358,6 @@ export default function StaffOrdersPage() {
       .finally(() => setIsStatusSaving(false));
   };
 
-  // Chức năng: Thêm ghi chú nội bộ
-  // const appendOrderNote = () => {
-  //   if (!orderNoteDraft.trim() || !selectedOrder) return
-  //   setOrders((prev) =>
-  //     prev.map((order) =>
-  //       order.id === selectedOrder.id
-  //         ? {
-  //             ...order,
-  //             notes: [...order.notes, `[Staff Note]: ${orderNoteDraft.trim()}`],
-  //           }
-  //         : order,
-  //     ),
-  //   )
-  //   setOrderNoteDraft("")
-  //   showToast({
-  //     title: "Đã thêm ghi chú",
-  //     description: "Ghi chú nội bộ đã được lưu vào hồ sơ đơn hàng.",
-  //     type: "info",
-  //   })
-  // }
-
   // Chức năng: Gửi yêu cầu hoàn tiền (Gửi cho Admin duyệt)
   const submitRefundRequest = () => {
     if (!selectedOrder?.adminId || !refundReason.trim()) return;
@@ -773,16 +752,11 @@ export default function StaffOrdersPage() {
           <DialogHeader>
             <DialogTitle>Cập nhật trạng thái đơn hàng</DialogTitle>
             <DialogDescription>
-              Thay đổi trạng thái hiện tại của đơn #{
-                selectedOrder?.code ?? selectedOrder?.id
-              }
+              Thay đổi trạng thái hiện tại của đơn #{selectedOrder?.id}
             </DialogDescription>
           </DialogHeader>
-          {statusError && (
-            <p className="text-sm text-red-600">{statusError}</p>
-          )}
           <div className="grid gap-2 py-4">
-            {(["new", "processing", "delivered", "returned"] as const).map(
+            {(["new", "processing", "delivered"] as const).map(
               (status) => (
                 <Button
                   key={status}
@@ -795,7 +769,6 @@ export default function StaffOrdersPage() {
                       "border-[#c87d2f] bg-[#fdfbf7]"
                   )}
                   onClick={() => updateOrderStatus(status)}
-                  disabled={isStatusSaving}
                 >
                   <div className="flex items-center gap-3">
                     <div
@@ -808,7 +781,6 @@ export default function StaffOrdersPage() {
                       <span className="font-semibold text-sm">
                         {orderStatusLabel[status]}
                       </span>
-                      {/* Mock descriptions */}
                       <span className="text-[10px] text-muted-foreground font-normal">
                         {status === "new"
                           ? "Đơn hàng mới tạo, chưa xử lý."
@@ -816,7 +788,7 @@ export default function StaffOrdersPage() {
                           ? "Đang đóng gói và vận chuyển."
                           : status === "delivered"
                           ? "Khách hàng đã nhận được hàng."
-                          : "Đơn hàng bị trả lại hoặc hủy."}
+                          : "Đơn hàng hoàn tất."}
                       </span>
                     </div>
                   </div>
