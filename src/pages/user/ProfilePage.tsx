@@ -2205,7 +2205,7 @@ export default function ProfilePage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="space-y-4">
+                  {/* <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-gray-900">
                       Notifications
                     </h3>
@@ -2255,9 +2255,9 @@ export default function ProfilePage() {
                         />
                       </div>
                     </div>
-                  </div>
+                  </div> */}
 
-                  <div className="border-t pt-6">
+                  <div className="pt-2">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4">
                       Security
                     </h3>
@@ -2269,13 +2269,13 @@ export default function ProfilePage() {
                         <CreditCard className="w-4 h-4 mr-2" />
                         Change Password
                       </Button>
-                      <Button
+                      {/* <Button
                         variant="outline"
                         className="w-full justify-start bg-transparent"
                       >
                         <Settings className="w-4 h-4 mr-2" />
                         Two-Factor Authentication
-                      </Button>
+                      </Button> */}
                     </div>
                   </div>
 
@@ -2284,13 +2284,13 @@ export default function ProfilePage() {
                       Data & Privacy
                     </h3>
                     <div className="space-y-3">
-                      <Button
+                      {/* <Button
                         variant="outline"
                         className="w-full justify-start bg-transparent"
                       >
                         <Download className="w-4 h-4 mr-2" />
                         Download My Data
-                      </Button>
+                      </Button> */}
                       <Button
                         variant="outline"
                         className="w-full justify-start text-red-600 hover:text-red-700 bg-transparent"

@@ -25,7 +25,7 @@ const navItems = [
   { label: "Danh Mục", to: "/admin/categories", icon: Layers },
   // { label: "Inventory & Shipping (bỏ)", to: "/admin/inventory", icon: Warehouse },
   // { label: "Khách Hàng", to: "/admin/customers", icon: Users },
-  { label: "Báo Cáo & Phân Tích (biểu đồ,thống kê năng suất của nhân viên)", to: "/admin/reports", icon: BarChart3 },
+  { label: "Báo Cáo & Phân Tích", to: "/admin/reports", icon: BarChart3 },
   { label: "Người Dùng", to: "/admin/users", icon: ShieldCheck },
   // { label: "Cài Đặt", to: "/admin/settings", icon: Settings },
   // { label: "Hỗ Trợ (Chỉnh sửa lại)", to: "/admin/support", icon: LifeBuoy },
