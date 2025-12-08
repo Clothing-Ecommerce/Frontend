@@ -61,18 +61,18 @@ export function OrderCancelDialog({
         >
           <DialogHeader className="space-y-2">
             <DialogTitle className="text-lg font-semibold">
-              Hủy đơn hàng
+              Cancel Order
             </DialogTitle>
             <DialogDescription className="text-sm text-gray-500">
-              Chúng tôi rất tiếc khi phải hủy đơn hàng của bạn. Xin vui lòng
-              cho chúng tôi biết lý do hủy để cải thiện dịch vụ trong tương lai.
+              We’re sorry that we have to cancel your order. Please let us know
+              the reason so we can improve our service in the future.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-3">
               <Label className="text-sm font-medium text-gray-900">
-                Chọn lý do hủy đơn hàng
+                Choose a reason for cancelling the order
               </Label>
               <RadioGroup className="space-y-3">
                 {reasons.map((reason) => {
@@ -117,11 +117,11 @@ export function OrderCancelDialog({
             {showCustomTextarea && (
               <div className="space-y-2">
                 <Label htmlFor="cancel-order-custom-reason">
-                  Mô tả chi tiết lý do hủy
+                  Describe the cancellation reason in detail
                 </Label>
                 <Textarea
                   id="cancel-order-custom-reason"
-                  placeholder="Vui lòng chia sẻ thêm thông tin..."
+                  placeholder="Please share more details..."
                   value={customReason}
                   onChange={(event) => onCustomReasonChange(event.target.value)}
                   disabled={submitting}
@@ -142,10 +142,10 @@ export function OrderCancelDialog({
               onClick={() => onOpenChange(false)}
               disabled={submitting}
             >
-              Quay lại
+              Go back
             </Button>
             <Button type="submit" variant="destructive" disabled={submitting}>
-              {submitting ? "Đang hủy..." : "Xác nhận hủy đơn"}
+              {submitting ? "Cancelling..." : "Confirm cancellation"}
             </Button>
           </DialogFooter>
         </form>
