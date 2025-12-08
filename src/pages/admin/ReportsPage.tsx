@@ -129,7 +129,7 @@ const formatCurrency = (value: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(value)
 
 const formatGrowth = (growth: number | null) => {
-  if (growth === null) return { label: "Không đổi", trend: "neutral" as const }
+  if (growth === null) return { label: "No change", trend: "neutral" as const }
   const percent = (growth * 100).toFixed(1)
   const label = `${growth >= 0 ? "+" : ""}${percent}%`
   const trend = growth > 0 ? ("up" as const) : growth < 0 ? ("down" as const) : ("neutral" as const)
@@ -172,7 +172,7 @@ export default function ReportsPage() {
         setVipCustomers(vipRes.data)
       } catch (err) {
         console.error("Failed to fetch reports", err)
-        if (isMounted) setError("Không thể tải dữ liệu báo cáo. Vui lòng thử lại sau.")
+        if (isMounted) setError("Failed to load report data. Please try again later.")
       } finally {
         if (isMounted) setLoading(false)
       }
@@ -202,23 +202,23 @@ export default function ReportsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900">Báo cáo &amp; Thống kê</h2>
-          <p className="text-sm text-slate-500">Tổng quan tình hình kinh doanh, tồn kho và khách hàng.</p>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900">Reports &amp; Analytics</h2>
+          <p className="text-sm text-slate-500">Overview of business performance, inventory, and customers.</p>
         </div>
         <div className="flex items-center gap-2">
           <Select value={timeRange} onValueChange={(value) => setTimeRange(value as ReportRange)}>
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Chọn khoảng thời gian" />
+              <SelectValue placeholder="Select time range" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="24h">24 giờ qua</SelectItem>
-              <SelectItem value="7d">7 ngày qua</SelectItem>
-              <SelectItem value="30d">30 ngày qua</SelectItem>
-              <SelectItem value="this_month">Tháng này</SelectItem>
+              <SelectItem value="24h">Last 24 hours</SelectItem>
+              <SelectItem value="7d">Last 7 days</SelectItem>
+              <SelectItem value="30d">Last 30 days</SelectItem>
+              <SelectItem value="this_month">This month</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="outline" className="gap-2" disabled>
-            Xuất báo cáo
+            Export report
           </Button>
         </div>
       </div>
@@ -227,16 +227,16 @@ export default function ReportsPage() {
 
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="overview">Tổng quan</TabsTrigger>
-          <TabsTrigger value="sales">Doanh thu &amp; Đơn hàng</TabsTrigger>
-          <TabsTrigger value="products">Sản phẩm &amp; Tồn kho</TabsTrigger>
-          <TabsTrigger value="customers">Khách hàng</TabsTrigger>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="sales">Revenue &amp; Orders</TabsTrigger>
+          <TabsTrigger value="products">Products &amp; Inventory</TabsTrigger>
+          <TabsTrigger value="customers">Customers</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <KPICard
-              title="Tổng doanh thu"
+              title="Total revenue"
               value={overview ? formatCurrency(overview.kpis.revenue.current) : "—"}
               change={formatGrowth(overview?.kpis.revenue.growth ?? null).label}
               trend={formatGrowth(overview?.kpis.revenue.growth ?? null).trend}
@@ -244,7 +244,7 @@ export default function ReportsPage() {
               loading={loading}
             />
             <KPICard
-              title="Đơn hàng mới"
+              title="New orders"
               value={overview ? overview.kpis.newOrders.current.toLocaleString("vi-VN") : "—"}
               change={formatGrowth(overview?.kpis.newOrders.growth ?? null).label}
               trend={formatGrowth(overview?.kpis.newOrders.growth ?? null).trend}
@@ -252,7 +252,7 @@ export default function ReportsPage() {
               loading={loading}
             />
             <KPICard
-              title="Sản phẩm đã bán"
+              title="Products sold"
               value={overview ? overview.kpis.productsSold.current.toLocaleString("vi-VN") : "—"}
               change={formatGrowth(overview?.kpis.productsSold.growth ?? null).label}
               trend={formatGrowth(overview?.kpis.productsSold.growth ?? null).trend}
@@ -260,7 +260,7 @@ export default function ReportsPage() {
               loading={loading}
             />
             <KPICard
-              title="Khách hàng mới"
+              title="New customers"
               value={overview ? overview.kpis.newCustomers.current.toLocaleString("vi-VN") : "—"}
               change={formatGrowth(overview?.kpis.newCustomers.growth ?? null).label}
               trend={formatGrowth(overview?.kpis.newCustomers.growth ?? null).trend}
@@ -272,8 +272,8 @@ export default function ReportsPage() {
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
             <Card className="col-span-4">
               <CardHeader>
-                <CardTitle>Biểu đồ doanh thu</CardTitle>
-                <CardDescription>Doanh thu và số lượng đơn theo từng mốc thời gian</CardDescription>
+                <CardTitle>Revenue chart</CardTitle>
+                <CardDescription>Revenue and order volume over time</CardDescription>
               </CardHeader>
               <CardContent className="pl-2">
                 <div className="h-[300px] w-full">
@@ -292,7 +292,7 @@ export default function ReportsPage() {
                         contentStyle={{ backgroundColor: "#fff", borderRadius: "8px", border: "1px solid #e2e8f0" }}
                         formatter={(value: number, name) => [
                           name === "revenue" ? formatCurrency(value) : value,
-                          name === "revenue" ? "Doanh thu" : "Đơn hàng",
+                          name === "revenue" ? "Revenue" : "Orders",
                         ]}
                       />
                       <Line type="monotone" dataKey="revenue" stroke="#0f172a" strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
@@ -305,8 +305,8 @@ export default function ReportsPage() {
 
             <Card className="col-span-3">
               <CardHeader>
-                <CardTitle>Doanh thu theo danh mục</CardTitle>
-                <CardDescription>Tỷ trọng doanh thu các nhóm hàng</CardDescription>
+                <CardTitle>Revenue by category</CardTitle>
+                <CardDescription>Revenue share by category</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="h-[300px] w-full">
@@ -330,11 +330,11 @@ export default function ReportsPage() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle>Cảnh báo tồn kho</CardTitle>
-                  <CardDescription>Các sản phẩm bán chạy có tồn kho thấp</CardDescription>
+                  <CardTitle>Inventory alerts</CardTitle>
+                  <CardDescription>Bestselling products with low inventory</CardDescription>
                 </div>
                 <Badge variant="destructive" className="flex items-center gap-1">
-                  <AlertTriangle size={12} /> Cần nhập hàng
+                  <AlertTriangle size={12} /> Restock needed
                 </Badge>
               </CardHeader>
               <CardContent>
@@ -347,26 +347,26 @@ export default function ReportsPage() {
                         </div>
                         <div>
                           <p className="text-sm font-medium text-slate-900">{item.name}</p>
-                          <p className="text-xs text-slate-500">Tồn kho: {"inventory" in item ? item.inventory : "N/A"}</p>
+                          <p className="text-xs text-slate-500">Inventory: {"inventory" in item ? item.inventory : "N/A"}</p>
                         </div>
                       </div>
                       <div className="text-right">
                         <p className={`text-sm font-bold ${"severity" in item && item.severity === "high" ? "text-red-600" : "text-amber-600"}`}>
-                          {"inventory" in item ? item.inventory : 0} cái
+                          {"inventory" in item ? item.inventory : 0} units
                         </p>
-                        {"orders" in item && <p className="text-xs text-slate-500">Đã bán: {item.orders}</p>}
+                        {"orders" in item && <p className="text-xs text-slate-500">Sold: {item.orders}</p>}
                       </div>
                     </div>
                   ))}
-                  {!lowStockAlerts.length && !bestSellers.length && <p className="text-sm text-slate-500">Không có dữ liệu tồn kho.</p>}
+                  {!lowStockAlerts.length && !bestSellers.length && <p className="text-sm text-slate-500">No inventory data.</p>}
                 </div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Khu vực mua hàng nhiều nhất</CardTitle>
-                <CardDescription>Top tỉnh thành có lượng đơn cao</CardDescription>
+                <CardTitle>Top purchasing locations</CardTitle>
+                <CardDescription>Top regions by order volume</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -384,7 +384,7 @@ export default function ReportsPage() {
                       <span className="text-sm font-medium">{item.percentage}%</span>
                     </div>
                   ))}
-                  {!topLocations.length && <p className="text-sm text-slate-500">Chưa có dữ liệu địa lý.</p>}
+                  {!topLocations.length && <p className="text-sm text-slate-500">No location data yet.</p>}
                 </div>
               </CardContent>
             </Card>
@@ -395,8 +395,8 @@ export default function ReportsPage() {
           <div className="grid gap-4 md:grid-cols-7">
             <Card className="col-span-4">
               <CardHeader>
-                <CardTitle>Xu hướng dòng tiền</CardTitle>
-                <CardDescription>Doanh thu thuần so với số lượng đơn hàng</CardDescription>
+                <CardTitle>Cash flow trend</CardTitle>
+                <CardDescription>Net revenue compared to order volume</CardDescription>
               </CardHeader>
               <CardContent className="pl-2">
                 <div className="h-[300px] w-full">
@@ -408,7 +408,7 @@ export default function ReportsPage() {
                       <YAxis yAxisId="right" orientation="right" fontSize={12} tickLine={false} axisLine={false} />
                       <Tooltip
                         cursor={{ fill: "transparent" }}
-                        formatter={(value, name) => [name === "revenue" ? formatCurrency(value as number) : value, name === "revenue" ? "Doanh thu" : "Đơn hàng"]}
+                        formatter={(value, name) => [name === "revenue" ? formatCurrency(value as number) : value, name === "revenue" ? "Revenue" : "Orders"]}
                       />
                       <Bar yAxisId="left" dataKey="revenue" fill="#0f172a" radius={[4, 4, 0, 0]} barSize={20} />
                       <Line yAxisId="right" type="monotone" dataKey="orders" stroke="#f59e0b" strokeWidth={2} />
@@ -421,23 +421,23 @@ export default function ReportsPage() {
             <div className="col-span-3 space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Phương thức thanh toán</CardTitle>
-                  <CardDescription>Tỷ lệ thanh toán thành công theo kênh</CardDescription>
+                  <CardTitle>Payment methods</CardTitle>
+                  <CardDescription>Successful payment rate by channel</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
                   {paymentSummary.map((method) => (
                     <div key={method.method} className="flex items-center justify-between">
                       <div>
                         <p className="font-medium text-slate-900">{method.methodLabel}</p>
-                        <p className="text-xs text-slate-500">{method.total} giao dịch</p>
+                        <p className="text-xs text-slate-500">{method.total} transactions</p>
                       </div>
                       <div className="text-right">
                         <p className="font-semibold text-slate-900">{formatCurrency(method.revenue)}</p>
-                        <p className="text-xs text-slate-500">Tỉ lệ thành công: {method.successRate}%</p>
+                        <p className="text-xs text-slate-500">Success rate: {method.successRate}%</p>
                       </div>
                     </div>
                   ))}
-                  {!paymentSummary.length && <p className="text-sm text-slate-500">Chưa có dữ liệu thanh toán.</p>}
+                  {!paymentSummary.length && <p className="text-sm text-slate-500">No payment data yet.</p>}
                 </CardContent>
               </Card>
             </div>
@@ -447,8 +447,8 @@ export default function ReportsPage() {
         <TabsContent value="products" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Top sản phẩm bán chạy</CardTitle>
-              <CardDescription>Xếp hạng theo doanh thu trong kỳ</CardDescription>
+              <CardTitle>Top best-selling products</CardTitle>
+              <CardDescription>Ranked by revenue in the period</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
@@ -462,17 +462,17 @@ export default function ReportsPage() {
                         <p className="font-medium text-slate-900 group-hover:text-blue-600 transition-colors">{item.name}</p>
                         <div className="flex gap-2 text-xs text-slate-500 mt-1">
                           {item.category && <Badge variant="secondary" className="font-normal">{item.category}</Badge>}
-                          <span className="flex items-center">Đơn: {item.orders}</span>
+                          <span className="flex items-center">Orders: {item.orders}</span>
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-slate-900">{item.unitsSold.toLocaleString("vi-VN")} đã bán</p>
-                      <p className="text-xs text-emerald-600 font-medium">Doanh thu: {formatCurrency(item.revenue)}</p>
+                      <p className="font-bold text-slate-900">{item.unitsSold.toLocaleString("vi-VN")} sold</p>
+                      <p className="text-xs text-emerald-600 font-medium">Revenue: {formatCurrency(item.revenue)}</p>
                     </div>
                   </div>
                 ))}
-                {!bestSellers.length && <p className="text-sm text-slate-500">Chưa có sản phẩm nào trong kỳ.</p>}
+                {!bestSellers.length && <p className="text-sm text-slate-500">No products in this period.</p>}
               </div>
             </CardContent>
           </Card>
@@ -480,8 +480,8 @@ export default function ReportsPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle>Trạng thái kho hàng</CardTitle>
-                <CardDescription>Theo dõi tồn kho của sản phẩm bán chạy</CardDescription>
+                <CardTitle>Stock status</CardTitle>
+                <CardDescription>Track inventory for bestselling products</CardDescription>
               </div>
             </CardHeader>
             <CardContent>
@@ -489,11 +489,11 @@ export default function ReportsPage() {
                 <table className="w-full text-sm text-left caption-bottom">
                   <thead className="[&_tr]:border-b">
                     <tr className="border-b transition-colors hover:bg-slate-100/50 data-[state=selected]:bg-slate-100">
-                      <th className="h-12 px-4 text-left align-middle font-medium text-slate-500">Sản phẩm</th>
-                      <th className="h-12 px-4 text-center align-middle font-medium text-slate-500">Đã bán</th>
-                      <th className="h-12 px-4 text-center align-middle font-medium text-slate-500">Đơn hàng</th>
-                      <th className="h-12 px-4 text-center align-middle font-medium text-slate-500">Tồn kho</th>
-                      <th className="h-12 px-4 text-right align-middle font-medium text-slate-500">Trạng thái</th>
+                      <th className="h-12 px-4 text-left align-middle font-medium text-slate-500">Product</th>
+                      <th className="h-12 px-4 text-center align-middle font-medium text-slate-500">Sold</th>
+                      <th className="h-12 px-4 text-center align-middle font-medium text-slate-500">Orders</th>
+                      <th className="h-12 px-4 text-center align-middle font-medium text-slate-500">Inventory</th>
+                      <th className="h-12 px-4 text-right align-middle font-medium text-slate-500">Status</th>
                     </tr>
                   </thead>
                   <tbody className="[&_tr:last-child]:border-0">
@@ -507,14 +507,14 @@ export default function ReportsPage() {
                         </td>
                         <td className="p-4 align-middle text-right">
                           {item.inventory <= 5 ? (
-                            <Badge variant="destructive">Cực thấp</Badge>
+                            <Badge variant="destructive">Critically low</Badge>
                           ) : item.inventory <= 20 ? (
                             <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-700">
-                              Sắp hết
+                              Running low
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
-                              Đủ hàng
+                              In stock
                             </Badge>
                           )}
                         </td>
@@ -523,7 +523,7 @@ export default function ReportsPage() {
                     {!bestSellers.length && (
                       <tr>
                         <td className="p-4 text-center text-slate-500" colSpan={5}>
-                          Không có dữ liệu sản phẩm.
+                          No product data.
                         </td>
                       </tr>
                     )}
@@ -538,8 +538,8 @@ export default function ReportsPage() {
           <div className="grid gap-4 md:grid-cols-5">
             <Card className="col-span-2">
               <CardHeader>
-                <CardTitle>Khách hàng VIP</CardTitle>
-                <CardDescription>Top chi tiêu trong kỳ</CardDescription>
+                <CardTitle>VIP customers</CardTitle>
+                <CardDescription>Top spenders in the period</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-5">
@@ -556,11 +556,11 @@ export default function ReportsPage() {
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-bold">{formatCurrency(user.totalSpent)}</p>
-                        <p className="text-xs text-slate-500">{user.orders} đơn</p>
+                        <p className="text-xs text-slate-500">{user.orders} orders</p>
                       </div>
                     </div>
                   ))}
-                  {(!vipCustomers || vipCustomers.customers.length === 0) && <p className="text-sm text-slate-500">Chưa có khách hàng VIP.</p>}
+                  {(!vipCustomers || vipCustomers.customers.length === 0) && <p className="text-sm text-slate-500">No VIP customers yet.</p>}
                 </div>
               </CardContent>
             </Card>
@@ -568,8 +568,8 @@ export default function ReportsPage() {
             <div className="col-span-3 space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Phân bổ địa lý</CardTitle>
-                  <CardDescription>Nơi tập trung nhiều đơn hàng nhất</CardDescription>
+                  <CardTitle>Geographical distribution</CardTitle>
+                  <CardDescription>Where most orders are concentrated</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
@@ -582,7 +582,7 @@ export default function ReportsPage() {
                         <div className="w-12 text-right font-bold">{item.percentage}%</div>
                       </div>
                     ))}
-                    {!topLocations.length && <p className="text-sm text-slate-500">Không có dữ liệu địa lý.</p>}
+                    {!topLocations.length && <p className="text-sm text-slate-500">No location data.</p>}
                   </div>
                 </CardContent>
               </Card>
@@ -590,13 +590,13 @@ export default function ReportsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <Card className="bg-slate-50 border-dashed">
                   <CardContent className="pt-6 text-center">
-                    <div className="text-xs text-slate-500 uppercase tracking-wide">Tổng đơn hàng</div>
+                    <div className="text-xs text-slate-500 uppercase tracking-wide">Total orders</div>
                     <div className="text-2xl font-bold text-indigo-600 mt-1">{locations?.totalOrders ?? 0}</div>
                   </CardContent>
                 </Card>
                 <Card className="bg-slate-50 border-dashed">
                   <CardContent className="pt-6 text-center">
-                    <div className="text-xs text-slate-500 uppercase tracking-wide">Tổng doanh thu</div>
+                    <div className="text-xs text-slate-500 uppercase tracking-wide">Total revenue</div>
                     <div className="text-2xl font-bold text-emerald-600 mt-1">{categories ? formatCurrency(categories.totalRevenue) : "—"}</div>
                   </CardContent>
                 </Card>
@@ -641,7 +641,7 @@ function KPICard({
             {trend === "neutral" && <span className="mr-1">—</span>}
             {change}
           </span>
-          so với kỳ trước
+          compared to previous period
         </p>
       </CardContent>
     </Card>
