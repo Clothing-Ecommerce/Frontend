@@ -72,7 +72,7 @@ export function AddressFormDialog({
   const [loadingDistricts, setLoadingDistricts] = useState(false);
   const [loadingWards, setLoadingWards] = useState(false);
 
-  // load provinces khi mở dialog
+  // load provinces when opening dialog
   useEffect(() => {
     if (!open) return;
     let alive = true;
@@ -88,7 +88,7 @@ export function AddressFormDialog({
     return () => { alive = false; };
   }, [open, getProvinces]);
 
-  // khi đổi provinceCode → load districts, reset wards
+  // when provinceCode changes → load districts, reset wards
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -98,7 +98,7 @@ export function AddressFormDialog({
       try {
         const list = await getDistricts(formData.provinceCode);
         if (alive) setDistricts(list);
-        if (alive) setWards([]); // reset wards khi đổi quận
+        if (alive) setWards([]); // reset wards when district changes
       } finally {
         if (alive) setLoadingDistricts(false);
       }
@@ -106,7 +106,7 @@ export function AddressFormDialog({
     return () => { alive = false; };
   }, [open, formData.provinceCode, getDistricts]);
 
-  // khi đổi districtCode → load wards
+  // when districtCode changes → load wards
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -123,41 +123,10 @@ export function AddressFormDialog({
     return () => { alive = false; };
   }, [open, formData.districtCode, getWards]);
 
-  // useEffect(() => {
-  //   if (address && mode === "edit") {
-  //     setFormData(address);
-  //   } else {
-  //     // Reset form for add mode
-  //     setFormData({
-  //       label: "Home",
-  //       recipient: "",
-  //       phone: "",
-  //       company: "",
-  //       houseNumber: "",
-  //       street: "",
-  //       wardCode: "",
-  //       wardName: "",
-  //       districtCode: "",
-  //       districtName: "",
-  //       provinceCode: "",
-  //       provinceName: "",
-  //       postalCode: "",
-  //       building: "",
-  //       block: "",
-  //       floor: "",
-  //       room: "",
-  //       notes: "",
-  //       country: "Vietnam",
-  //       isDefault: false,
-  //     });
-  //   }
-  // }, [address, mode, open]);
-  
-  // Đồng bộ form khi mở dialog hoặc khi đổi mode/địa chỉ (dựa trên id để tránh object mới mỗi render)
+  // sync form when dialog opens or address changes
   useEffect(() => {
     if (!open) return;
     if (mode === "edit" && address) {
-      // gộp với DEFAULT_FORM để đảm bảo đủ field, và chỉ set khi khác thực sự
       const next = { ...DEFAULT_FORM, ...address };
       setFormData(prev => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
     } else if (mode === "add") {
@@ -219,19 +188,19 @@ export function AddressFormDialog({
       <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {mode === "add" ? "Thêm địa chỉ mới" : "Chỉnh sửa địa chỉ"}
+            {mode === "add" ? "Add New Address" : "Edit Address"}
           </DialogTitle>
           <DialogDescription>
             {mode === "add"
-              ? "Thêm địa chỉ giao hàng mới"
-              : "Cập nhật thông tin địa chỉ giao hàng"}
+              ? "Add a new shipping address"
+              : "Update shipping address information"}
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Address Label */}
           <div className="space-y-2">
-            <Label htmlFor="label">Nhãn địa chỉ *</Label>
+            <Label htmlFor="label">Address Label *</Label>
             <Select
               value={formData.label}
               onValueChange={(value: "HOME" | "WORK" | "OTHER") =>
@@ -242,9 +211,9 @@ export function AddressFormDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="HOME">Nhà</SelectItem>
-                <SelectItem value="WORK">Chỗ Làm</SelectItem>
-                <SelectItem value="OTHER">Khác</SelectItem>
+                <SelectItem value="HOME">Home</SelectItem>
+                <SelectItem value="WORK">Workplace</SelectItem>
+                <SelectItem value="OTHER">Other</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -252,17 +221,17 @@ export function AddressFormDialog({
           {/* Recipient Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="recipient">Họ và tên người nhận *</Label>
+              <Label htmlFor="recipient">Recipient Name *</Label>
               <Input
                 id="recipient"
                 value={formData.recipient}
                 onChange={(e) => handleInputChange("recipient", e.target.value)}
-                placeholder="Nguyễn Văn A"
+                placeholder="John Doe"
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Số điện thoại</Label>
+              <Label htmlFor="phone">Phone Number</Label>
               <Input
                 id="phone"
                 value={formData.phone || ""}
@@ -274,26 +243,26 @@ export function AddressFormDialog({
 
           {/* Company (optional) */}
           <div className="space-y-2">
-            <Label htmlFor="company">Tên công ty (nếu có)</Label>
+            <Label htmlFor="company">Company Name (optional)</Label>
             <Input
               id="company"
               value={formData.company || ""}
               onChange={(e) => handleInputChange("company", e.target.value)}
-              placeholder="Công ty TNHH ABC"
+              placeholder="ABC Company Ltd."
             />
           </div>
 
           {/* Administrative Divisions */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="province">Tỉnh/Thành phố *</Label>
+              <Label htmlFor="province">Province/City *</Label>
               <Select
                 value={formData.provinceCode ?? ""}
                 onValueChange={handleProvinceChange}
                 disabled={loadingProvinces}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Chọn tỉnh/thành phố" />
+                  <SelectValue placeholder="Select province/city" />
                 </SelectTrigger>
                 <SelectContent>
                   {provinces.map((p: { code: string; name: string }) => (
@@ -306,18 +275,17 @@ export function AddressFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="district">Quận/Huyện *</Label>
+              <Label htmlFor="district">District *</Label>
               <Select
                 value={formData.districtCode ?? ""}
                 onValueChange={handleDistrictChange}
                 disabled={!formData.provinceCode || loadingDistricts}
               >
                 <SelectTrigger>
-                  {/* <SelectValue placeholder="Chọn quận/huyện" /> */}
                   <SelectValue placeholder={
                     !formData.provinceCode
-                      ? "Chọn tỉnh/thành trước"
-                      : (loadingDistricts ? "Đang tải..." : "Chọn quận/huyện")
+                      ? "Select province first"
+                      : (loadingDistricts ? "Loading..." : "Select district")
                   } />
                 </SelectTrigger>
                 <SelectContent>
@@ -331,18 +299,17 @@ export function AddressFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="ward">Phường/Xã *</Label>
+              <Label htmlFor="ward">Ward/Commune *</Label>
               <Select
                 value={formData.wardCode ?? ""}
                 onValueChange={handleWardChange}
                 disabled={!formData.districtCode || loadingWards}
               >
                 <SelectTrigger>
-                  {/* <SelectValue placeholder="Chọn phường/xã" /> */}
                   <SelectValue placeholder={
                     !formData.districtCode
-                      ? "Chọn quận/huyện trước"
-                      : (loadingWards ? "Đang tải..." : "Chọn phường/xã")
+                      ? "Select district first"
+                      : (loadingWards ? "Loading..." : "Select ward/commune")
                   } />
                 </SelectTrigger>
                 <SelectContent>
@@ -359,23 +326,23 @@ export function AddressFormDialog({
           {/* Street Address */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="houseNumber">Số nhà/Ngõ/Hẻm</Label>
+              <Label htmlFor="houseNumber">House Number / Alley</Label>
               <Input
                 id="houseNumber"
                 value={formData.houseNumber || ""}
                 onChange={(e) =>
                   handleInputChange("houseNumber", e.target.value)
                 }
-                placeholder="123, Ngõ 45"
+                placeholder="123, Alley 45"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="street">Tên đường</Label>
+              <Label htmlFor="street">Street Name</Label>
               <Input
                 id="street"
                 value={formData.street || ""}
                 onChange={(e) => handleInputChange("street", e.target.value)}
-                placeholder="Đường Láng"
+                placeholder="Lang Street"
               />
             </div>
           </div>
@@ -383,16 +350,16 @@ export function AddressFormDialog({
           {/* Building Details */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="building">Tòa nhà/Khu vực</Label>
+              <Label htmlFor="building">Building / Area</Label>
               <Input
                 id="building"
                 value={formData.building || ""}
                 onChange={(e) => handleInputChange("building", e.target.value)}
-                placeholder="Tòa A"
+                placeholder="Building A"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="block">Block/Lô</Label>
+              <Label htmlFor="block">Block / Lot</Label>
               <Input
                 id="block"
                 value={formData.block || ""}
@@ -401,28 +368,28 @@ export function AddressFormDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="floor">Tầng</Label>
+              <Label htmlFor="floor">Floor</Label>
               <Input
                 id="floor"
                 value={formData.floor || ""}
                 onChange={(e) => handleInputChange("floor", e.target.value)}
-                placeholder="Tầng 5"
+                placeholder="5th Floor"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="room">Phòng/Căn</Label>
+              <Label htmlFor="room">Room / Unit</Label>
               <Input
                 id="room"
                 value={formData.room || ""}
                 onChange={(e) => handleInputChange("room", e.target.value)}
-                placeholder="Căn 501"
+                placeholder="Unit 501"
               />
             </div>
           </div>
 
           {/* Postal Code */}
           <div className="space-y-2">
-            <Label htmlFor="postalCode">Mã bưu điện</Label>
+            <Label htmlFor="postalCode">Postal Code</Label>
             <Input
               id="postalCode"
               value={formData.postalCode || ""}
@@ -434,12 +401,12 @@ export function AddressFormDialog({
 
           {/* Delivery Notes */}
           <div className="space-y-2">
-            <Label htmlFor="notes">Ghi chú giao hàng</Label>
+            <Label htmlFor="notes">Delivery Notes</Label>
             <Textarea
               id="notes"
               value={formData.notes || ""}
               onChange={(e) => handleInputChange("notes", e.target.value)}
-              placeholder="Gọi điện trước khi giao hàng, giao hàng giờ hành chính..."
+              placeholder="Call before delivery, deliver during working hours..."
               rows={3}
             />
           </div>
@@ -457,7 +424,7 @@ export function AddressFormDialog({
               htmlFor="isDefault"
               className="text-sm font-medium text-gray-700"
             >
-              Đặt làm địa chỉ mặc định
+              Set as default address
             </Label>
           </div>
 
@@ -468,7 +435,7 @@ export function AddressFormDialog({
               disabled={!isFormValid}
               className="flex-1 bg-black text-white hover:bg-gray-800"
             >
-              {mode === "add" ? "Thêm địa chỉ" : "Cập nhật địa chỉ"}
+              {mode === "add" ? "Add Address" : "Update Address"}
             </Button>
             <Button
               type="button"
@@ -476,7 +443,7 @@ export function AddressFormDialog({
               onClick={() => onOpenChange(false)}
               className="flex-1 bg-transparent"
             >
-              Hủy
+              Cancel
             </Button>
           </div>
         </form>
