@@ -124,24 +124,24 @@ const CANCEL_REASON_OTHER_VALUE = "other" as const;
 const ORDER_CANCEL_REASON_OPTIONS: CancelReasonOption[] = [
   {
     value: "change_of_mind",
-    label: "Tôi đổi ý, không muốn mua nữa",
+    label: "I changed my mind and no longer want to buy",
   },
   {
     value: "found_better_price",
-    label: "Tôi tìm được giá tốt hơn ở nơi khác",
+    label: "I found a better price elsewhere",
   },
   {
     value: "shipping_delay",
-    label: "Thời gian giao hàng dự kiến quá lâu",
+    label: "The estimated delivery time is too long",
   },
   {
     value: "incorrect_order",
-    label: "Tôi đặt nhầm sản phẩm hoặc số lượng",
+    label: "I ordered the wrong product or quantity",
   },
   {
     value: CANCEL_REASON_OTHER_VALUE,
-    label: "Lý do khác",
-    description: "Vui lòng chia sẻ chi tiết để chúng tôi phục vụ tốt hơn",
+    label: "Other reason",
+    description: "Please share more details so we can serve you better",
     requiresDetails: true,
   },
 ];
@@ -273,11 +273,11 @@ const formatOrderDate = (date: string) => {
 const getLabelText = (label: string) => {
   switch (label) {
     case "HOME":
-      return "Nhà";
+      return "Home";
     case "WORK":
-      return "Chỗ Làm";
+      return "Workplace";
     case "OTHER":
-      return "Khác";
+      return "Other";
     default:
       return label;
   }
@@ -293,8 +293,8 @@ export default function ProfilePage() {
   );
   const [isEditing, setIsEditing] = useState(false);
   // const [editingAddress, setEditingAddress] = useState<number | null>(null);
-  const [formData, setFormData] = useState<UserProfile>(emptyUser); // dữ liệu hiển thị đã “lưu”
-  const [draft, setDraft] = useState<UserProfile>(emptyUser); // dữ liệu đang chỉnh sửa
+  const [formData, setFormData] = useState<UserProfile>(emptyUser); // persisted data currently shown
+  const [draft, setDraft] = useState<UserProfile>(emptyUser); // data currently being edited
   // const [loading, setLoading] = useState(true);
   const [showAvatarDialog, setShowAvatarDialog] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -389,7 +389,7 @@ export default function ProfilePage() {
   //   setFormData((prev) => ({ ...prev, [name]: value }));
   // };
 
-  // CHỈ update draft khi đang Edit
+  // ONLY update draft while in edit mode
   const handleDraftInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -399,10 +399,10 @@ export default function ProfilePage() {
   };
 
   // ====== Date helpers ======
-  // Chuẩn hoá chuỗi ngày bất kỳ (ISO hoặc 'yyyy-mm-dd') -> 'yyyy-mm-dd' cho <input type="date">
+  // Normalize any date string (ISO or 'yyyy-mm-dd') -> 'yyyy-mm-dd' for <input type="date">
   const toYMD = (dateStr: string | null | undefined): string => {
     if (!dateStr) return "";
-    // Nếu đã là 'yyyy-mm-dd' thì trả lại luôn
+    // If already 'yyyy-mm-dd', return as is
     if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return "";
@@ -412,10 +412,10 @@ export default function ProfilePage() {
     return `${y}-${m}-${day}`;
   };
 
-  // Hiển thị ra UI: 'dd/mm/yyyy'
+  // Display in UI as 'dd/mm/yyyy'
   const toDMY = (dateStr: string | null | undefined): string => {
     if (!dateStr) return "";
-    const d = new Date(toYMD(dateStr)); // đảm bảo parse đúng
+    const d = new Date(toYMD(dateStr)); // ensure correct parsing
     if (isNaN(d.getTime())) return "";
     const day = String(d.getDate()).padStart(2, "0");
     const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -423,7 +423,7 @@ export default function ProfilePage() {
     return `${day}/${m}/${y}`;
   };
 
-  // Load hồ sơ từ API /user/profile khi mở trang
+  // Load profile from /user/profile API when the page opens
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -432,19 +432,19 @@ export default function ProfilePage() {
         if (!mounted) return;
         // setFormData({
         //   ...data,
-        //   // đảm bảo hợp <input type="date">
+        //   // ensure compatible with <input type="date">
         //   // dateOfBirth: data.dateOfBirth ?? "",
-        //   dateOfBirth: toYMD(data.dateOfBirth), // giữ 'yyyy-mm-dd' trong state
+        //   dateOfBirth: toYMD(data.dateOfBirth), // keep 'yyyy-mm-dd' in state
         //   avatar: data.avatar ?? "/placeholder.svg?height=100&width=100",
         // });
 
         const loaded = {
           ...data,
-          dateOfBirth: toYMD(data.dateOfBirth), // chuẩn hoá cho <input type="date">
+          dateOfBirth: toYMD(data.dateOfBirth), // normalize for <input type="date">
           avatar: data.avatar ?? "/placeholder.svg?height=100&width=100",
         };
         setFormData(loaded);
-        setDraft(loaded); // đồng bộ draft ban đầu
+        setDraft(loaded); // sync initial draft
       } catch (e) {
         console.error("Failed to fetch profile", e);
       } finally {
@@ -457,7 +457,7 @@ export default function ProfilePage() {
     };
   }, []);
 
-  // So sánh thay đổi để disable Save khi không đổi gì
+  // Compare changes to disable Save when nothing has changed
   const hasChanges = useMemo(() => {
     const pick = (u: UserProfile) => ({
       username: u.username,
@@ -485,8 +485,8 @@ export default function ProfilePage() {
         dateOfBirth: toYMD(data.dateOfBirth) || "",
         avatar: data.avatar ?? "/placeholder.svg?height=100&width=100",
       };
-      setFormData(updated); // cập nhật dữ liệu đã “lưu”
-      setDraft(updated); // đồng bộ lại draft
+      setFormData(updated); // update persisted data
+      setDraft(updated); // sync draft again
       setIsEditing(false);
     } catch (e) {
       console.error("Failed to update profile", e);
@@ -543,7 +543,7 @@ export default function ProfilePage() {
     // setIsDropdownOpen(false);
   };
 
-  // nạp danh sách địa chỉ
+  // load address list
   useEffect(() => {
     (async () => {
       try {
@@ -551,7 +551,7 @@ export default function ProfilePage() {
         setAddresses(data);
       } catch (e) {
         console.error(e);
-        toast.error("Lỗi", "Không tải được danh sách địa chỉ");
+        toast.error("Error", "Unable to load address list");
       }
     })();
   }, [toast]);
@@ -583,8 +583,8 @@ export default function ProfilePage() {
         console.error("Failed to load orders", e);
         setOrders([]);
         setOrdersPagination(null);
-        setOrdersError("Không thể tải danh sách đơn hàng");
-        toast.error("Lỗi", "Không thể tải danh sách đơn hàng");
+        setOrdersError("Unable to load order list");
+        toast.error("Error", "Unable to load order list");
       } finally {
         setOrdersLoading(false);
         setOrdersLoaded(true);
@@ -620,9 +620,9 @@ export default function ProfilePage() {
         console.error(`Failed to load order detail ${orderId}`, e);
         setOrderDetailErrors((prev) => ({
           ...prev,
-          [orderId]: "Không thể tải chi tiết đơn hàng",
+          [orderId]: "Unable to load order details",
         }));
-        toast.error("Lỗi", "Không thể tải chi tiết đơn hàng");
+        toast.error("Error", "Unable to load order details");
       } finally {
         setLoadingDetailId((current) => (current === orderId ? null : current));
       }
@@ -803,12 +803,13 @@ export default function ProfilePage() {
           void _removed;
           return rest;
         });
-        toast.success("Thành công", "Đơn hàng đã được hủy");
+        toast.success("Success", "Order has been cancelled");
         wasSuccessful = true;
       } catch (err: any) {
         const message =
-          err?.response?.data?.message ?? "Không thể hủy đơn hàng lúc này";
-        toast.error("Lỗi", message);
+          err?.response?.data?.message ??
+          "Unable to cancel the order at this time";
+        toast.error("Error", message);
       } finally {
         setCancelingOrderId((current) =>
           current === orderId ? null : current
@@ -836,8 +837,8 @@ export default function ProfilePage() {
     if (!reasonMessage) {
       setCancelDialogError(
         requiresDetails
-          ? "Vui lòng nhập lý do hủy đơn hàng."
-          : "Vui lòng chọn lý do hủy đơn hàng."
+          ? "Please enter a reason for cancelling the order."
+          : "Please select a reason for cancelling the order."
       );
       return;
     }
@@ -870,15 +871,15 @@ export default function ProfilePage() {
           0
         );
         toast.success(
-          "Thành công",
+          "Success",
           itemCount && itemCount > 0
-            ? `Đã thêm ${itemCount} sản phẩm vào giỏ hàng`
-            : "Đã thêm sản phẩm vào giỏ hàng"
+            ? `Added ${itemCount} products to your cart`
+            : "Products have been added to your cart"
         );
       } catch (err: any) {
         const message =
-          err?.response?.data?.message ?? "Không thể mua lại đơn hàng";
-        toast.error("Lỗi", message);
+          err?.response?.data?.message ?? "Unable to reorder this order";
+        toast.error("Error", message);
       } finally {
         setReorderingOrderId((current) =>
           current === orderId ? null : current
@@ -928,7 +929,7 @@ export default function ProfilePage() {
             : prev.slice();
           return [...next, data];
         });
-        toast.success("Thành công", "Đã thêm địa chỉ");
+        toast.success("Success", "Address added successfully");
       } else if (editingAddress?.addressId) {
         //  const { addressId: _ignore, isDefault, ...payload } = addressData;
         const {
@@ -952,11 +953,11 @@ export default function ProfilePage() {
             : prev.slice();
           return next.map((a) => (a.addressId === data.addressId ? data : a));
         });
-        toast.success("Thành công", "Đã cập nhật địa chỉ");
+        toast.success("Success", "Address updated successfully");
       }
     } catch (e) {
       console.error(e);
-      toast.error("Lỗi", "Không lưu được địa chỉ");
+      toast.error("Error", "Unable to save address");
     }
   };
 
@@ -978,10 +979,10 @@ export default function ProfilePage() {
         }
         return filtered;
       });
-      toast.success("Thành công", "Đã xoá địa chỉ");
+      toast.success("Success", "Address deleted successfully");
     } catch (e) {
       console.error(e);
-      toast.error("Lỗi", "Không xoá được địa chỉ");
+      toast.error("Error", "Unable to delete address");
     } finally {
       setDeletingAddress(null);
     }
@@ -993,9 +994,9 @@ export default function ProfilePage() {
       setAddresses((prev) =>
         prev.map((a) => ({ ...a, isDefault: a.addressId === addressId }))
       );
-      toast.success("Thành công", "Đã đặt địa chỉ mặc định");
+      toast.success("Success", "Default address set successfully");
     } catch {
-      toast.error("Lỗi", "Không đặt được địa chỉ mặc định");
+      toast.error("Error", "Unable to set default address");
     }
   };
 
@@ -1069,7 +1070,10 @@ export default function ProfilePage() {
 
   const handleReviewFilesChange = (event: ChangeEvent<HTMLInputElement>) => {
     if (existingReview) {
-      toast.error("Không thể tải tệp", "Bạn đã gửi đánh giá cho sản phẩm này.");
+      toast.error(
+        "Cannot upload files",
+        "You have already submitted a review for this product."
+      );
       event.target.value = "";
       return;
     }
@@ -1081,8 +1085,8 @@ export default function ProfilePage() {
       const isValid = file.size <= REVIEW_MAX_FILE_SIZE_MB * 1024 * 1024;
       if (!isValid) {
         toast.error(
-          "Tệp quá lớn",
-          `${file.name} vượt quá dung lượng ${REVIEW_MAX_FILE_SIZE_MB}MB`
+          "File too large",
+          `${file.name} exceeds the size limit of ${REVIEW_MAX_FILE_SIZE_MB}MB`
         );
       }
       return isValid;
@@ -1099,8 +1103,8 @@ export default function ProfilePage() {
 
       if (filesToAdd.length < validFiles.length) {
         toast.error(
-          "Quá số lượng cho phép",
-          `Chỉ có thể tải lên tối đa ${REVIEW_MAX_FILES} tệp`
+          "Too many files",
+          `You can upload up to ${REVIEW_MAX_FILES} files only`
         );
       }
 
@@ -1143,16 +1147,16 @@ export default function ProfilePage() {
               `Failed to load review for order item ${orderItemId}`,
               error
             );
-            setReviewError("Không thể tải đánh giá hiện có");
-            toast.error("Lỗi", "Không thể tải đánh giá hiện có");
+            setReviewError("Unable to load existing review");
+            toast.error("Error", "Unable to load existing review");
           }
         } else {
           console.error(
             `Failed to load review for order item ${orderItemId}`,
             error
           );
-          setReviewError("Không thể tải đánh giá hiện có");
-          toast.error("Lỗi", "Không thể tải đánh giá hiện có");
+          setReviewError("Unable to load existing review");
+          toast.error("Error", "Unable to load existing review");
         }
       } finally {
         setReviewLoading(false);
@@ -1168,7 +1172,7 @@ export default function ProfilePage() {
     }
 
     if (reviewForm.rating === 0) {
-      toast.error("Thiếu thông tin", "Vui lòng chọn số sao đánh giá");
+      toast.error("Missing information", "Please select a star rating");
       return;
     }
 
@@ -1217,8 +1221,8 @@ export default function ProfilePage() {
 
       setExistingReview(data);
       toast.success(
-        "Đánh giá đã được gửi",
-        "Cảm ơn bạn đã chia sẻ trải nghiệm sản phẩm!"
+        "Review submitted",
+        "Thank you for sharing your experience!"
       );
       setReviewSubmitting(false);
       handleCloseReviewDialog();
@@ -1227,10 +1231,10 @@ export default function ProfilePage() {
       if (axios.isAxiosError(error)) {
         const message =
           (error.response?.data as { message?: string } | undefined)?.message ||
-          "Không thể gửi đánh giá";
-        toast.error("Lỗi", message);
+          "Unable to submit review";
+        toast.error("Error", message);
       } else {
-        toast.error("Lỗi", "Không thể gửi đánh giá");
+        toast.error("Error", "Unable to submit review");
       }
       console.error("Failed to submit review", error);
     }
@@ -1247,10 +1251,10 @@ export default function ProfilePage() {
     label: string;
     icon: LucideIcon;
   }> = [
-    { id: "profile", label: "Hồ Sơ", icon: User },
-    { id: "addresses", label: "Địa Chỉ", icon: MapPin },
-    { id: "orders", label: "Đơn Hàng", icon: Package },
-    { id: "settings", label: "Cài Đặt", icon: Settings },
+    { id: "profile", label: "Profile", icon: User },
+    { id: "addresses", label: "Addresses", icon: MapPin },
+    { id: "orders", label: "Orders", icon: Package },
+    { id: "settings", label: "Settings", icon: Settings },
   ];
 
   return (
@@ -1410,7 +1414,7 @@ export default function ProfilePage() {
                     className="w-full text-red-600 border-red-200 hover:bg-red-50 bg-transparent"
                   >
                     <LogOut className="w-4 h-4 mr-2" />
-                    Đăng Xuất
+                    Log Out
                   </Button>
                 </div>
               </CardContent>
@@ -1433,11 +1437,11 @@ export default function ProfilePage() {
                     variant="outline"
                     onClick={() => {
                       if (!isEditing) {
-                        // Bắt đầu Edit: copy formData -> draft
+                        // Start edit: copy formData -> draft
                         setDraft(formData);
                         setIsEditing(true);
                       } else {
-                        // Cancel từ nút trên header: bỏ thay đổi
+                        // Cancel from header button: discard changes
                         setDraft(formData);
                         setIsEditing(false);
                       }
@@ -1497,7 +1501,7 @@ export default function ProfilePage() {
                           disabled={!isEditing}
                         />
                       ) : (
-                        // Khi không edit: hiển thị dd/mm/yyyy
+                        // When not editing: show dd/mm/yyyy
                         <Input
                           id="dateOfBirth"
                           name="dateOfBirth"
@@ -1548,7 +1552,7 @@ export default function ProfilePage() {
                       <Button
                         onClick={handleSaveProfile}
                         className="bg-black text-white hover:bg-gray-800"
-                        disabled={!hasChanges} // không cho save nếu không đổi gì
+                        disabled={!hasChanges} // do not allow save if nothing changed
                       >
                         Save Changes
                       </Button>
@@ -1556,7 +1560,7 @@ export default function ProfilePage() {
                         variant="outline"
                         // onClick={() => setIsEditing(false)}
                         onClick={() => {
-                          // Cancel dưới form: bỏ thay đổi, khôi phục draft từ formData
+                          // Cancel below form: discard changes and restore draft from formData
                           setDraft(formData);
                           setIsEditing(false);
                         }}
@@ -1602,9 +1606,9 @@ export default function ProfilePage() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
-                    <CardTitle>Địa chỉ giao hàng</CardTitle>
+                    <CardTitle>Shipping Addresses</CardTitle>
                     <CardDescription>
-                      Quản lý địa chỉ giao hàng của bạn
+                      Manage your shipping addresses
                     </CardDescription>
                   </div>
                   <Button
@@ -1612,7 +1616,7 @@ export default function ProfilePage() {
                     className="bg-black text-white hover:bg-gray-800"
                   >
                     <Plus className="w-4 h-4 mr-2" />
-                    Thêm địa chỉ
+                    Add Address
                   </Button>
                 </CardHeader>
                 <CardContent>
@@ -1630,7 +1634,7 @@ export default function ProfilePage() {
                               </h3>
                               {address.isDefault && (
                                 <Badge className="bg-amber-100 text-amber-800">
-                                  Mặc định
+                                  Default
                                 </Badge>
                               )}
                             </div>
@@ -1638,7 +1642,7 @@ export default function ProfilePage() {
                             <div className="space-y-2 text-gray-600">
                               <div className="flex items-start gap-2">
                                 <span className="font-medium text-gray-900 min-w-[100px]">
-                                  Người nhận:
+                                  Recipient:
                                 </span>
                                 <span>{address.recipient}</span>
                               </div>
@@ -1646,7 +1650,7 @@ export default function ProfilePage() {
                               {address.phone && (
                                 <div className="flex items-start gap-2">
                                   <span className="font-medium text-gray-900 min-w-[100px]">
-                                    Điện thoại:
+                                    Phone:
                                   </span>
                                   <span>{address.phone}</span>
                                 </div>
@@ -1655,7 +1659,7 @@ export default function ProfilePage() {
                               {address.company && (
                                 <div className="flex items-start gap-2">
                                   <span className="font-medium text-gray-900 min-w-[100px]">
-                                    Công ty:
+                                    Company:
                                   </span>
                                   <span>{address.company}</span>
                                 </div>
@@ -1663,7 +1667,7 @@ export default function ProfilePage() {
 
                               <div className="flex items-start gap-2">
                                 <span className="font-medium text-gray-900 min-w-[100px]">
-                                  Địa chỉ:
+                                  Address:
                                 </span>
                                 <span>{formatAddress(address)}</span>
                               </div>
@@ -1671,7 +1675,7 @@ export default function ProfilePage() {
                               {address.postalCode && (
                                 <div className="flex items-start gap-2">
                                   <span className="font-medium text-gray-900 min-w-[100px]">
-                                    Mã bưu điện:
+                                    Postal code:
                                   </span>
                                   <span>{address.postalCode}</span>
                                 </div>
@@ -1680,7 +1684,7 @@ export default function ProfilePage() {
                               {address.notes && (
                                 <div className="flex items-start gap-2">
                                   <span className="font-medium text-gray-900 min-w-[100px]">
-                                    Ghi chú:
+                                    Notes:
                                   </span>
                                   <span className="italic">
                                     {address.notes}
@@ -1717,7 +1721,7 @@ export default function ProfilePage() {
                                 }
                                 className="text-amber-600 hover:text-amber-700 border-amber-200 hover:bg-amber-50 bg-transparent w-full"
                               >
-                                Mặc Định
+                                Set as Default
                               </Button>
                             )}
                           </div>
@@ -1729,14 +1733,14 @@ export default function ProfilePage() {
                       <div className="text-center py-12">
                         <MapPin className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                         <p className="text-gray-600 text-lg mb-4">
-                          Chưa có địa chỉ giao hàng nào
+                          No shipping addresses yet
                         </p>
                         <Button
                           onClick={handleAddAddress}
                           className="bg-black text-white hover:bg-gray-800"
                         >
                           <Plus className="w-4 h-4 mr-2" />
-                          Thêm địa chỉ đầu tiên
+                          Add your first address
                         </Button>
                       </div>
                     )}
@@ -1749,15 +1753,15 @@ export default function ProfilePage() {
             {activeSection === "orders" && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Lịch Sử Đơn Hàng</CardTitle>
+                  <CardTitle>Order History</CardTitle>
                   <CardDescription>
-                    Xem và theo dõi đơn hàng của bạn
+                    View and track your orders
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {ordersLoading && (
                     <div className="py-12 text-center text-sm text-gray-500">
-                      Đang tải danh sách đơn hàng...
+                      Loading order list...
                     </div>
                   )}
                   {ordersError && !ordersLoading && (
@@ -1769,13 +1773,13 @@ export default function ProfilePage() {
                         }}
                         className="bg-black text-white hover:bg-gray-800"
                       >
-                        Thử lại
+                        Try again
                       </Button>
                     </div>
                   )}
                   {!ordersLoading && !ordersError && orders.length === 0 && (
                     <div className="py-12 text-center text-sm text-gray-500">
-                      Bạn chưa có đơn hàng nào.
+                      You have no orders yet.
                     </div>
                   )}
                   {!ordersLoading && !ordersError && orders.length > 0 && (
@@ -1810,7 +1814,7 @@ export default function ProfilePage() {
                                 <div className="mb-3 flex items-center justify-between">
                                   <div className="flex items-center gap-3">
                                     <h3 className="text-sm font-semibold text-gray-900">
-                                      Đơn hàng #{order.code}
+                                      Order #{order.code}
                                     </h3>
                                     <Badge
                                       className={`${getStatusColor(
@@ -1825,7 +1829,7 @@ export default function ProfilePage() {
                                     <div className="flex items-center gap-2 text-xs text-gray-500">
                                       <CalendarDays className="h-3.5 w-3.5" />
                                       <span>
-                                        Đã đặt vào ngày{" "}
+                                        Placed on{" "}
                                         {formatOrderDate(order.placedAt)}
                                       </span>
                                     </div>
@@ -1860,7 +1864,9 @@ export default function ProfilePage() {
                                           </div>
                                           <div>
                                             {item.color}{" "}
-                                            {item.size ? ` · ${item.size}` : ""}{" "}
+                                            {item.size
+                                              ? ` · ${item.size}`
+                                              : ""}{" "}
                                             x {item.quantity}
                                           </div>
                                         </div>
@@ -1868,7 +1874,7 @@ export default function ProfilePage() {
                                     ))}
                                     <div className="ml-auto text-right">
                                       <div className="text-xs text-gray-500">
-                                        Tổng:
+                                        Total:
                                       </div>
                                       <div className="text-base font-semibold text-gray-900">
                                         {formatPrice(totals.total)}
@@ -1883,7 +1889,7 @@ export default function ProfilePage() {
                                   <div className="space-y-4">
                                     {isDetailLoading && !detail && (
                                       <div className="rounded-md border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500">
-                                        Đang tải chi tiết đơn hàng...
+                                        Loading order details...
                                       </div>
                                     )}
                                     {detailError && (
@@ -1897,7 +1903,7 @@ export default function ProfilePage() {
                                             fetchOrderDetail(order.id)
                                           }
                                         >
-                                          Thử lại
+                                          Try again
                                         </Button>
                                       </div>
                                     )}
@@ -1929,22 +1935,22 @@ export default function ProfilePage() {
                                                 <Badge className="flex items-center gap-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
                                                   <CheckCircle className="h-3.5 w-3.5" />
                                                   <span className="text-xs font-medium uppercase">
-                                                    Đã Đánh Giá
+                                                    Reviewed
                                                   </span>
                                                 </Badge>
                                               )}
                                             </div>
                                             <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-500">
                                               {item.color && (
-                                                <span>Màu: {item.color}</span>
+                                                <span>Color: {item.color}</span>
                                               )}
                                               {item.size && (
                                                 <span>
-                                                  Kích Cỡ: {item.size}
+                                                  Size: {item.size}
                                                 </span>
                                               )}
                                               <span>
-                                                Số Lượng: {item.quantity}
+                                                Quantity: {item.quantity}
                                               </span>
                                             </div>
                                           </div>
@@ -1974,7 +1980,7 @@ export default function ProfilePage() {
                                                   fill="currentColor"
                                                   strokeWidth={1.5}
                                                 />
-                                                Đánh Giá
+                                                Review
                                               </Button>
                                             )}
                                           </div>
@@ -1986,7 +1992,7 @@ export default function ProfilePage() {
                                       <div className="rounded-lg border border-gray-200 bg-white p-6">
                                         <h4 className="mb-3 flex items-center gap-2 text-base font-semibold text-gray-900">
                                           <MapPin className="h-5 w-5 text-gray-600" />
-                                          Địa Chỉ Giao Hàng
+                                          Shipping Address
                                         </h4>
                                         {shippingAddress ? (
                                           <div className="space-y-1 text-sm text-gray-700">
@@ -2003,33 +2009,34 @@ export default function ProfilePage() {
                                         ) : (
                                           <p className="text-sm text-gray-500">
                                             {isDetailLoading
-                                              ? "Đang tải địa chỉ giao hàng..."
-                                              : "Không có thông tin địa chỉ giao hàng"}
+                                              ? "Loading shipping address..."
+                                              : "No shipping address information"}
                                           </p>
                                         )}
                                       </div>
 
                                       <div className="rounded-lg border border-gray-200 bg-white p-6">
                                         <h4 className="mb-3 text-base font-semibold text-gray-900">
-                                          Tóm Tắt Đơn Hàng
+                                          Order Summary
                                         </h4>
                                         <div className="space-y-2 text-sm text-gray-700">
                                           <div className="flex justify-between">
-                                            <span>Tạm Tính</span>
+                                            <span>Subtotal</span>
                                             <span>
                                               {formatPrice(totals.subtotal)}
                                             </span>
                                           </div>
                                           {totals.discount > 0 && (
                                             <div className="flex justify-between text-red-600">
-                                              <span>Giảm Giá</span>
+                                              <span>Discount</span>
                                               <span>
-                                                -{formatPrice(totals.discount)}
+                                                -
+                                                {formatPrice(totals.discount)}
                                               </span>
                                             </div>
                                           )}
                                           <div className="flex justify-between">
-                                            <span>Vận Chuyển</span>
+                                            <span>Shipping</span>
                                             <span className="font-medium">
                                               {shippingDisplay}
                                             </span>
@@ -2037,7 +2044,7 @@ export default function ProfilePage() {
                                           {typeof totals.tax === "number" &&
                                             totals.tax > 0 && (
                                               <div className="flex justify-between">
-                                                <span>Thuế</span>
+                                                <span>Tax</span>
                                                 <span>
                                                   {formatPrice(totals.tax)}
                                                 </span>
@@ -2045,7 +2052,7 @@ export default function ProfilePage() {
                                             )}
                                           <hr className="my-3 border-gray-200" />
                                           <div className="flex justify-between text-base font-semibold text-gray-900">
-                                            <span>Tổng Cộng</span>
+                                            <span>Total</span>
                                             <span>
                                               {formatPrice(totals.total)}
                                             </span>
@@ -2062,15 +2069,17 @@ export default function ProfilePage() {
                                           variant="outline"
                                           size="sm"
                                           className="border-red-200 text-red-600 hover:bg-red-50"
-                                          onClick={() => openCancelDialog(order.id)}
+                                          onClick={() =>
+                                            openCancelDialog(order.id)
+                                          }
                                           disabled={
                                             cancelingOrderId === order.id ||
                                             reorderingOrderId === order.id
                                           }
                                         >
                                           {cancelingOrderId === order.id
-                                            ? "Đang hủy..."
-                                            : "Hủy Đơn"}
+                                            ? "Cancelling..."
+                                            : "Cancel Order"}
                                         </Button>
                                       )}
                                       {order.canReorder && (
@@ -2087,8 +2096,8 @@ export default function ProfilePage() {
                                           }
                                         >
                                           {reorderingOrderId === order.id
-                                            ? "Đang xử lý..."
-                                            : "Mua Lại"}
+                                            ? "Processing..."
+                                            : "Reorder"}
                                         </Button>
                                       )}
                                     </div>
@@ -2096,7 +2105,7 @@ export default function ProfilePage() {
                                     {deliveredAt && (
                                       <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-700">
                                         <CheckCircle className="h-4 w-4" />
-                                        Đã giao vào ngày{" "}
+                                        Delivered on{" "}
                                         {formatOrderDate(deliveredAt)}
                                       </div>
                                     )}
@@ -2162,7 +2171,10 @@ export default function ProfilePage() {
                                   buildOrdersPageHref(
                                     Math.min(
                                       ordersPagination.page + 1,
-                                      Math.max(ordersPagination.totalPages, 1)
+                                      Math.max(
+                                        ordersPagination.totalPages,
+                                        1
+                                      )
                                     )
                                   )
                                 }
