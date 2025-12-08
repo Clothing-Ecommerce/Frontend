@@ -401,8 +401,8 @@ export default function ProductDetailsPage() {
           setUserReview(null);
         } else {
           console.error("Error fetching user review:", error);
-          setUserReviewError("Không thể tải đánh giá của bạn.");
-          toast.error("Lỗi", "Không thể tải đánh giá của bạn.");
+          setUserReviewError("Your review could not be loaded.");
+          toast.error("Error", "Your review could not be loaded.");
         }
       })
       .finally(() => {
@@ -570,8 +570,8 @@ export default function ProductDetailsPage() {
       const isValid = file.size <= REVIEW_MAX_FILE_SIZE_MB * 1024 * 1024;
       if (!isValid) {
         toast.error(
-          "Tệp quá lớn",
-          `${file.name} vượt quá dung lượng ${REVIEW_MAX_FILE_SIZE_MB}MB`
+          "File too large",
+          `${file.name} exceeds ${REVIEW_MAX_FILE_SIZE_MB}MB`
         );
       }
       return isValid;
@@ -588,8 +588,8 @@ export default function ProductDetailsPage() {
 
       if (filesToAdd.length < validFiles.length) {
         toast.error(
-          "Quá số lượng cho phép",
-          `Chỉ có thể tải lên tối đa ${REVIEW_MAX_FILES} tệp`
+          "Over the allowed quantity",
+          `Only a maximum of ${REVIEW_MAX_FILES} files can be uploaded`
         );
       }
 
@@ -616,7 +616,7 @@ export default function ProductDetailsPage() {
     }
 
     if (editReviewForm.rating === 0) {
-      toast.error("Thiếu thông tin", "Vui lòng chọn số sao đánh giá");
+      toast.error("Missing information", "Please select a star rating");
       return;
     }
 
@@ -657,16 +657,16 @@ export default function ProductDetailsPage() {
         prev && prev.id === updatedReview.id ? { ...prev, ...updatedReview } : prev
       );
 
-      toast.success("✅", "Cập nhật đánh giá thành công");
+      toast.success("✅", "Update review successful");
       handleCloseEditDialog();
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const message =
           (error.response?.data as { message?: string } | undefined)?.message ||
-          "Không thể cập nhật đánh giá";
-        toast.error("Lỗi", message);
+          "Unable to update review";
+        toast.error("Error", message);
       } else {
-        toast.error("Lỗi", "Không thể cập nhật đánh giá");
+        toast.error("Error", "Unable to update review");
       }
       console.error("Failed to update review", error);
     } finally {
@@ -702,16 +702,16 @@ export default function ProductDetailsPage() {
       setUserReview((prev) =>
         prev && prev.id === reviewToDelete.id ? null : prev
       );
-      toast.success("✅", "Đã xóa đánh giá thành công");
+      toast.success("✅", "Review deleted successfully");
       handleCloseDeleteDialog();
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const message =
           (error.response?.data as { message?: string } | undefined)?.message ||
-          "Không thể xóa đánh giá";
-        toast.error("Lỗi", message);
+          "Cannot delete review";
+        toast.error("Error", message);
       } else {
-        toast.error("Lỗi", "Không thể xóa đánh giá");
+        toast.error("Error", "Cannot delete review");
       }
       console.error("Failed to delete review", error);
     } finally {
@@ -728,8 +728,8 @@ export default function ProductDetailsPage() {
     if (!productId) return;
     if (!isAuthenticated) {
       toast.error(
-        "Bạn chưa đăng nhập",
-        "Hãy đăng nhập để thêm sản phẩm vào danh sách yêu thích."
+        "You are not logged in",
+        "Please log in to add products to your wishlist."
       );
       return;
     }
@@ -740,30 +740,30 @@ export default function ProductDetailsPage() {
         await api.delete(`/wishlist/${productId}`);
         setIsWishlisted(false);
         toast.success(
-          "Đã xoá khỏi wishlist",
-          "Sản phẩm đã được xoá khỏi danh sách yêu thích của bạn."
+          "Removed from wishlist",
+          "The product has been removed from your wishlist."
         );
       } else {
         await api.post<WishlistMutationResponse>("/wishlist", { productId });
         setIsWishlisted(true);
         toast.success(
-          "Đã thêm vào wishlist",
-          "Sản phẩm đã được thêm vào danh sách yêu thích của bạn."
+          "Added to wishlist",
+          "The product has been added to your wishlist."
         );
       }
       void refreshWishlistCount();
     } catch (error) {
       console.error("Failed to toggle wishlist", error);
       let message = isWishlisted
-        ? "Không thể xoá sản phẩm khỏi wishlist."
-        : "Không thể thêm sản phẩm vào wishlist.";
+        ? "Cannot remove product from wishlist."
+        : "Cannot add product to wishlist.";
       if (axios.isAxiosError(error)) {
         const responseMessage = error.response?.data?.message;
         if (typeof responseMessage === "string" && responseMessage.trim()) {
           message = responseMessage;
         }
       }
-      toast.error("Thao tác không thành công", message);
+      toast.error("Operation failed", message);
     } finally {
       setIsWishlistActionLoading(false);
     }
@@ -1004,8 +1004,8 @@ export default function ProductDetailsPage() {
                   aria-pressed={isWishlisted}
                   aria-label={
                     isWishlisted
-                      ? "Xoá khỏi wishlist"
-                      : "Thêm vào wishlist"
+                      ? "Remove from wishlist"
+                      : "Add to wishlist"
                   }
                 >
                   {isWishlistActionLoading ? (
@@ -1113,7 +1113,7 @@ export default function ProductDetailsPage() {
             <TabsContent value="reviews" className="mt-6">
               {isLoadingUserReview && (
                 <p className="mb-4 text-sm text-gray-500">
-                  Đang tải đánh giá của bạn...
+                  Loading your review...
                 </p>
               )}
               {userReviewError && (
@@ -1295,9 +1295,9 @@ export default function ProductDetailsPage() {
       >
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Xóa đánh giá</DialogTitle>
+            <DialogTitle>Delete Review</DialogTitle>
             <DialogDescription>
-              Bạn có chắc chắn muốn xóa đánh giá này không? Hành động này không thể hoàn tác.
+              Are you sure you want to delete this review? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -1307,7 +1307,7 @@ export default function ProductDetailsPage() {
               onClick={handleCloseDeleteDialog}
               disabled={isDeletingReview}
             >
-              Hủy
+              Cancel
             </Button>
             <Button
               type="button"
@@ -1315,7 +1315,7 @@ export default function ProductDetailsPage() {
               onClick={handleDeleteReview}
               disabled={isDeletingReview}
             >
-              {isDeletingReview ? "Đang xóa..." : "Xóa"}
+              {isDeletingReview ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
