@@ -12,7 +12,7 @@ export default function Footer() {
               <div className="w-8 h-8 bg-amber-600 rounded-full flex items-center justify-center">
                 <span className="text-white font-bold text-lg">G</span>
               </div>
-              <span className="text-xl font-bold">GENTLEMAN JONES</span>
+              <span className="text-xl font-bold">FASHION STORE</span>
             </div>
             <p className="text-gray-400 mb-4">
               Your premier destination for sophisticated men's fashion and timeless style.
@@ -59,7 +59,7 @@ export default function Footer() {
 
         {/* Bottom Footer */}
         <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-gray-400 text-sm">© 2024 Gentleman Jones. All rights reserved.</p>
+          <p className="text-gray-400 text-sm">© 2025 Fashion Store. All rights reserved.</p>
           <div className="flex items-center gap-6 mt-4 md:mt-0">
             <Link to="#" className="text-gray-400 hover:text-white text-sm">Privacy Policy</Link>
             <Link to="#" className="text-gray-400 hover:text-white text-sm">Terms of Service</Link>
