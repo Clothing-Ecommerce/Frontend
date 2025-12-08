@@ -114,9 +114,9 @@ export default function CategoryTreeFilter({
     onChange(Array.from(next));
   };
 
-  if (loading) return <div className="text-sm text-gray-500">Đang tải {root === "men" ? "Nam" : "Nữ"}...</div>;
-  if (error) return <div className="text-sm text-red-600">Lỗi: {error}</div>;
-  if (!tree) return <div className="text-sm text-gray-500">Không có dữ liệu</div>;
+  if (loading) return <div className="text-sm text-gray-500">Loading {root === "men" ? "Nam" : "Nữ"}...</div>;
+  if (error) return <div className="text-sm text-red-600">Error: {error}</div>;
+  if (!tree) return <div className="text-sm text-gray-500">No data</div>;
 
   return (
     <div className={className}>
