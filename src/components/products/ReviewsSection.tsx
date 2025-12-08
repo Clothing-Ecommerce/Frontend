@@ -157,7 +157,7 @@ export const ReviewsSection = ({
           <div className="flex flex-col gap-8 lg:flex-row">
             <div className="lg:w-1/4">
               <p className="text-sm font-medium text-gray-500">
-                Điểm trung bình
+                Average rating
               </p>
               <div className="mt-3 flex items-end gap-2">
                 <span className="text-4xl font-semibold text-gray-900">
@@ -169,7 +169,7 @@ export const ReviewsSection = ({
                 <RatingStars rating={averageRating} />
               </div>
               <p className="mt-4 text-sm text-gray-500">
-                Dựa trên {totalReviews} đánh giá từ khách hàng thực tế.
+                Based on {totalReviews} reviews from real customers.
               </p>
             </div>
             <div className="lg:w-2/4 space-y-3">
@@ -199,14 +199,13 @@ export const ReviewsSection = ({
             <div className="lg:w-1/4">
               <div className="rounded-2xl bg-blue-50 p-6 text-center">
                 <h4 className="text-base font-semibold text-blue-700">
-                  Chia sẻ trải nghiệm
+                  Share your experience
                 </h4>
                 <p className="mt-3 text-sm text-blue-600">
-                  Giúp những người mua khác bằng cách để lại bình luận về sản
-                  phẩm.
+                  Help other shoppers by leaving a review about the product.
                 </p>
                 <Button className="mt-6 w-full" type="button">
-                  Viết đánh giá
+                  Write a review
                 </Button>
               </div>
             </div>
@@ -218,13 +217,13 @@ export const ReviewsSection = ({
             </div>
             <div className="space-y-2">
               <h3 className="text-lg font-semibold text-gray-900">
-                Chưa có bình luận nào
+                No reviews yet
               </h3>
               <p className="text-sm text-gray-500">
-                Hãy là người đầu tiên chia sẻ cảm nhận của bạn về sản phẩm này.
+                Be the first to share your thoughts about this product.
               </p>
             </div>
-            <Button type="button">Viết đánh giá ngay</Button>
+            <Button type="button">Write a review now</Button>
           </div>
         )}
       </div>
@@ -234,10 +233,10 @@ export const ReviewsSection = ({
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h3 className="text-lg font-semibold text-gray-900">
-                Bình luận từ khách hàng
+                Customer reviews
               </h3>
               <p className="text-sm text-gray-500">
-                Xem những chia sẻ thực tế sau khi trải nghiệm sản phẩm.
+                See real feedback from customers after using the product.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -246,7 +245,7 @@ export const ReviewsSection = ({
                 variant={selectedRating === null ? "default" : "outline"}
                 onClick={() => setSelectedRating(null)}
               >
-                Tất cả ({totalReviews})
+                All ({totalReviews})
               </Button>
               {ratingFilters.map((rating) => {
                 const count = ratingCounts[rating] ?? 0;
@@ -265,7 +264,7 @@ export const ReviewsSection = ({
                       count === 0 ? "pointer-events-none opacity-50" : undefined
                     }
                   >
-                    {rating} sao ({count})
+                    {rating} stars ({count})
                   </Button>
                 );
               })}
@@ -282,7 +281,7 @@ export const ReviewsSection = ({
                   ? review.user.username.trim()
                   : "";
                 const reviewerName =
-                  username.length > 0 ? username : "Khách hàng";
+                  username.length > 0 ? username : "Customer";
                 const avatarUrl = review.user?.avatar ?? null;
                 const isOwnReview =
                   currentUserId != null &&
@@ -305,7 +304,7 @@ export const ReviewsSection = ({
                 }
                 const variantLabel =
                   variantLabelParts.length > 0
-                    ? `Phân loại: ${variantLabelParts.join(" / ")}`
+                    ? `Variant: ${variantLabelParts.join(" / ")}`
                     : null;
                 return (
                   <article
@@ -321,7 +320,7 @@ export const ReviewsSection = ({
                         {avatarUrl ? (
                           <img
                             src={avatarUrl}
-                            alt={`Ảnh đại diện của ${reviewerName}`}
+                            alt={`Avatar of ${reviewerName}`}
                             className="h-full w-full object-cover"
                             loading="lazy"
                           />
@@ -340,12 +339,12 @@ export const ReviewsSection = ({
                               variant="default"
                               className="rounded-full bg-amber-100 text-amber-700"
                             >
-                              Đánh giá của bạn
+                              Your review
                             </Badge>
                           )}
                           {review.isPublished === false && (
                             <Badge variant="outline" className="rounded-full">
-                              Chờ duyệt
+                              Pending approval
                             </Badge>
                           )}
                         </div>
@@ -363,11 +362,11 @@ export const ReviewsSection = ({
                         <div className="flex flex-wrap items-center gap-3 text-xs text-gray-500">
                           {createdAtLabel && (
                             <span>
-                              Đăng ngày {createdAtLabel}
+                              Posted on {createdAtLabel}
                               {hasEditedDate && updatedAtLabel && (
                                 <>
                                   {" "}
-                                  • Chỉnh sửa ngày {updatedAtLabel}
+                                  • Edited on {updatedAtLabel}
                                 </>
                               )}
                             </span>
@@ -380,7 +379,7 @@ export const ReviewsSection = ({
                             type="button"
                             onClick={() => onEditReview?.(review)}
                             className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition hover:border-amber-200 hover:text-amber-600"
-                            aria-label="Chỉnh sửa đánh giá"
+                            aria-label="Edit review"
                           >
                             <Pencil className="h-4 w-4" />
                           </button>
@@ -388,7 +387,7 @@ export const ReviewsSection = ({
                             type="button"
                             onClick={() => onDeleteReview?.(review)}
                             className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 bg-white text-gray-500 transition hover:border-red-200 hover:text-red-600"
-                            aria-label="Xóa đánh giá"
+                            aria-label="Delete review"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -401,7 +400,7 @@ export const ReviewsSection = ({
             </div>
           ) : (
             <div className="rounded-2xl border border-dashed bg-gray-50 p-10 text-center text-sm text-gray-500">
-              Chưa có bình luận {selectedRating} sao.
+              There are no {selectedRating}-star reviews yet.
             </div>
           )}
         </div>
