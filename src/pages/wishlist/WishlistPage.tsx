@@ -48,14 +48,14 @@ export default function WishlistPage() {
         const message =
           typeof err.response?.data?.message === "string"
             ? err.response?.data?.message
-            : "Không thể tải wishlist.";
+            : "Unable to load wishlist.";
         if (status === 401) {
-          setError("Bạn cần đăng nhập để xem wishlist của mình.");
+          setError("You need to log in to view your wishlist.");
         } else {
           setError(message);
         }
       } else {
-        setError("Không thể tải wishlist.");
+        setError("Unable to load wishlist.");
       }
       setItems([]);
       setWishlistCount(0);
@@ -83,18 +83,18 @@ export default function WishlistPage() {
           setWishlistCount(next.length);
           return next;
         });
-        toast.success("Đã xoá khỏi wishlist", "Sản phẩm đã được xoá khỏi danh sách yêu thích của bạn.");
+        toast.success("Removed from wishlist", "The product has been removed from your wishlist.");
         void refreshWishlistCount();
       } catch (err) {
         console.error("Failed to remove wishlist item", err);
-        let message = "Không thể xoá sản phẩm khỏi wishlist.";
+        let message = "Cannot remove product from wishlist.";
         if (axios.isAxiosError(err)) {
           message =
             typeof err.response?.data?.message === "string"
               ? err.response.data.message
               : message;
         }
-        toast.error("Thao tác không thành công", message);
+        toast.error("Operation failed", message);
       }
     },
     [refreshWishlistCount, setWishlistCount, toast]
@@ -104,12 +104,12 @@ export default function WishlistPage() {
 
   const introSubtitle = useMemo(() => {
     if (!isAuthenticated) {
-      return "Đăng nhập để xem và quản lý các sản phẩm yêu thích của bạn.";
+      return "Log in to view and manage your favorite products.";
     }
     if (!hasItems) {
-      return "Danh sách yêu thích của bạn đang trống. Hãy khám phá và thêm những sản phẩm bạn yêu thích!";
+      return "Your wishlist is empty. Explore and add your favorite products!";
     }
-    return `Bạn có ${wishlistCount} sản phẩm trong danh sách yêu thích.`;
+    return `You have ${wishlistCount} products in your wishlist.`;
   }, [hasItems, isAuthenticated, wishlistCount]);
 
   return (
@@ -121,7 +121,7 @@ export default function WishlistPage() {
             <div>
               <h1 className="text-3xl font-bold text-gray-900 flex items-center justify-center sm:justify-start gap-3">
                 <Heart className="w-8 h-8 text-amber-500" fill="currentColor" />
-                Wishlist của bạn
+                Your Wishlist
               </h1>
               <p className="text-gray-600 mt-2 max-w-2xl">{introSubtitle}</p>
             </div>
@@ -132,7 +132,7 @@ export default function WishlistPage() {
                 onClick={() => navigate("/products/all")}
               >
                 <ShoppingBag className="w-4 h-4" />
-                Tiếp tục mua sắm
+                Continue shopping
               </Button>
             )}
           </div>
@@ -142,14 +142,14 @@ export default function WishlistPage() {
           <div className="bg-white border border-amber-100 rounded-2xl shadow-sm p-10 text-center">
             <div className="max-w-md mx-auto space-y-4">
               <Heart className="w-12 h-12 text-amber-400 mx-auto" />
-              <h2 className="text-2xl font-semibold text-gray-900">Bạn chưa đăng nhập</h2>
+              <h2 className="text-2xl font-semibold text-gray-900">You are not logged in</h2>
               <p className="text-gray-600">
-                Hãy đăng nhập để lưu lại những sản phẩm bạn yêu thích và truy cập chúng bất cứ lúc nào.
+                Sign in to save your favorite products and access them anytime.
               </p>
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Button onClick={() => navigate("/auth/login")}>Đăng nhập</Button>
                 <Button variant="outline" onClick={() => navigate("/auth/register")}>
-                  Đăng ký tài khoản
+                  Register an account
                 </Button>
               </div>
             </div>
@@ -157,7 +157,7 @@ export default function WishlistPage() {
         ) : loading ? (
           <div className="flex flex-col items-center justify-center py-24 text-gray-600">
             <Loader2 className="w-8 h-8 animate-spin mb-4 text-amber-500" />
-            <p>Đang tải danh sách yêu thích của bạn...</p>
+            <p>Loading your wishlist...</p>
           </div>
         ) : error ? (
           <div className="bg-red-50 border border-red-200 text-red-700 rounded-2xl p-6 text-center">
@@ -168,12 +168,11 @@ export default function WishlistPage() {
             <Package className="w-12 h-12 text-amber-400 mx-auto mb-4" />
             <h2 className="text-2xl font-semibold text-gray-900">Wishlist trống</h2>
             <p className="text-gray-600 max-w-xl mx-auto">
-              Bạn chưa thêm sản phẩm nào vào danh sách yêu thích. Khám phá cửa hàng của chúng tôi và lưu lại những sản phẩm bạn
-              muốn theo dõi.
+              You have not added any products to your wishlist. Explore our store and save the products you want to follow.
             </p>
             <Button className="mt-6" onClick={() => navigate("/products/all")}>
               <ShoppingBag className="w-4 h-4" />
-              Khám phá sản phẩm
+              Explore products
             </Button>
           </div>
         ) : (
@@ -220,12 +219,12 @@ export default function WishlistPage() {
                     ),
                     topLeft: !product.inStock ? (
                       <span className="rounded-full bg-gray-900/80 px-3 py-1 text-xs font-medium text-white">
-                        Tạm hết hàng
+                        Temporarily out of stock
                       </span>
                     ) : undefined,
                     bottomLeft: addedDate ? (
                       <span className="rounded-full bg-white/90 px-3 py-1 text-xs font-medium text-gray-600">
-                        Đã thêm: {addedDate}
+                        Added: {addedDate}
                       </span>
                     ) : undefined,
                   }}
