@@ -102,7 +102,7 @@ export default function ProductCard({
             : "bg-rose-50 text-rose-700 border border-rose-100"
         )}
       >
-        {inStock ? "Còn hàng" : "Hết hàng"}
+        {inStock ? "In Stock" : "Out of Stock"}
       </Badge>
     ) : null;
 
