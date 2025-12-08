@@ -75,7 +75,7 @@ export default function PaymentSuccessPage() {
         if (!cancelled) {
           setErrorMessage(
             error?.response?.data?.message ||
-              "Không thể đồng bộ trạng thái thanh toán. Vui lòng kiểm tra lại sau."
+              "Unable to sync payment status. Please check again later."
           );
           setSyncState("error");
         }
@@ -91,8 +91,8 @@ export default function PaymentSuccessPage() {
               ? null
               : prev ||
                 (data?.resultMessage
-                  ? `Trạng thái thanh toán: ${data.resultMessage}`
-                  : "Thanh toán chưa được xác nhận thành công.")
+                  ? `Payment status: ${data.resultMessage}`
+                  : "Payment has not been successfully confirmed.")
           );
         }
       } catch (error: any) {
@@ -100,7 +100,7 @@ export default function PaymentSuccessPage() {
         if (!cancelled) {
           setErrorMessage(
             error?.response?.data?.message ||
-              "Không thể tải thông tin thanh toán. Vui lòng thử lại."
+              "Unable to load payment information. Please try again."
           );
           setSyncState((state) => (state === "success" ? state : "error"));
         }
@@ -121,13 +121,13 @@ export default function PaymentSuccessPage() {
     if (!paymentDetail) return null;
 
     const statusTextMap: Record<string, string> = {
-      PENDING: "Đang xử lý",
-      SUCCEEDED: "Thành công",
-      SUCCESS: "Thành công",
-      PAID: "Đã thanh toán",
-      AUTHORIZED: "Đã ủy quyền",
-      FAILED: "Thất bại",
-      CANCELLED: "Đã hủy",
+      PENDING: "Processing",
+      SUCCEEDED: "Successful",
+      SUCCESS: "Successful",
+      PAID: "Paid",
+      AUTHORIZED: "Authorized",
+      FAILED: "Failed",
+      CANCELLED: "Cancelled",
     };
 
     const normalizedStatus = paymentDetail.status
@@ -144,7 +144,7 @@ export default function PaymentSuccessPage() {
 
     return (
       <div className={`text-sm font-medium ${colorClass}`}>
-        Trạng thái: {statusLabel}
+        Status: {statusLabel}
       </div>
     );
   }, [paymentDetail]);
@@ -169,10 +169,10 @@ export default function PaymentSuccessPage() {
               {/* Success Message */}
               <div className="text-center mb-8">
                 <h1 className="text-2xl font-bold text-gray-900 mb-3">
-                  Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi!
+                  Thank you for using our service!
                 </h1>
                 <p className="text-gray-600">
-                  Chúng tôi đang xác nhận trạng thái giao dịch và sẽ xử lý đơn hàng trong giây lát.
+                  We are verifying your transaction status and will process your order shortly.
                 </p>
               </div>
 
@@ -183,10 +183,10 @@ export default function PaymentSuccessPage() {
                     <div className="rounded-lg border border-indigo-100 bg-indigo-50 px-4 py-3 text-indigo-800">
                       <div className="flex items-center gap-2 font-semibold text-indigo-900">
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Đang xác nhận thanh toán
+                        Verifying payment
                       </div>
                       <p className="mt-2 text-sm text-indigo-700">
-                        Vui lòng chờ trong giây lát trong khi chúng tôi đồng bộ kết quả từ MoMo.
+                        Please wait a moment while we synchronize the result from MoMo.
                       </p>
                     </div>
                   )}
@@ -195,16 +195,16 @@ export default function PaymentSuccessPage() {
                     <div className="rounded-lg border border-green-100 bg-green-50 px-4 py-3 text-green-900">
                       <div className="flex items-center gap-2 font-semibold text-green-900">
                         <ShieldCheck className="h-4 w-4" />
-                        Thanh toán đã được xác nhận
+                        Payment has been confirmed
                       </div>
                       <div className="mt-2 text-sm text-green-800">
-                        Đơn hàng #{paymentDetail.orderId} đã được ghi nhận thanh toán.
+                        Order #{paymentDetail.orderId} has been recorded as paid.
                         <div className="mt-3 space-y-1">
-                          <div>Số tiền: {paymentDetail.amount}</div>
+                          <div>Amount: {paymentDetail.amount}</div>
                           {statusBadge}
                           {paymentDetail.paidAt && (
                             <div>
-                              Thời gian: {new Date(paymentDetail.paidAt).toLocaleString()}
+                              Time: {new Date(paymentDetail.paidAt).toLocaleString()}
                             </div>
                           )}
                         </div>
@@ -216,19 +216,19 @@ export default function PaymentSuccessPage() {
                     <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-900">
                       <div className="flex items-center gap-2 font-semibold text-red-900">
                         <TriangleAlert className="h-4 w-4" />
-                        Không thể xác nhận thanh toán
+                        Unable to confirm payment
                       </div>
                       <div className="mt-2 text-sm text-red-800">
                         {errorMessage}
                         {paymentDetail && (
                           <div className="mt-3 space-y-1 text-sm">
-                            <div>Đơn hàng: #{paymentDetail.orderId}</div>
+                            <div>Order: #{paymentDetail.orderId}</div>
                             {statusBadge}
                             {typeof paymentDetail.resultCode === "number" && (
-                              <div>Mã kết quả: {paymentDetail.resultCode}</div>
+                              <div>Result code: {paymentDetail.resultCode}</div>
                             )}
                             {paymentDetail.resultMessage && (
-                              <div>Thông báo: {paymentDetail.resultMessage}</div>
+                              <div>Message: {paymentDetail.resultMessage}</div>
                             )}
                           </div>
                         )}
