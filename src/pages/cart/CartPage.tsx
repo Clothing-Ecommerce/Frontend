@@ -41,7 +41,7 @@ export default function CartPage() {
   const [summary, setSummary] = useState<CartSummary | null>(null);
   const { setCartQuantity } = useCartCount();
 
-  // // Lưu appliedPromo từ server (giúp hiển thị "FREE (promo)" nếu mã có freeship)
+  // // Save appliedPromo from server (helps display "FREE (promo)" if the code has free shipping)
   // const [appliedPromo, setAppliedPromo] = useState<CartResponse["appliedPromo"] | undefined>(undefined);
 
   // ==== Edit dialog states ====
@@ -99,7 +99,7 @@ export default function CartPage() {
       });
       refreshCartFromResponse(res);
     } catch (error: any) {
-      const msg = error?.response?.data?.message || "Không thể cập nhật số lượng";
+      const msg = error?.response?.data?.message || "Unable to update quantity";
       alert(msg);
     }
   };
@@ -109,7 +109,7 @@ export default function CartPage() {
       const res = await api.delete<CartResponse>(`/cart/items/${id}`);
       refreshCartFromResponse(res);
     } catch (error: any) {
-      const msg = error?.response?.data?.message || "Không thể xoá sản phẩm";
+      const msg = error?.response?.data?.message || "Unable to remove item";
       alert(msg);
     }
   };
@@ -118,7 +118,7 @@ export default function CartPage() {
     setEditingItem(item);
     setEditFormData({ quantity: item.quantity });
 
-    // đặt lựa chọn ban đầu theo item hiện có
+    // set initial selection according to the current item
     setSelectedColor(item.color);
     setSelectedSize(item.size);
 
@@ -135,7 +135,7 @@ export default function CartPage() {
     setShowEditDialog(true);
   };
 
-  // Tạo danh sách màu/size từ variants (unique + available)
+  // Create color/size list from variants (unique + available)
   const colorOptions = useMemo(() => {
     const map = new Map<
       string,
@@ -173,14 +173,14 @@ export default function CartPage() {
 
   const handleSaveEdit = async () => {
     if (!editingItem) return;
-    // Tìm variantId tương ứng với (selectedColor, selectedSize)
+    // Find variantId corresponding to (selectedColor, selectedSize)
     const target = variants.find(
       (v) =>
         (v.colorName ?? "Default") === (selectedColor ?? "Default") &&
         (v.sizeName ?? "One Size") === (selectedSize ?? "One Size")
     );
     if (!target) {
-      alert("Phối màu/kích thước không khả dụng");
+      alert("Color/size combination is not available");
       return;
     }
 
@@ -203,7 +203,7 @@ export default function CartPage() {
         );
 
         if (!updatedItem) {
-          throw new Error("Không tìm thấy sản phẩm sau khi cập nhật biến thể");
+          throw new Error("Could not find item after updating variant");
         }
 
         currentItemId = updatedItem.id;
@@ -228,7 +228,7 @@ export default function CartPage() {
       const msg =
         error?.response?.data?.message ||
         error?.message ||
-        "Không thể lưu thay đổi";
+        "Unable to save changes";
       alert(msg);
     }
   };
@@ -244,13 +244,13 @@ export default function CartPage() {
           <div className="text-center py-16">
             <ShoppingCart className="w-24 h-24 text-gray-300 mx-auto mb-6" />
             <h1 className="text-3xl font-bold text-gray-900 mb-4">
-              Giỏ hàng trống
+              Cart is empty
             </h1>
             <p className="text-gray-600 mb-8 max-w-md mx-auto">
-              Bạn chưa thêm sản phẩm nào. Hãy tiếp tục mua sắm nhé!
+              You have not added any items yet. Continue shopping!
             </p>
             <Button asChild className="bg-black text-white hover:bg-gray-800">
-              <Link to="/products/all">Tiếp tục mua sắm</Link>
+              <Link to="/products/all">Continue shopping</Link>
             </Button>
           </div>
         ) : (
@@ -259,14 +259,14 @@ export default function CartPage() {
             <div className="lg:col-span-2">
               <div className="flex items-center justify-between mb-6">
                 <h1 className="text-3xl font-bold text-gray-900">
-                  Giỏ hàng
+                  Cart
                 </h1>
                 <Link
                   to="/products/all"
                   className="flex items-center gap-2 text-gray-600 hover:text-gray-900"
                 >
                   <ArrowLeft className="w-4 h-4" />
-                  Tiếp tục mua sắm
+                  Continue shopping
                 </Link>
               </div>
 
@@ -286,7 +286,7 @@ export default function CartPage() {
                           {!item.inStock && (
                             <div className="absolute inset-0 bg-black bg-opacity-50 rounded-md flex items-center justify-center">
                               <span className="text-white text-xs font-medium">
-                                Hết hàng
+                                Out of stock
                               </span>
                             </div>
                           )}
@@ -299,7 +299,7 @@ export default function CartPage() {
                                 {item.product.name}
                               </h3>
                               <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
-                                <span>Màu: {item.color}</span>
+                                <span>Color: {item.color}</span>
                                 <span>Size: {item.size}</span>
                               </div>
                             </div>
@@ -307,14 +307,14 @@ export default function CartPage() {
                               <button
                                 onClick={() => handleEditItem(item)}
                                 className="text-gray-400 hover:text-amber-600 p-1"
-                                title="Chỉnh sửa"
+                                title="Edit"
                               >
                                 <Edit className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => handleRemoveItem(item.id)}
                                 className="text-gray-400 hover:text-red-500 p-1"
-                                title="Xoá"
+                                title="Remove"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -334,7 +334,7 @@ export default function CartPage() {
                               {item.listPrice != null &&
                                 item.listPrice > item.unitPrice && (
                                   <Badge className="bg-green-100 text-green-800 text-xs">
-                                    Tiết kiệm{" "}
+                                    Save{" "}
                                     {formatPrice(item.listPrice - item.unitPrice)}
                                   </Badge>
                                 )}
@@ -382,7 +382,7 @@ export default function CartPage() {
                           {!item.inStock && (
                             <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md">
                               <p className="text-sm text-red-800">
-                                Sản phẩm tạm hết. Vui lòng xoá hoặc lưu để mua sau.
+                                This item is temporarily unavailable. Please remove it or save it for later.
                               </p>
                             </div>
                           )}
@@ -398,37 +398,37 @@ export default function CartPage() {
             <div className="lg:col-span-1">
               <Card className="sticky top-4">
                 <CardHeader>
-                  <CardTitle>Tóm tắt đơn hàng</CardTitle>
+                  <CardTitle>Order summary</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex justify-between">
-                    <span>Tạm tính ({itemsCount} sản phẩm)</span>
+                    <span>Subtotal ({itemsCount} items)</span>
                     <span>{formatPrice(subtotal)}</span>
                   </div>
 
                   <div className="flex justify-between">
-                    <span>Phí vận chuyển</span>
+                    <span>Shipping fee</span>
                     <span>
-                      {shipping === 0 ? "Miễn phí" : formatPrice(shipping)}
+                      {shipping === 0 ? "Free" : formatPrice(shipping)}
                     </span>
                   </div>
 
                   <div className="flex justify-between">
-                    <span>Thuế</span>
+                    <span>Tax</span>
                     <span>{formatPrice(tax)}</span>
                   </div>
 
                   <Separator />
 
                   <div className="flex justify-between text-lg font-bold">
-                    <span>Tổng cộng</span>
+                    <span>Total</span>
                     <span>{formatPrice(total)}</span>
                   </div>
 
                   <Button className="w-full bg-black text-white hover:bg-gray-800 py-3">
                     <Lock className="w-4 h-4 mr-2" />
                     <Link to="/cart/checkout">
-                      Đặt Hàng
+                      Place order
                     </Link>
                   </Button>
 
@@ -436,21 +436,21 @@ export default function CartPage() {
                   <div className="space-y-3 pt-4 border-t">
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <Shield className="w-4 h-4 text-green-600" />
-                      <span>Mã hoá SSL 256-bit</span>
+                      <span>256-bit SSL encryption</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <Truck className="w-4 h-4 text-blue-600" />
-                      <span>Miễn phí vận chuyển cho đơn đủ điều kiện</span>
+                      <span>Free shipping for eligible orders</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <RotateCcw className="w-4 h-4 text-amber-600" />
-                      <span>Đổi trả trong 30 ngày</span>
+                      <span>30-day returns</span>
                     </div>
                   </div>
 
                   {/* Payment Methods */}
                   {/* <div className="pt-4 border-t">
-                    <p className="text-sm text-gray-600 mb-2">Phương thức thanh toán:</p>
+                    <p className="text-sm text-gray-600 mb-2">Payment methods:</p>
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-6 bg-blue-600 rounded text-white text-xs flex items-center justify-center font-bold">
                         VISA
@@ -478,10 +478,10 @@ export default function CartPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Edit className="w-5 h-5" />
-                Chỉnh sửa sản phẩm
+                Edit item
               </DialogTitle>
               <DialogDescription>
-                Cập nhật tuỳ chọn cho {editingItem?.product.name}
+                Update options for {editingItem?.product.name}
               </DialogDescription>
             </DialogHeader>
 
@@ -508,7 +508,7 @@ export default function CartPage() {
 
                 {/* Color Selection */}
                 <div className="space-y-2">
-                  <Label>Màu sắc</Label>
+                  <Label>Color</Label>
                   <div className="flex gap-2">
                     {colorOptions.map((color) => (
                       <button
@@ -528,13 +528,13 @@ export default function CartPage() {
                     ))}
                   </div>
                   <p className="text-sm text-gray-600">
-                    Đã chọn: {selectedColor ?? "—"}
+                    Selected: {selectedColor ?? "—"}
                   </p>
                 </div>
 
                 {/* Size Selection */}
                 <div className="space-y-2">
-                  <Label htmlFor="edit-size">Kích thước</Label>
+                  <Label htmlFor="edit-size">Size</Label>
                   <div className="grid grid-cols-3 gap-2 max-w-[400px]">
                     {sizeOptions.map((size) => (
                       <button
@@ -559,7 +559,7 @@ export default function CartPage() {
 
                 {/* Quantity */}
                 <div className="space-y-3">
-                  <Label htmlFor="edit-quantity">Số lượng</Label>
+                  <Label htmlFor="edit-quantity">Quantity</Label>
                   <div className="flex flex-col items-center gap-2">
                     <div className="flex items-center justify-center border border-gray-300 rounded-md">
                       <button
@@ -594,7 +594,7 @@ export default function CartPage() {
                       </button>
                     </div>
                     <span className="text-xs text-gray-500">
-                      Tối đa: {editingItem.maxQuantity} sản phẩm
+                      Maximum: {editingItem.maxQuantity} items
                     </span>
                   </div>
                 </div>
@@ -606,13 +606,13 @@ export default function CartPage() {
                     onClick={() => setShowEditDialog(false)}
                     className="flex-1 bg-transparent"
                   >
-                    Huỷ
+                    Cancel
                   </Button>
                   <Button
                     onClick={handleSaveEdit}
                     className="flex-1 bg-black text-white hover:bg-gray-800"
                   >
-                    Lưu thay đổi
+                    Save changes
                   </Button>
                 </div>
               </div>
