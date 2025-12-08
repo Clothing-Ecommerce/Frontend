@@ -13,7 +13,7 @@ import {
   Loader2
 } from "lucide-react"
 
-// Import các UI components
+// Import UI components
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -92,7 +92,7 @@ const mapApiUser = (user: AdminUserResponse): AdminUser => ({
 })
 
 const formatLastActive = (value: string | null) => {
-  if (!value) return "Chưa hoạt động"
+  if (!value) return "Not active yet"
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return value
 
@@ -100,14 +100,14 @@ const formatLastActive = (value: string | null) => {
   if (diffMs < 0) return date.toLocaleString("vi-VN")
 
   const minutes = Math.floor(diffMs / 1000 / 60)
-  if (minutes < 1) return "Vừa xong"
-  if (minutes < 60) return `${minutes} phút trước`
+  if (minutes < 1) return "Just now"
+  if (minutes < 60) return `${minutes} minutes ago`
 
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours} giờ trước`
+  if (hours < 24) return `${hours} hours ago`
 
   const days = Math.floor(hours / 24)
-  if (days < 30) return `${days} ngày trước`
+  if (days < 30) return `${days} days ago`
 
   return date.toLocaleString("vi-VN")
 }
@@ -159,7 +159,7 @@ export default function UsersRolesPage() {
       } catch (error: unknown) {
         if (signal?.aborted) return
         console.error(error)
-        toast.error(getErrorMessage(error, "Không thể tải danh sách nhân sự"))
+        toast.error(getErrorMessage(error, "Unable to load staff list"))
       } finally {
         if (!signal?.aborted) {
           setIsLoading(false)
@@ -181,14 +181,14 @@ export default function UsersRolesPage() {
     }
   }, [loadUsers])
 
-  // Mở Dialog Thêm mới
+  // Open Create Dialog
   const openCreateDialog = () => {
     setEditingUser(null)
     setFormData({ name: "", email: "", role: "Staff" })
     setIsDialogOpen(true)
   }
 
-  // Mở Dialog Chỉnh sửa
+  // Open Edit Dialog
   const openEditDialog = (user: AdminUser) => {
     setEditingUser(user)
     setFormData({ name: user.name, email: user.email, role: user.role })
@@ -199,7 +199,7 @@ export default function UsersRolesPage() {
     const name = formData.name.trim()
     const email = formData.email.trim()
     if (!name || !email) {
-      toast.error("Thiếu thông tin bắt buộc")
+      toast.error("Missing required information")
       return
     }
 
@@ -213,16 +213,16 @@ export default function UsersRolesPage() {
     try {
       if (editingUser) {
         await api.patch(`/admin/users/${editingUser.id}`, payload)
-        toast.success("Cập nhật nhân sự thành công")
+        toast.success("Staff updated successfully")
       } else {
         await api.post("/admin/users", payload)
-        toast.success("Tạo nhân sự thành công")
+        toast.success("Staff created successfully")
       }
       setIsDialogOpen(false)
       setEditingUser(null)
       await loadUsers()
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, "Không thể lưu thông tin nhân sự"))
+      toast.error(getErrorMessage(error, "Unable to save staff information"))
     } finally {
       setIsSaving(false)
     }
@@ -233,44 +233,44 @@ export default function UsersRolesPage() {
     setStatusUpdatingId(id)
     try {
       await api.patch(`/admin/users/${id}/status`, { status: nextStatus })
-      toast.success("Cập nhật trạng thái thành công")
+      toast.success("Status updated successfully")
       await loadUsers()
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, "Không thể cập nhật trạng thái"))
+      toast.error(getErrorMessage(error, "Unable to update status"))
     } finally {
       setStatusUpdatingId(null)
     }
   }
 
-  // Xử lý Xóa (Mở Alert)
+  // Handle Delete (Open Alert)
   const confirmDelete = (id: number) => {
     setDeletingId(id)
     setIsAlertOpen(true)
   }
 
-  // Thực hiện Xóa
+  // Perform Delete
   const handleDelete = async () => {
     if (!deletingId) return
     setIsSaving(true)
     try {
       await api.delete(`/admin/users/${deletingId}`)
-      toast.success("Đã xoá tài khoản")
+      toast.success("Account deleted")
       setIsAlertOpen(false)
       setDeletingId(null)
       await loadUsers()
     } catch (error: unknown) {
-      toast.error(getErrorMessage(error, "Không thể xoá tài khoản"))
+      toast.error(getErrorMessage(error, "Unable to delete account"))
     } finally {
       setIsSaving(false)
     }
   }
 
-  // Helper render Badge Role
+  // Helper render Role Badge
   const getRoleBadgeColor = (role: AdminUserRole) => {
     switch (role) {
-      case "Admin": return "bg-slate-900 text-white hover:bg-slate-700" // Đen
-      case "Staff": return "bg-blue-100 text-blue-700 hover:bg-blue-200" // Xanh dương
-      default: return "bg-slate-100 text-slate-700 hover:bg-slate-200" // Xám
+      case "Admin": return "bg-slate-900 text-white hover:bg-slate-700" // Black
+      case "Staff": return "bg-blue-100 text-blue-700 hover:bg-blue-200" // Blue
+      default: return "bg-slate-100 text-slate-700 hover:bg-slate-200" // Gray
     }
   }
 
@@ -279,13 +279,13 @@ export default function UsersRolesPage() {
       {/* Header & Stats Overview (Optional) */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Người dùng & Phân quyền</h2>
+          <h2 className="text-2xl font-bold tracking-tight">Users & Permissions</h2>
           <p className="text-sm text-muted-foreground">
-            Quản lý tài khoản nhân viên, phân quyền truy cập và trạng thái hoạt động.
+            Manage staff accounts, access permissions, and activity status.
           </p>
         </div>
         <Button onClick={openCreateDialog} className="shadow-sm">
-          <Plus className="mr-2 h-4 w-4" /> Thêm nhân sự
+          <Plus className="mr-2 h-4 w-4" /> Add staff
         </Button>
       </div>
 
@@ -296,7 +296,7 @@ export default function UsersRolesPage() {
             <div className="relative flex-1">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-500" />
               <Input
-                placeholder="Tìm kiếm theo tên hoặc email..."
+                placeholder="Search by name or email..."
                 className="pl-9 bg-white max-w-sm"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -306,10 +306,10 @@ export default function UsersRolesPage() {
               <Filter className="h-4 w-4 text-slate-500" />
               <Select value={roleFilter} onValueChange={setRoleFilter}>
                 <SelectTrigger className="w-[180px] bg-white">
-                  <SelectValue placeholder="Lọc theo vai trò" />
+                  <SelectValue placeholder="Filter by role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tất cả vai trò</SelectItem>
+                  <SelectItem value="all">All roles</SelectItem>
                   {ROLES.map((role) => (
                     <SelectItem key={role} value={role}>{role}</SelectItem>
                   ))}
@@ -322,10 +322,10 @@ export default function UsersRolesPage() {
           <Table>
             <TableHeader className="bg-slate-50">
               <TableRow>
-                <TableHead className="w-[350px] pl-6">Nhân sự</TableHead>
-                <TableHead>Vai trò</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead className="hidden md:table-cell">Hoạt động cuối</TableHead>
+                <TableHead className="w-[350px] pl-6">Staff</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="hidden md:table-cell">Last active</TableHead>
                 <TableHead className="w-[80px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -334,14 +334,14 @@ export default function UsersRolesPage() {
                 <TableRow>
                   <TableCell colSpan={5} className="h-24 text-center text-slate-500">
                     <div className="flex items-center justify-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" /> Đang tải dữ liệu
+                      <Loader2 className="h-4 w-4 animate-spin" /> Loading data
                     </div>
                   </TableCell>
                 </TableRow>
               ) : formattedUsers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="h-24 text-center text-slate-500">
-                    Không tìm thấy nhân sự nào.
+                    No staff found.
                   </TableCell>
                 </TableRow>
               ) : (
@@ -379,7 +379,7 @@ export default function UsersRolesPage() {
                         ) : (
                           <XCircle className="w-3 h-3" />
                         )}
-                        {user.status === "active" ? "Hoạt động" : "Đã khoá"}
+                        {user.status === "active" ? "Active" : "Locked"}
                       </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-xs text-slate-500">
@@ -393,9 +393,9 @@ export default function UsersRolesPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuLabel>Thao tác</DropdownMenuLabel>
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuItem onClick={() => openEditDialog(user)}>
-                            <Edit className="mr-2 h-4 w-4" /> Chỉnh sửa
+                            <Edit className="mr-2 h-4 w-4" /> Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             disabled={statusUpdatingId === user.id}
@@ -403,11 +403,11 @@ export default function UsersRolesPage() {
                           >
                             {user.status === "active" ? (
                               <>
-                                <Lock className="mr-2 h-4 w-4" /> Khóa tài khoản
+                                <Lock className="mr-2 h-4 w-4" /> Lock account
                               </>
                             ) : (
                               <>
-                                <Unlock className="mr-2 h-4 w-4" /> Mở khóa
+                                <Unlock className="mr-2 h-4 w-4" /> Unlock
                               </>
                             )}
                           </DropdownMenuItem>
@@ -416,7 +416,7 @@ export default function UsersRolesPage() {
                             className="text-rose-600 focus:text-rose-600 focus:bg-rose-50"
                             onClick={() => confirmDelete(user.id)}
                           >
-                            <Trash2 className="mr-2 h-4 w-4" /> Xóa tài khoản
+                            <Trash2 className="mr-2 h-4 w-4" /> Delete account
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -433,25 +433,25 @@ export default function UsersRolesPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>{editingUser ? "Chỉnh sửa thông tin" : "Thêm nhân sự mới"}</DialogTitle>
+            <DialogTitle>{editingUser ? "Edit information" : "Add new staff"}</DialogTitle>
             <DialogDescription>
               {editingUser 
-                ? "Cập nhật thông tin và vai trò của nhân sự." 
-                : "Tạo tài khoản mới cho nhân viên vào hệ thống."}
+                ? "Update staff information and role." 
+                : "Create a new account for staff in the system."}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="name">Họ và tên</Label>
+              <Label htmlFor="name">Full name</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Ví dụ: Nguyễn Văn A"
+                placeholder="Example: Nguyen Van A"
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="email">Email đăng nhập</Label>
+              <Label htmlFor="email">Login email</Label>
               <Input
                 id="email"
                 type="email"
@@ -461,13 +461,13 @@ export default function UsersRolesPage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="role">Vai trò</Label>
+              <Label htmlFor="role">Role</Label>
               <Select
                 value={formData.role}
                 onValueChange={(val) => setFormData({ ...formData, role: val as AdminUserRole })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Chọn vai trò" />
+                  <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
                   {ROLES.map((role) => (
@@ -479,17 +479,17 @@ export default function UsersRolesPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSaving}>
-              Hủy
+              Cancel
             </Button>
             <Button onClick={handleSave} disabled={isSaving}>
               {isSaving ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Đang lưu
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving
                 </>
               ) : editingUser ? (
-                "Lưu thay đổi"
+                "Save changes"
               ) : (
-                "Tạo tài khoản"
+                "Create account"
               )}
             </Button>
           </DialogFooter>
@@ -500,14 +500,14 @@ export default function UsersRolesPage() {
       <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Bạn có chắc chắn muốn xóa?</AlertDialogTitle>
+            <AlertDialogTitle>Are you sure you want to delete?</AlertDialogTitle>
             <AlertDialogDescription>
-              Hành động này không thể hoàn tác. Tài khoản này sẽ bị xóa vĩnh viễn khỏi hệ thống 
-              và mất toàn bộ quyền truy cập.
+              This action cannot be undone. This account will be permanently deleted from the system 
+              and lose all access.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Hủy bỏ</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               className="bg-rose-600 hover:bg-rose-700 focus:ring-rose-600"
@@ -515,10 +515,10 @@ export default function UsersRolesPage() {
             >
               {isSaving ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Đang xoá
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting
                 </>
               ) : (
-                "Xóa vĩnh viễn"
+                "Delete permanently"
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
