@@ -40,7 +40,7 @@ export default function StaffDashboardPage() {
         setInventory(inventoryRes.data)
       } catch (err) {
         console.error("Failed to load staff dashboard overview", err)
-        if (isMounted) setError("Không thể tải dữ liệu tổng quan. Vui lòng thử lại sau.")
+        if (isMounted) setError("Unable to load overview data. Please try again later.")
       } finally {
         if (isMounted) setLoading(false)
       }
@@ -56,8 +56,8 @@ export default function StaffDashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Tổng quan hiệu suất</h1>
-        <p className="text-sm text-slate-500">Nhân viên theo dõi nhanh tình hình kinh doanh hiện tại.</p>
+        <h1 className="text-2xl font-semibold text-slate-900">Performance Overview</h1>
+        <p className="text-sm text-slate-500">Staff quickly track current business situation.</p>
       </div>
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
