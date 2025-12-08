@@ -64,7 +64,7 @@ export function SelectAddressDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl" showCloseButton={false}>
         <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <DialogTitle className="text-xl font-semibold">Chọn địa chỉ giao hàng</DialogTitle>
+          <DialogTitle className="text-xl font-semibold">Select Shipping Address</DialogTitle>
           <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full" onClick={() => onOpenChange(false)}>
             <X className="h-4 w-4" />
           </Button>
