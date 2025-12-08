@@ -52,13 +52,13 @@ import type {
 } from "@/types/adminType"
 
 const statusLabels: Record<AdminOrderStatus, string> = {
-  pending: "Chờ xác nhận",
-  processing: "Đang xử lý",
-  packed: "Đã đóng gói",
-  shipping: "Đang giao",
-  completed: "Hoàn tất",
-  cancelled: "Đã huỷ",
-  refunded: "Hoàn tiền",
+  pending: "Pending confirmation",
+  processing: "Processing",
+  packed: "Packed",
+  shipping: "Shipping",
+  completed: "Completed",
+  cancelled: "Cancelled",
+  refunded: "Refunded",
 }
 
 const statusBadge: Record<AdminOrderStatus, string> = {
@@ -176,7 +176,7 @@ export default function OrdersPage() {
         const message =
           axios.isAxiosError(error) && error.response?.data?.message
             ? error.response.data.message
-            : "Không thể tải danh sách đơn hàng"
+            : "Unable to load order list"
         setListError(message)
         setPagination(null)
       })
@@ -238,7 +238,7 @@ export default function OrdersPage() {
         const message =
           axios.isAxiosError(error) && error.response?.data?.message
             ? error.response.data.message
-            : "Không thể tải chi tiết đơn hàng"
+            : "Unable to load order details"
         setDetailError(message)
         setOrderDetail(null)
       })
@@ -396,8 +396,8 @@ export default function OrdersPage() {
       const successMessage =
         typeof data.message === "string" && data.message.trim().length
           ? data.message
-          : "Cập nhật trạng thái thành công"
-      toast.success(successMessage, `Trạng thái hiện tại: ${statusLabels[data.status]}`)
+          : "Status updated successfully"
+      toast.success(successMessage, `Current status: ${statusLabels[data.status]}`)
 
       setIsStatusDialogOpen(false)
       setStatusSelection(null)
@@ -405,7 +405,7 @@ export default function OrdersPage() {
       setStatusError(null)
     } catch (error) {
       console.error("Failed to update admin order status", error)
-      let message = "Không thể cập nhật trạng thái đơn hàng"
+      let message = "Unable to update order status"
       if (axios.isAxiosError(error)) {
         const responseMessage = error.response?.data?.message
         if (typeof responseMessage === "string" && responseMessage.trim().length) {
@@ -413,7 +413,7 @@ export default function OrdersPage() {
         }
       }
       setStatusError(message)
-      toast.error("Cập nhật không thành công", message)
+      toast.error("Update failed", message)
     } finally {
       setIsStatusSaving(false)
     }
@@ -435,7 +435,7 @@ export default function OrdersPage() {
     if (!summary && !loading) {
       return (
         <div className="flex h-full items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-slate-50/80 p-6 text-sm text-slate-500">
-          Chọn một đơn để xem chi tiết.
+          Select an order to view details.
         </div>
       )
     }
@@ -445,7 +445,7 @@ export default function OrdersPage() {
         <div className="flex h-full flex-col items-center justify-center gap-4 rounded-3xl border border-dashed border-rose-200 bg-rose-50/70 p-6 text-center text-sm text-rose-600">
           <span>{error}</span>
           <Button size="sm" variant="outline" onClick={handleRetryDetail}>
-            Thử lại
+            Retry
           </Button>
         </div>
       )
@@ -469,7 +469,7 @@ export default function OrdersPage() {
     const displayCustomer = detail?.customer.name?.trim() || summary.customer
     const createdAt = detail?.createdAt ?? summary.createdAt
     const paymentDisplay = detail?.payment.display ?? summary.payment
-    const addressLine = detail?.address?.line ?? "Không có thông tin địa chỉ"
+    const addressLine = detail?.address?.line ?? "No address information"
     const timelineEntries = detail?.timeline ?? []
     const notes = detail?.notes ?? []
     const items = detail?.items ?? []
@@ -504,11 +504,11 @@ export default function OrdersPage() {
             <Badge className={cn("border", statusBadge[effectiveStatus])}>{statusLabels[effectiveStatus]}</Badge>
             <span className="text-sm font-semibold text-slate-800">{formatCurrency(summary.value)}</span>
             <span className="hidden sm:inline">•</span>
-            <span>Thanh toán: {paymentDisplay}</span>
+            <span>Payment: {paymentDisplay}</span>
           </div>
 
           <div className="space-y-3">
-            <h4 className="text-sm font-semibold text-slate-800">Thông tin giao nhận</h4>
+            <h4 className="text-sm font-semibold text-slate-800">Delivery information</h4>
             <div className="rounded-2xl border border-slate-200 bg-white/80 p-4 text-sm text-slate-600">
               <div className="flex items-start gap-3">
                 <MapPin className="mt-0.5 h-4 w-4 text-slate-500" />
@@ -518,11 +518,11 @@ export default function OrdersPage() {
           </div>
 
           <div className="space-y-3">
-            <h4 className="text-sm font-semibold text-slate-800">Sản phẩm</h4>
+            <h4 className="text-sm font-semibold text-slate-800">Products</h4>
             <div className="space-y-2">
               {items.length === 0 ? (
-                <div className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-3 text-sm text-slate-500">
-                  Không có thông tin sản phẩm
+                <div className="rounded-2xl border border-slate-200 bg:white/70 px-4 py-3 text-sm text-slate-500">
+                  No product information
                 </div>
               ) : (
                 items.map((item) => (
@@ -544,11 +544,11 @@ export default function OrdersPage() {
           </div>
 
           <div className="space-y-3">
-            <h4 className="text-sm font-semibold text-slate-800">Tiến trình đơn hàng</h4>
+            <h4 className="text-sm font-semibold text-slate-800">Order progress</h4>
             <ol className="space-y-2">
               {timelineEntries.length === 0 ? (
                 <li className="rounded-2xl border border-slate-200 bg-white/70 px-4 py-2 text-xs text-slate-500">
-                  Chưa có lịch sử trạng thái.
+                  No status history yet.
                 </li>
               ) : (
                 timelineEntries.map((step, index) => {
@@ -581,11 +581,11 @@ export default function OrdersPage() {
           </div>
 
           <div className="space-y-2">
-            <h4 className="text-sm font-semibold text-slate-800">Ghi chú</h4>
+            <h4 className="text-sm font-semibold text-slate-800">Notes</h4>
             <div className="space-y-2 text-xs text-slate-600">
               {notes.length === 0 ? (
                 <div className="rounded-2xl border border-slate-200 bg-white/70 p-3 text-slate-500">
-                  Không có ghi chú.
+                  No notes.
                 </div>
               ) : (
                 notes.map((note, index) => (
@@ -600,14 +600,14 @@ export default function OrdersPage() {
 
         <div className="space-y-3">
           <Button type="button" className="w-full gap-2" onClick={() => onUpdateStatus(effectiveStatus)}>
-            <Package className="h-4 w-4" /> Cập nhật đơn hàng
+            <Package className="h-4 w-4" /> Update order
           </Button>
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" className="flex-1">
-              Theo dõi vận đơn
+              Track shipment
             </Button>
             <Button type="button" variant="outline" className="flex-1">
-              Xuất hoá đơn
+              Export invoice
             </Button>
           </div>
         </div>
@@ -625,24 +625,24 @@ export default function OrdersPage() {
       <Card>
         <CardHeader className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <CardTitle>Quản lý đơn hàng</CardTitle>
+            <CardTitle>Order Management</CardTitle>
             <CardDescription>
-              Hiển thị nhanh tình trạng đơn hàng, truy cập thông tin chi tiết
+              Quickly view order status and access detailed information
             </CardDescription>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Input
-              placeholder="Tìm mã đơn hoặc khách hàng"
+              placeholder="Search by order code or customer"
               className="w-56"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
             <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as AdminOrderStatus | "all")}>
               <SelectTrigger className="w-44">
-                <SelectValue placeholder="Trạng thái" />
+                <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                <SelectItem value="all">All statuses</SelectItem>
                 {Object.entries(statusLabels).map(([key, label]) => (
                   <SelectItem key={key} value={key}>
                     {label}
@@ -664,11 +664,11 @@ export default function OrdersPage() {
               <table className="min-w-full divide-y">
                 <thead className="bg-slate-50">
                   <tr className="text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                    <th className="px-4 py-3">Đơn</th>
-                    <th className="px-4 py-3">Khách hàng</th>
-                    <th className="px-4 py-3">Giá trị</th>
-                    <th className="px-4 py-3">Thanh toán</th>
-                    <th className="px-4 py-3">Trạng thái</th>
+                    <th className="px-4 py-3">Order</th>
+                    <th className="px-4 py-3">Customer</th>
+                    <th className="px-4 py-3">Amount</th>
+                    <th className="px-4 py-3">Payment</th>
+                    <th className="px-4 py-3">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y bg-white text-sm">
@@ -677,7 +677,7 @@ export default function OrdersPage() {
                       <td colSpan={5} className="py-10 text-center text-sm text-slate-500">
                         <div className="flex items-center justify-center gap-3">
                           <LoadingSpinner />
-                          <span>Đang tải đơn hàng...</span>
+                          <span>Loading orders...</span>
                         </div>
                       </td>
                     </tr>
@@ -690,7 +690,7 @@ export default function OrdersPage() {
                   ) : orders.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="py-10 text-center text-sm text-slate-500">
-                        Không có đơn hàng nào phù hợp.
+                        No matching orders.
                       </td>
                     </tr>
                   ) : (
@@ -848,9 +848,9 @@ export default function OrdersPage() {
       >
         <DialogContent className="sm:max-w-md max-h-[80vh] overflow-hidden bg-white flex flex-col">
           <DialogHeader className="shrink-0 pb-2">
-            <DialogTitle>Cập nhật trạng thái đơn hàng</DialogTitle>
+            <DialogTitle>Update order status</DialogTitle>
             <DialogDescription>
-              Chọn trạng thái phù hợp cho đơn hàng này. Bạn chỉ có thể chọn một trạng thái tại một thời điểm.
+              Select an appropriate status for this order. You can only choose one status at a time.
             </DialogDescription>
           </DialogHeader>
 
@@ -866,7 +866,7 @@ export default function OrdersPage() {
                   >
                     <div className="flex flex-col">
                       <span className="font-semibold text-slate-900">{label}</span>
-                      {/* <span className="text-xs text-slate-500">Mã trạng thái: {status}</span> */}
+                      {/* <span className="text-xs text-slate-500">Status code: {status}</span> */}
                     </div>
                     <RadioGroupItem
                       value={status}
@@ -884,10 +884,10 @@ export default function OrdersPage() {
             </RadioGroup>
 
             <div className="space-y-2">
-              <Label htmlFor="admin-order-status-note">Ghi chú (tuỳ chọn)</Label>
+              <Label htmlFor="admin-order-status-note">Note (optional)</Label>
               <Textarea
                 id="admin-order-status-note"
-                placeholder="Thêm ghi chú cho lần cập nhật trạng thái này"
+                placeholder="Add a note for this status update"
                 value={statusNote}
                 onChange={(event) => {
                   setStatusNote(event.target.value)
@@ -898,7 +898,7 @@ export default function OrdersPage() {
                 className="min-h-24"
               />
               <p className="text-xs text-slate-500">
-                Ghi chú sẽ được lưu lại trong lịch sử trạng thái của đơn hàng.
+                The note will be saved in the order&apos;s status history.
               </p>
             </div>
           </div>
@@ -907,7 +907,7 @@ export default function OrdersPage() {
 
           <DialogFooter className="gap-2 shrink-0 pt-2">
             <Button variant="outline" onClick={handleCloseStatusDialog} disabled={isStatusSaving}>
-              Huỷ
+              Cancel
             </Button>
             <Button
               onClick={handleSaveStatus}
@@ -916,10 +916,10 @@ export default function OrdersPage() {
               {isStatusSaving ? (
                 <span className="flex items-center gap-2">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Đang lưu...
+                  Saving...
                 </span>
               ) : (
-                "Lưu"
+                "Save"
               )}
             </Button>
           </DialogFooter>
