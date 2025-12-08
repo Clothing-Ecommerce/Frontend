@@ -273,7 +273,7 @@ export default function Header({
                         onClick={handleNavigateToManagement}
                         className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       >
-                        Quản Lý
+                        Manage
                       </button>
                     )}
                     {managementPath && <hr className="my-1" />}
@@ -281,20 +281,20 @@ export default function Header({
                       to="/user/profile"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
-                      Hồ Sơ Của Tôi
+                      My Profile
                     </Link>
                     <Link
                       to="/settings"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
-                      Cài Đặt
+                      Settings
                     </Link>
                     <hr className="my-1" />
                     <button
                       onClick={handleLogout}
                       className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                     >
-                      Đăng Xuất
+                      Logout
                     </button>
                   </div>
                 )}
