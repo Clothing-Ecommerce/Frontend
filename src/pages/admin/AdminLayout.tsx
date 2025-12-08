@@ -20,17 +20,17 @@ import { useMemo } from "react"
 
 const navItems = [
   { label: "Dashboard", to: "/admin/dashboard", icon: LayoutDashboard },
-  { label: "Đơn Hàng", to: "/admin/orders", icon: ShoppingBag },
-  { label: "Sản Phẩm", to: "/admin/products", icon: PackageSearch },
-  { label: "Danh Mục", to: "/admin/categories", icon: Layers },
-  // { label: "Inventory & Shipping (bỏ)", to: "/admin/inventory", icon: Warehouse },
-  // { label: "Khách Hàng", to: "/admin/customers", icon: Users },
-  { label: "Báo Cáo & Phân Tích", to: "/admin/reports", icon: BarChart3 },
-  { label: "Người Dùng", to: "/admin/users", icon: ShieldCheck },
-  // { label: "Cài Đặt", to: "/admin/settings", icon: Settings },
-  // { label: "Hỗ Trợ (Chỉnh sửa lại)", to: "/admin/support", icon: LifeBuoy },
-  // { label: "Khuyến Mãi", to: "/admin/marketing", icon: Megaphone },
-  { label: "Nhật Ký", to: "/admin/audit", icon: History },
+  { label: "Orders", to: "/admin/orders", icon: ShoppingBag },
+  { label: "Products", to: "/admin/products", icon: PackageSearch },
+  { label: "Categories", to: "/admin/categories", icon: Layers },
+  // { label: "Inventory & Shipping (remove)", to: "/admin/inventory", icon: Warehouse },
+  // { label: "Customers", to: "/admin/customers", icon: Users },
+  { label: "Reports & Analytics", to: "/admin/reports", icon: BarChart3 },
+  { label: "Users", to: "/admin/users", icon: ShieldCheck },
+  // { label: "Settings", to: "/admin/settings", icon: Settings },
+  // { label: "Support (Refactor)", to: "/admin/support", icon: LifeBuoy },
+  // { label: "Promotions", to: "/admin/marketing", icon: Megaphone },
+  { label: "Audit Log", to: "/admin/audit", icon: History },
 ] as const
 
 export default function AdminLayout() {
@@ -43,7 +43,7 @@ export default function AdminLayout() {
   }, [location.pathname])
 
   const adminProfile = {
-    name: "Quản trị viên",
+    name: "Administrator",
     email: "admin@hypercommerce.vn",
     phone: "+84 912 345 678",
   }
@@ -107,7 +107,7 @@ export default function AdminLayout() {
             <div className="flex-shrink-0 border-t border-[#2a2620]/50 px-4 py-4">
               <button className="flex w-full items-center gap-3 rounded-xl px-5 py-4 text-base font-medium text-stone-400 transition hover:bg-red-900/50 hover:text-red-200">
                 <LogOut className="h-5 w-5 text-red-300" />
-                Đăng xuất
+                Log out
               </button>
             </div>
           </div>
@@ -135,7 +135,7 @@ export default function AdminLayout() {
                   className="rounded-full border-[#ead7b9] bg-white/70 text-[#1f1b16] hover:bg-[#efe2c6]"
                   onClick={() => navigate("/")}
                 >
-                  Trang chủ
+                  Home
                 </Button>
               </div>
             </header>
