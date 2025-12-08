@@ -98,71 +98,71 @@ export default function ProductsPage() {
     setSearchParams(p, { replace: true });
   };
 
-  const handleToggleWishlist = useCallback(
-    async (productId: number) => {
-      if (!isAuthenticated) {
-        toast.error(
-          "Bạn chưa đăng nhập",
-          "Hãy đăng nhập để thêm sản phẩm vào danh sách yêu thích."
-        );
-        return;
-      }
+const handleToggleWishlist = useCallback(
+  async (productId: number) => {
+    if (!isAuthenticated) {
+      toast.error(
+        "You are not logged in",
+        "Please log in to add products to your wishlist."
+      );
+      return;
+    }
 
-      setWishlistActionIds((prev) => {
-        const next = new Set(prev);
-        next.add(productId);
-        return next;
-      });
+    setWishlistActionIds((prev) => {
+      const next = new Set(prev);
+      next.add(productId);
+      return next;
+    });
 
-      const alreadyWishlisted = wishlistIds.has(productId);
+    const alreadyWishlisted = wishlistIds.has(productId);
 
-      try {
-        if (alreadyWishlisted) {
-          await api.delete(`/wishlist/${productId}`);
-          setWishlistIds((prev) => {
-            const next = new Set(prev);
-            next.delete(productId);
-            return next;
-          });
-          toast.success(
-            "Đã xoá khỏi wishlist",
-            "Sản phẩm đã được xoá khỏi danh sách yêu thích của bạn."
-          );
-        } else {
-          await api.post<WishlistMutationResponse>("/wishlist", { productId });
-          setWishlistIds((prev) => {
-            const next = new Set(prev);
-            next.add(productId);
-            return next;
-          });
-          toast.success(
-            "Đã thêm vào wishlist",
-            "Sản phẩm đã được thêm vào danh sách yêu thích của bạn."
-          );
-        }
-        void refreshWishlistCount();
-      } catch (error) {
-        console.error("Failed to toggle wishlist item", error);
-        let message = alreadyWishlisted
-          ? "Không thể xoá sản phẩm khỏi wishlist."
-          : "Không thể thêm sản phẩm vào wishlist.";
-        if (axios.isAxiosError(error)) {
-          const responseMessage = error.response?.data?.message;
-          if (typeof responseMessage === "string" && responseMessage.trim()) {
-            message = responseMessage;
-          }
-        }
-        toast.error("Thao tác không thành công", message);
-      } finally {
-        setWishlistActionIds((prev) => {
+    try {
+      if (alreadyWishlisted) {
+        await api.delete(`/wishlist/${productId}`);
+        setWishlistIds((prev) => {
           const next = new Set(prev);
           next.delete(productId);
           return next;
         });
+        toast.success(
+          "Removed from wishlist",
+          "The product has been removed from your wishlist."
+        );
+      } else {
+        await api.post<WishlistMutationResponse>("/wishlist", { productId });
+        setWishlistIds((prev) => {
+          const next = new Set(prev);
+          next.add(productId);
+          return next;
+        });
+        toast.success(
+          "Added to wishlist",
+          "The product has been added to your wishlist."
+        );
       }
-    },
-    [isAuthenticated, refreshWishlistCount, toast, wishlistIds]
-  );
+      void refreshWishlistCount();
+    } catch (error) {
+      console.error("Failed to toggle wishlist item", error);
+      let message = alreadyWishlisted
+        ? "Unable to remove the product from the wishlist."
+        : "Unable to add the product to the wishlist.";
+      if (axios.isAxiosError(error)) {
+        const responseMessage = error.response?.data?.message;
+        if (typeof responseMessage === "string" && responseMessage.trim()) {
+          message = responseMessage;
+        }
+      }
+      toast.error("Action failed", message);
+    } finally {
+      setWishlistActionIds((prev) => {
+        const next = new Set(prev);
+        next.delete(productId);
+        return next;
+      });
+    }
+  },
+  [isAuthenticated, refreshWishlistCount, toast, wishlistIds]
+);
 
   // Sync state khi URL đổi (ví dụ user click link ở Header)
   useEffect(() => {
@@ -574,7 +574,7 @@ export default function ProductsPage() {
             {loading ? (
               <div className="text-center py-12 text-gray-600">
                 <Loader2 className="w-6 h-6 animate-spin mx-auto mb-4" />
-                Đang tải sản phẩm...
+                Loading products...
               </div>
             ) : (
               <div
@@ -625,8 +625,8 @@ export default function ProductsPage() {
                               aria-pressed={isProductWishlisted}
                               aria-label={
                                 isProductWishlisted
-                                  ? "Xoá khỏi wishlist"
-                                  : "Thêm vào wishlist"
+                                  ? "Remove wishlist"
+                                  : "Add to wishlist"
                               }
                             >
                               {isWishlistProcessing ? (
@@ -676,8 +676,8 @@ export default function ProductsPage() {
                             aria-pressed={isProductWishlisted}
                             aria-label={
                               isProductWishlisted
-                                ? "Xoá khỏi wishlist"
-                                : "Thêm vào wishlist"
+                                ? "Remove from wishlist"
+                                : "Add to wishlist"
                             }
                           >
                             {isWishlistProcessing ? (
