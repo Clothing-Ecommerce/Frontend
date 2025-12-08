@@ -28,11 +28,11 @@ type CheckoutAddress = Address & { addressId: number };
 const getLabelText = (label: CheckoutAddress["label"] | null | undefined) => {
   switch (label) {
     case "HOME":
-      return "Nhà";
+      return "Home";
     case "WORK":
-      return "Chỗ Làm";
+      return "Workplace";
     case "OTHER":
-      return "Khác";
+      return "Other";
     default:
       return "Other";
   }
@@ -241,12 +241,12 @@ export default function CheckoutPage() {
     if (isPlacingOrder) return;
 
     if (!selectedAddressId) {
-      setOrderError("Vui lòng chọn địa chỉ giao hàng trước khi thanh toán.");
+      setOrderError("Please select a shipping address before payment.");
       return;
     }
 
     if (!summary || cartItems.length === 0) {
-      setOrderError("Giỏ hàng của bạn đang trống. Vui lòng thêm sản phẩm trước khi đặt hàng.");
+      setOrderError("Your cart is empty. Please add items before placing an order.");
       return;
     }
 
@@ -266,7 +266,7 @@ export default function CheckoutPage() {
 
       if (paymentMethod === "MOMO") {
         if (data.paymentError) {
-          setOrderError(data.paymentError.message || "Không thể tạo thanh toán MoMo. Vui lòng thử lại.");
+          setOrderError(data.paymentError.message || "Unable to create MoMo payment. Please try again.");
           return;
         }
 
@@ -282,7 +282,7 @@ export default function CheckoutPage() {
           return;
         }
 
-        setOrderError("Không nhận được liên kết thanh toán MoMo. Vui lòng thử lại sau.");
+        setOrderError("Did not receive MoMo payment link. Please try again later.");
         return;
       }
 
@@ -293,19 +293,19 @@ export default function CheckoutPage() {
 
       switch (code) {
         case "ADDRESS_NOT_FOUND":
-          setOrderError("Không tìm thấy địa chỉ giao hàng. Vui lòng chọn lại địa chỉ khác.");
+          setOrderError("Shipping address not found. Please select a different address.");
           break;
         case "CART_EMPTY":
-          setOrderError("Giỏ hàng của bạn đang trống.");
+          setOrderError("Your cart is empty.");
           break;
         case "ITEM_OUT_OF_STOCK":
-          setOrderError("Một số sản phẩm đã hết hàng. Vui lòng kiểm tra lại giỏ hàng.");
+          setOrderError("Some items are out of stock. Please check your cart.");
           break;
         case "QUANTITY_EXCEEDS_STOCK":
-          setOrderError("Số lượng sản phẩm vượt quá tồn kho. Vui lòng điều chỉnh lại giỏ hàng.");
+          setOrderError("Item quantity exceeds stock. Please adjust your cart.");
           break;
         default:
-          setOrderError(message || "Không thể tạo đơn hàng. Vui lòng thử lại sau.");
+          setOrderError(message || "Unable to create order. Please try again later.");
       }
     } finally {
       setIsPlacingOrder(false);
@@ -337,28 +337,28 @@ export default function CheckoutPage() {
       const missing = error?.response?.data?.data?.missingAmount;
       switch (code) {
         case "MIN_ORDER_NOT_MET":
-          alert(`Cần mua thêm ${formatPrice(Number(missing) || 0)} để áp dụng mã`);
+          alert(`You need to spend an additional ${formatPrice(Number(missing) || 0)} to apply the code`);
           break;
         case "INVALID_COUPON":
-          alert("Mã khuyến mãi không hợp lệ");
+          alert("Promo code is invalid");
           break;
         case "COUPON_INACTIVE":
-          alert("Mã khuyến mãi đang tạm ngưng");
+          alert("Promo code is currently inactive");
           break;
         case "COUPON_NOT_STARTED":
-          alert("Mã khuyến mãi chưa bắt đầu");
+          alert("Promo code has not started yet");
           break;
         case "COUPON_EXPIRED":
-          alert("Mã khuyến mãi đã hết hạn");
+          alert("Promo code has expired");
           break;
         case "USAGE_LIMIT_REACHED":
-          alert("Mã khuyến mãi đã đạt giới hạn sử dụng");
+          alert("Promo code has reached its usage limit");
           break;
         case "CART_EMPTY":
-          alert("Giỏ hàng đang trống");
+          alert("Cart is empty");
           break;
         default:
-          alert(error?.response?.data?.message || "Không thể áp dụng mã");
+          alert(error?.response?.data?.message || "Unable to apply code");
       }
     } finally {
       setIsPromoLoading(false);
@@ -372,7 +372,7 @@ export default function CheckoutPage() {
       refreshCartFromResponse(res);
       setPromoCode("");
     } catch (error: any) {
-      alert(error?.response?.data?.message || "Không thể gỡ mã");
+      alert(error?.response?.data?.message || "Unable to remove code");
     } finally {
       setIsPromoLoading(false);
     }
@@ -436,7 +436,7 @@ export default function CheckoutPage() {
               <div className="flex items-center gap-2 mb-4">
                 <MapPin className="w-5 h-5 text-gray-900" />
                 <h2 className="text-lg font-semibold text-gray-900">
-                  Địa chỉ giao hàng
+                  Shipping address
                 </h2>
                 <Button
                   variant="ghost"
@@ -446,13 +446,13 @@ export default function CheckoutPage() {
                   disabled={isLoadingAddresses}
                 >
                   <Edit className="w-4 h-4 mr-1" />
-                  Thay đổi địa chỉ
+                  Change address
                 </Button>
               </div>
 
               {isLoadingAddresses ? (
                 <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-600">
-                  Đang tải địa chỉ giao hàng...
+                  Loading shipping address...
                 </div>
               ) : selectedAddress ? (
                 <div className="p-4 border-2 border-gray-900 rounded-lg bg-white">
@@ -462,7 +462,7 @@ export default function CheckoutPage() {
                     </span>
                     {selectedAddress.isDefault && (
                       <span className="px-2 py-0.5 bg-gray-900 text-white text-xs rounded font-medium">
-                        Mặc định
+                        Default
                       </span>
                     )}
                     <span className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded font-medium">
@@ -481,7 +481,7 @@ export default function CheckoutPage() {
                 </div>
               ) : (
                 <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-600">
-                  Bạn chưa lưu địa chỉ nào. Vui lòng thêm địa chỉ vào hồ sơ trước khi đặt hàng.
+                  You have not saved any address yet. Please add an address to your profile before placing an order.
                 </div>
               )}
             </div>
@@ -498,7 +498,7 @@ export default function CheckoutPage() {
               <div className="space-y-4">
                 {isLoadingCart ? (
                   <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-600">
-                    Đang tải sản phẩm trong giỏ hàng...
+                    Loading items in cart...
                   </div>
                 ) : cartItems.length > 0 ? (
                   cartItems.map((item) => (
@@ -518,7 +518,7 @@ export default function CheckoutPage() {
                           {item.product.name}
                         </h3>
                         <p className="text-sm text-gray-600 mb-2">
-                          {item.size || "Không có kích thước"} • {item.color || "Không có màu"}
+                          {item.size || "No size"} • {item.color || "No color"}
                         </p>
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-gray-600">
@@ -533,7 +533,7 @@ export default function CheckoutPage() {
                   ))
                 ) : (
                   <div className="p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 text-sm text-gray-600">
-                    Giỏ hàng của bạn đang trống. Vui lòng thêm sản phẩm trước khi thanh toán.
+                    Your cart is empty. Please add products before checkout.
                   </div>
                 )}
               </div>
@@ -551,12 +551,12 @@ export default function CheckoutPage() {
                 <div className="flex items-center gap-3">
                   <Tag className="w-5 h-5 text-amber-600" />
                   <div className="flex flex-col items-start text-sm text-gray-700">
-                    <span>Chọn khuyến mãi</span>
+                    <span>Choose promotion</span>
                     {(appliedPromo || (summary?.promoDiscount ?? 0) > 0) && (
                       <Badge className="mt-1 bg-green-100 text-green-800">
                         {appliedPromo
                           ? `${appliedPromo.code} (−${formatPrice(summary?.promoDiscount ?? 0)})`
-                          : `Đã áp dụng (−${formatPrice(summary?.promoDiscount ?? 0)})`}
+                          : `Applied (−${formatPrice(summary?.promoDiscount ?? 0)})`}
                       </Badge>
                     )}
                   </div>
@@ -582,26 +582,26 @@ export default function CheckoutPage() {
               <Card>
                 <CardContent className="p-6">
                   <h3 className="font-semibold text-gray-900 mb-4">
-                    Chi tiết đơn hàng
+                    Order details
                   </h3>
 
                   <div className="space-y-3 mb-4">
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Tổng tiền</span>
+                      <span className="text-gray-600">Subtotal</span>
                       <span className="text-gray-900">{formatPrice(subtotal)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Giảm giá</span>
+                      <span className="text-gray-600">Discount</span>
                       <span className="text-gray-900">{formatPrice(discount)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Phí vận chuyển</span>
+                      <span className="text-gray-600">Shipping fee</span>
                       <span className={shipping === 0 ? "text-green-600 font-medium" : "text-gray-900"}>
-                        {shipping === 0 ? "miễn phí" : formatPrice(shipping)}
+                        {shipping === 0 ? "Free" : formatPrice(shipping)}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Thuế</span>
+                      <span className="text-gray-600">Tax</span>
                       <span className="text-gray-900">{formatPrice(tax)}</span>
                     </div>
                   </div>
@@ -610,7 +610,7 @@ export default function CheckoutPage() {
 
                   <div className="flex justify-between items-center mb-6">
                     <span className="text-base font-semibold text-gray-900">
-                      Thành tiền
+                      Total
                     </span>
                     <div className="text-right">
                       <div className="text-xl font-bold text-gray-900">
@@ -620,7 +620,7 @@ export default function CheckoutPage() {
                         Mua nhiều giảm nhiều
                       </div> */}
                       <div className="text-xs text-gray-500">
-                        {appliedPromo?.code ? `Áp dụng mã ${appliedPromo.code}` : "Mua nhiều giảm nhiều"}
+                        {appliedPromo?.code ? `Applied code ${appliedPromo.code}` : "Buy more save more"}
                       </div>
                     </div>
                   </div>
@@ -635,7 +635,7 @@ export default function CheckoutPage() {
                     }
                     className="w-full bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-70 disabled:cursor-not-allowed py-6 text-base font-medium rounded-lg"
                   >
-                    {isPlacingOrder ? "Đang xử lý..." : "Thanh Toán"}
+                    {isPlacingOrder ? "Processing..." : "Pay now"}
                     {!isPlacingOrder && <ChevronRight className="w-5 h-5 ml-2" />}
                   </Button>
                   {orderError && (
@@ -675,14 +675,14 @@ export default function CheckoutPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Tag className="w-5 h-5" />
-              Chọn mã khuyến mãi
+              Choose promo code
             </DialogTitle>
-            <DialogDescription>Chọn từ danh sách hoặc nhập mã của bạn</DialogDescription>
+            <DialogDescription>Choose from the list or enter your code</DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div className="space-y-2">
-              <h4 className="font-medium text-sm text-gray-700">Mã đang hoạt động</h4>
+              <h4 className="font-medium text-sm text-gray-700">Active codes</h4>
               <div className="max-h-[240px] overflow-y-auto space-y-2 pr-2">
                 {availableCoupons.map((promo) => {
                   const disabled = !promo.isEligible;
@@ -700,7 +700,7 @@ export default function CheckoutPage() {
                         <span className="font-bold text-amber-600">{promo.code}</span>
                         <span className="text-sm font-medium text-gray-900">
                           {promo.freeShipping
-                            ? "Miễn phí vận chuyển"
+                            ? "Free shipping"
                             : promo.type === "PERCENTAGE"
                             ? `-${promo.value}%`
                             : `-${formatPrice(promo.value)}`}
@@ -710,32 +710,32 @@ export default function CheckoutPage() {
                         <p className="text-sm text-gray-600 mb-1">{promo.description}</p>
                       )}
                       <div className="flex items-center justify-between text-xs text-gray-500">
-                        <span>ĐH tối thiểu: {formatPrice(promo.minOrderValue)}</span>
+                        <span>Minimum order: {formatPrice(promo.minOrderValue)}</span>
                         {promo.endsAt && (
                           <span>
-                            Hết hạn: {new Date(promo.endsAt).toLocaleDateString("vi-VN")}
+                            Expires: {new Date(promo.endsAt).toLocaleDateString("vi-VN")}
                           </span>
                         )}
                       </div>
                       {disabled && promo.missingAmount > 0 && (
                         <p className="text-xs text-red-600 mt-1">
-                          Cần thêm {formatPrice(promo.missingAmount)} để đủ điều kiện
+                          Need an additional {formatPrice(promo.missingAmount)} to qualify
                         </p>
                       )}
                     </div>
                   );
                 })}
                 {availableCoupons.length === 0 && (
-                  <p className="text-sm text-gray-500">Hiện chưa có mã nào.</p>
+                  <p className="text-sm text-gray-500">There are no codes available yet.</p>
                 )}
               </div>
             </div>
 
             <div className="space-y-2">
-              <h4 className="font-medium text-sm text-gray-700">Nhập mã thủ công</h4>
+              <h4 className="font-medium text-sm text-gray-700">Enter code manually</h4>
               <div className="flex gap-2">
                 <Input
-                  placeholder="Nhập mã khuyến mãi"
+                  placeholder="Enter promo code"
                   value={promoCode}
                   onChange={(e) => setPromoCode(e.target.value)}
                   className="flex-1"
@@ -745,7 +745,7 @@ export default function CheckoutPage() {
                   disabled={!promoCode || isPromoLoading}
                   className="bg-black text-white hover:bg-gray-800"
                 >
-                  {isPromoLoading ? "Đang áp dụng..." : "Áp dụng"}
+                  {isPromoLoading ? "Applying..." : "Apply"}
                 </Button>
               </div>
             </div>
@@ -755,10 +755,10 @@ export default function CheckoutPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="font-medium text-green-800">
-                      {appliedPromo ? appliedPromo.code : "Đã áp dụng mã"}
+                      {appliedPromo ? appliedPromo.code : "Code applied"}
                     </span>
                     <p className="text-sm text-green-600">
-                      {`Giảm: -${formatPrice(summary?.promoDiscount ?? 0)}`}
+                      {`Discount: -${formatPrice(summary?.promoDiscount ?? 0)}`}
                     </p>
                   </div>
                   <Button
@@ -768,7 +768,7 @@ export default function CheckoutPage() {
                     className="text-green-600 hover:text-green-800 hover:bg-green-100"
                     disabled={isPromoLoading}
                   >
-                    Gỡ mã
+                    Remove code
                   </Button>
                 </div>
               </div>
