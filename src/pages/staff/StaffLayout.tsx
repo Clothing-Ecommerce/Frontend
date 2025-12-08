@@ -42,10 +42,10 @@ export type StaffOutletContext = {
 }
 
 export const orderStatusLabel: Record<StaffOrderDisplayStatus, string> = {
-  new: "Mới",
-  processing: "Đang xử lý",
-  delivered: "Đã giao",
-  returned: "Hoàn trả",
+  new: "New",
+  processing: "Processing",
+  delivered: "Delivered",
+  returned: "Returned",
 }
 
 export const orderStatusBadge: Record<StaffOrderDisplayStatus, string> = {
@@ -87,13 +87,13 @@ function formatDateTime(iso: string) {
 
 const navItems: Array<{ key: StaffSectionKey; label: string; icon: React.ElementType; to: string }> = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, to: "/staff/dashboard" },
-  { key: "orders", label: "Đơn Hàng", icon: ClipboardList, to: "/staff/orders" },
-  { key: "inventory", label: "Kho hàng (admin)", icon: Boxes, to: "/staff/inventory" },
-  { key: "products", label: "Sản Phẩm", icon: Tag, to: "/staff/products" },
-  { key: "customers", label: "Khách Hàng (bỏ)", icon: Users, to: "/staff/customers" },
-  { key: "support", label: "Hỗ Trợ (bỏ)", icon: LifeBuoy, to: "/staff/support" },
-  { key: "reports", label: "Báo Cáo (bỏ)", icon: BarChart3, to: "/staff/reports" },
-  { key: "profile", label: "Hồ Sơ", icon: UserCog, to: "/staff/profile" },
+  { key: "orders", label: "Orders", icon: ClipboardList, to: "/staff/orders" },
+  { key: "inventory", label: "Inventory (admin)", icon: Boxes, to: "/staff/inventory" },
+  { key: "products", label: "Products", icon: Tag, to: "/staff/products" },
+  { key: "customers", label: "Customers (unused)", icon: Users, to: "/staff/customers" },
+  { key: "support", label: "Support (unused)", icon: LifeBuoy, to: "/staff/support" },
+  { key: "reports", label: "Reports (unused)", icon: BarChart3, to: "/staff/reports" },
+  { key: "profile", label: "Profile", icon: UserCog, to: "/staff/profile" },
 ]
 
 export default function StaffLayout() {
@@ -182,7 +182,7 @@ export default function StaffLayout() {
                 className="flex w-full items-center gap-3 rounded-xl px-5 py-4 text-base font-medium text-stone-400 transition hover:bg-red-900/50 hover:text-red-200"
               >
                 <LogOut className="h-5 w-5 text-red-300" />
-                Đăng xuất
+                Log out
               </button>
             </nav>
           </div>
@@ -195,22 +195,22 @@ export default function StaffLayout() {
                 <h2 className="mt-2 text-3xl font-semibold text-[#1f1b16]">{currentTitle}</h2>
               </div>
               <div className="flex flex-wrap items-center gap-2 text-sm text-[#6c6252]">
-                <div className="inline-flex items-center gap-2 rounded-full border border-[#ead7b9] bg-white/60 px-4 py-1.5">
+                <div className="inline-flex items-center gap-2 rounded-full border border-[#ead7b9] bg:white/60 px-4 py-1.5">
                   <User className="h-4 w-4 text-[#c87d2f]" /> {staffProfile.name}
                 </div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-[#ead7b9] bg-white/60 px-4 py-1.5">
+                <div className="inline-flex items-center gap-2 rounded-full border border-[#ead7b9] bg:white/60 px-4 py-1.5">
                   <Mail className="h-4 w-4 text-[#c87d2f]" /> {staffProfile.email}
                 </div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-[#ead7b9] bg-white/60 px-4 py-1.5">
+                <div className="inline-flex items-center gap-2 rounded-full border border-[#ead7b9] bg:white/60 px-4 py-1.5">
                   <Phone className="h-4 w-4 text-[#c87d2f]" /> {staffProfile.phone}
                 </div>
                 <Button
                   size="sm"
                   variant="outline"
-                  className="rounded-full border-[#ead7b9] bg-white/70 text-[#1f1b16] hover:bg-[#efe2c6]"
+                  className="rounded-full border-[#ead7b9] bg:white/70 text-[#1f1b16] hover:bg-[#efe2c6]"
                   onClick={() => navigate("/")}
                 >
-                  Trang chủ
+                  Home
                 </Button>
               </div>
             </header>
