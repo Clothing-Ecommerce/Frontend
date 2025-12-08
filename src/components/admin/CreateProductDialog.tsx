@@ -27,12 +27,12 @@ const slugify = (value: string) =>
     .replace(/-+/g, "-")
 
 const colorOptions = [
-  { value: "Đỏ", hex: "#ef4444" },
-  { value: "Xanh", hex: "#3b82f6" },
-  { value: "Đen", hex: "#111827" },
-  { value: "Trắng", hex: "#f9fafb" },
+  { value: "Red", hex: "#ef4444" },
+  { value: "Blue", hex: "#3b82f6" },
+  { value: "Black", hex: "#111827" },
+  { value: "White", hex: "#f9fafb" },
   { value: "Be", hex: "#d6b98c" },
-  { value: "Xám", hex: "#9ca3af" },
+  { value: "Gray", hex: "#9ca3af" },
 ]
 
 const sizeOptions = ["XS", "S", "M", "L", "XL", "XXL"]
@@ -289,11 +289,11 @@ export default function CreateProductDialog({
     const parsedCategoryId = Number(categoryId)
     const parsedBrandId = brandId ? Number(brandId) : undefined
 
-    if (!trimmedName) return setError("Vui lòng nhập tên sản phẩm")
-    if (!trimmedSlug) return setError("Vui lòng nhập slug hợp lệ")
-    if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) return setError("Giá cơ bản không hợp lệ")
+    if (!trimmedName) return setError("Please enter product name")
+    if (!trimmedSlug) return setError("Please enter a valid slug")
+    if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) return setError("Base price is invalid")
     if (!Number.isFinite(parsedCategoryId) || parsedCategoryId <= 0)
-      return setError("Vui lòng chọn danh mục hợp lệ")
+      return setError("Please select a valid category")
 
     const featurePayload = {
       material: material || undefined,
@@ -335,7 +335,7 @@ export default function CreateProductDialog({
       await onSubmit(payload)
       resetForm()
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Không thể tạo sản phẩm")
+      setError(submitError instanceof Error ? submitError.message : "Unable to create product")
     }
   }
 
@@ -351,30 +351,30 @@ export default function CreateProductDialog({
     >
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle>Thêm sản phẩm mới</DialogTitle>
+          <DialogTitle>Add New Product</DialogTitle>
           <DialogDescription>
-            Thiết lập đầy đủ thông tin, hình ảnh, biến thể và thông số kỹ thuật cho sản phẩm của bạn.
+            Set up full information, images, variants and specifications for your product.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid grid-cols-2 sm:grid-cols-4">
-              <TabsTrigger value="general">Thông tin chung</TabsTrigger>
-              <TabsTrigger value="media">Hình ảnh</TabsTrigger>
-              <TabsTrigger value="variants">Biến thể & Kho</TabsTrigger>
-              <TabsTrigger value="specs">Thuộc tính khác</TabsTrigger>
+              <TabsTrigger value="general">General Information</TabsTrigger>
+              <TabsTrigger value="media">Images</TabsTrigger>
+              <TabsTrigger value="variants">Variants & Inventory</TabsTrigger>
+              <TabsTrigger value="specs">Other Attributes</TabsTrigger>
             </TabsList>
 
             <TabsContent value="general" className="space-y-4">
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="grid gap-2">
-                  <Label htmlFor="product-name">Tên sản phẩm</Label>
+                  <Label htmlFor="product-name">Product Name</Label>
                   <Input
                     id="product-name"
                     value={name}
                     onChange={(event) => setName(event.target.value)}
-                    placeholder="Áo thun basic..."
+                    placeholder="Basic t-shirt..."
                     className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
                   />
                 </div>
@@ -382,14 +382,14 @@ export default function CreateProductDialog({
                   <div className="flex items-center justify-between">
                     <Label htmlFor="product-slug">Slug</Label>
                     <Button type="button" variant="ghost" size="sm" className="h-8 px-2" onClick={() => setSlug(slugify(name))}>
-                      Tạo slug tự động
+                      Generate slug automatically
                     </Button>
                   </div>
                   <Input
                     id="product-slug"
                     value={slug}
                     onChange={(event) => setSlug(event.target.value)}
-                    placeholder="ao-thun-basic"
+                    placeholder="basic-t-shirt"
                     className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
                   />
                 </div>
@@ -397,7 +397,7 @@ export default function CreateProductDialog({
 
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="grid gap-2">
-                  <Label htmlFor="product-price">Giá niêm yết (VND)</Label>
+                  <Label htmlFor="product-price">Listed Price (VND)</Label>
                   <Input
                     id="product-price"
                     type="number"
@@ -409,10 +409,10 @@ export default function CreateProductDialog({
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="product-category">Danh mục</Label>
+                  <Label htmlFor="product-category">Category</Label>
                   <Select value={categoryId} onValueChange={setCategoryId}>
                     <SelectTrigger id="product-category" className="border-[#ead7b9] focus-visible:ring-[#c87d2f]">
-                      <SelectValue placeholder="Chọn danh mục" />
+                      <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map((category) => (
@@ -427,13 +427,13 @@ export default function CreateProductDialog({
 
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="grid gap-2">
-                  <Label htmlFor="product-brand">Thương hiệu</Label>
+                  <Label htmlFor="product-brand">Brand</Label>
                   <Select value={brandId || "none"} onValueChange={(value) => setBrandId(value === "none" ? "" : value)}>
                     <SelectTrigger id="product-brand" className="border-[#ead7b9] focus-visible:ring-[#c87d2f]">
-                      <SelectValue placeholder="Chọn thương hiệu" />
+                      <SelectValue placeholder="Select brand" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Không chọn thương hiệu</SelectItem>
+                      <SelectItem value="none">No brand selected</SelectItem>
                       {brands.map((brand) => (
                         <SelectItem key={brand.id} value={String(brand.id)}>
                           {brand.name}
@@ -443,7 +443,7 @@ export default function CreateProductDialog({
                   </Select>
                 </div>
                 <div className="grid gap-2">
-                  <Label>Chất liệu</Label>
+                  <Label>Material</Label>
                   <Input
                     value={material}
                     onChange={(event) => setMaterial(event.target.value)}
@@ -455,20 +455,20 @@ export default function CreateProductDialog({
 
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="grid gap-2">
-                  <Label>Hướng dẫn bảo quản</Label>
+                  <Label>Care Instructions</Label>
                   <Input
                     value={careInstructions}
                     onChange={(event) => setCareInstructions(event.target.value)}
-                    placeholder="Giặt nhẹ, không sấy nóng..."
+                    placeholder="Gentle wash, do not tumble dry..."
                     className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Mô tả chi tiết</Label>
+                  <Label>Detailed Description</Label>
                   <RichTextEditor
                     value={description}
                     onChange={setDescription}
-                    placeholder="Mô tả nổi bật, bảng size, thông tin chất liệu..."
+                    placeholder="Key highlights, size chart, material information..."
                   />
                 </div>
               </div>
@@ -485,11 +485,11 @@ export default function CreateProductDialog({
               >
                 <ImageIcon className="h-10 w-10 text-[#c87d2f]" />
                 <div>
-                  <p className="text-sm font-medium text-[#1f1b16]">Kéo & thả ảnh sản phẩm</p>
-                  <p className="text-xs text-[#6c6252]">Hỗ trợ tải nhiều ảnh cùng lúc để tạo gallery</p>
+                  <p className="text-sm font-medium text-[#1f1b16]">Drag & drop product images</p>
+                  <p className="text-xs text-[#6c6252]">Support uploading multiple images at once to create a gallery</p>
                 </div>
                 <label className="inline-flex cursor-pointer items-center justify-center rounded-md border border-[#ead7b9] bg-white px-3 py-1 text-sm font-medium text-[#1f1b16] shadow-sm hover:bg-[#f4f1ea]">
-                  Chọn ảnh
+                  Choose images
                   <input
                     type="file"
                     accept="image/*"
@@ -504,10 +504,10 @@ export default function CreateProductDialog({
                 <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
                   {orderedImages.map((image, index) => (
                     <div key={image.id} className="group relative rounded-lg border border-[#ead7b9] bg-white p-2 shadow-sm">
-                      <img src={image.preview} alt={name || "Ảnh sản phẩm"} className="h-36 w-full rounded-md object-cover" />
+                      <img src={image.preview} alt={name || "Product image"} className="h-36 w-full rounded-md object-cover" />
                       <div className="mt-2 flex items-center justify-between text-xs text-[#6c6252]">
                         <span>
-                          Ảnh {index + 1} {image.isPrimary ? "- Ảnh đại diện" : ""}
+                          Image {index + 1} {image.isPrimary ? "- Main image" : ""}
                         </span>
                         <div className="flex items-center gap-1">
                           <Button
@@ -540,10 +540,10 @@ export default function CreateProductDialog({
                           className={cn("flex-1 border-[#ead7b9]", image.isPrimary ? "bg-[#1c1a16] text-white" : "")}
                           onClick={() => togglePrimary(image.id)}
                         >
-                          Đặt làm ảnh đại diện
+                          Set as main image
                         </Button>
                         <Button type="button" variant="ghost" size="sm" className="text-red-600" onClick={() => handleDeleteImage(image.id)}>
-                          <Trash2 className="mr-1 h-4 w-4" /> Xoá
+                          <Trash2 className="mr-1 h-4 w-4" /> Delete
                         </Button>
                       </div>
                     </div>
@@ -555,7 +555,7 @@ export default function CreateProductDialog({
             <TabsContent value="variants" className="space-y-4">
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-2 rounded-lg border border-[#ead7b9] p-3">
-                  <p className="text-sm font-medium text-[#1f1b16]">Màu sắc</p>
+                  <p className="text-sm font-medium text-[#1f1b16]">Colors</p>
                   <div className="flex flex-wrap gap-2">
                     {colorOptions.map((color) => (
                       <Button
@@ -575,7 +575,7 @@ export default function CreateProductDialog({
                   </div>
                 </div>
                 <div className="space-y-2 rounded-lg border border-[#ead7b9] p-3">
-                  <p className="text-sm font-medium text-[#1f1b16]">Kích thước</p>
+                  <p className="text-sm font-medium text-[#1f1b16]">Sizes</p>
                   <div className="flex flex-wrap gap-2">
                     {sizeOptions.map((size) => (
                       <Button
@@ -596,7 +596,7 @@ export default function CreateProductDialog({
               </div>
 
               <Button type="button" className="bg-[#1c1a16] text-white" onClick={generateVariants}>
-                <Sparkles className="mr-2 h-4 w-4" /> Tạo biến thể
+                <Sparkles className="mr-2 h-4 w-4" /> Generate variants
               </Button>
 
               {!!variants.length && (
@@ -604,16 +604,16 @@ export default function CreateProductDialog({
                   <table className="min-w-full text-left text-sm">
                     <thead className="bg-[#f9f5ee] text-[#1f1b16]">
                       <tr>
-                        <th className="px-4 py-3">Tên biến thể</th>
+                        <th className="px-4 py-3">Variant Name</th>
                         <th className="px-4 py-3">SKU</th>
-                        <th className="px-4 py-3">Giá bán</th>
-                        <th className="px-4 py-3">Tồn kho</th>
-                        <th className="px-4 py-3">Ảnh</th>
+                        <th className="px-4 py-3">Price</th>
+                        <th className="px-4 py-3">Stock</th>
+                        <th className="px-4 py-3">Image</th>
                       </tr>
                     </thead>
                     <tbody>
                       {variants.map((variant) => {
-                        const displayName = [name || "Sản phẩm", variant.color, variant.size].filter(Boolean).join(" - ")
+                        const displayName = [name || "Product", variant.color, variant.size].filter(Boolean).join(" - ")
                         return (
                           <tr key={variant.id} className="border-t border-[#ead7b9]">
                             <td className="px-4 py-3 font-medium text-[#1f1b16]">{displayName}</td>
@@ -632,7 +632,7 @@ export default function CreateProductDialog({
                                   className="border-[#ead7b9]"
                                   onClick={() => setVariantField(variant.id, "sku", autoFillSku(variant))}
                                 >
-                                  Tự động
+                                  Auto
                                 </Button>
                               </div>
                             </td>
@@ -660,13 +660,13 @@ export default function CreateProductDialog({
                                 onValueChange={(value) => setVariantField(variant.id, "imageId", value === "none" ? "" : value)}
                               >
                                 <SelectTrigger className="w-40 border-[#ead7b9] focus-visible:ring-[#c87d2f]">
-                                  <SelectValue placeholder="Chọn ảnh" />
+                                  <SelectValue placeholder="Select image" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="none">Không gán ảnh</SelectItem>
+                                  <SelectItem value="none">No image assigned</SelectItem>
                                   {orderedImages.map((image, imageIndex) => (
                                     <SelectItem key={image.id} value={image.id}>
-                                      Ảnh {imageIndex + 1}
+                                      Image {imageIndex + 1}
                                     </SelectItem>
                                   ))}
                                 </SelectContent>
@@ -683,28 +683,28 @@ export default function CreateProductDialog({
 
             <TabsContent value="specs" className="space-y-3">
               <div className="space-y-2">
-                <p className="text-sm text-[#6c6252]">Thêm các thông số kỹ thuật dưới dạng cặp Key - Value.</p>
+                <p className="text-sm text-[#6c6252]">Add specifications as Key - Value pairs.</p>
                 {specifications.map((spec, index) => (
                   <div key={`${spec.key}-${index}`} className="grid grid-cols-1 gap-2 rounded-lg border border-[#ead7b9] bg-white p-3 sm:grid-cols-[1fr,1fr,auto]">
                     <Input
-                      placeholder="Tên thông số (VD: Chất liệu)"
+                      placeholder="Specification name (e.g., Material)"
                       value={spec.key}
                       onChange={(event) => handleSpecificationChange(index, "key", event.target.value)}
                       className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
                     />
                     <Input
-                      placeholder="Giá trị (VD: 100% Cotton)"
+                      placeholder="Value (e.g., 100% Cotton)"
                       value={spec.value}
                       onChange={(event) => handleSpecificationChange(index, "value", event.target.value)}
                       className="border-[#ead7b9] focus-visible:ring-[#c87d2f]"
                     />
                     <Button type="button" variant="ghost" className="text-red-600" onClick={() => handleRemoveSpecification(index)}>
-                      <Trash2 className="mr-1 h-4 w-4" /> Xoá
+                      <Trash2 className="mr-1 h-4 w-4" /> Delete
                     </Button>
                   </div>
                 ))}
                 <Button type="button" variant="outline" className="border-[#ead7b9]" onClick={handleAddSpecification}>
-                  <Plus className="mr-2 h-4 w-4" /> Thêm thông số
+                  <Plus className="mr-2 h-4 w-4" /> Add specification
                 </Button>
               </div>
             </TabsContent>
@@ -723,10 +723,10 @@ export default function CreateProductDialog({
               }}
               disabled={isSubmitting}
             >
-              Huỷ
+              Cancel
             </Button>
             <Button type="submit" className="bg-[#1c1a16] text-white" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Tạo sản phẩm
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Create Product
             </Button>
           </DialogFooter>
         </form>
