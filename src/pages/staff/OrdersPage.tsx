@@ -177,7 +177,7 @@ export default function StaffOrdersPage() {
         const message =
           axios.isAxiosError(error) && error.response?.data?.message
             ? error.response.data.message
-            : "Không thể tải danh sách đơn hàng"
+            : "Unable to load order list"
         setListError(message)
         setOrders([])
       })
@@ -220,7 +220,7 @@ export default function StaffOrdersPage() {
         const message =
           axios.isAxiosError(error) && error.response?.data?.message
             ? error.response.data.message
-            : "Không thể tải chi tiết đơn hàng"
+            : "Unable to load order details"
         setDetailError(message)
         setSelectedOrder(null)
       })
@@ -270,8 +270,8 @@ export default function StaffOrdersPage() {
         const updated = applyOrderUpdate(response.data)
         setStatusDialogOpen(false)
         showToast({
-          title: "Cập nhật thành công",
-          description: `Đơn ${updated.code ?? updated.id} đã chuyển sang "${
+          title: "Update successful",
+          description: `Order ${updated.code ?? updated.id} has been changed to "${
             orderStatusLabel[mapAdminStatusToStaff(updated.status)]
           }"`,
           type: "success",
@@ -281,13 +281,13 @@ export default function StaffOrdersPage() {
         const message =
           axios.isAxiosError(error) && error.response?.data?.message
             ? error.response.data.message
-            : "Không thể cập nhật trạng thái đơn hàng"
+            : "Unable to update order status"
         setStatusError(message)
       })
       .finally(() => setIsStatusSaving(false))
   }
 
-  // Chức năng: Gửi yêu cầu hoàn tiền (Gửi cho Admin duyệt)
+  // Function: Submit refund request (Send to Admin for approval)
   const submitRefundRequest = () => {
     if (!selectedOrder?.id || !refundReason.trim()) return
 
@@ -300,7 +300,7 @@ export default function StaffOrdersPage() {
         `/admin/orders/${selectedOrder.id}/status`,
         {
           status: currentAdminStatus,
-          note: `[YÊU CẦU HOÀN TIỀN]: ${refundReason.trim()}`,
+          note: `[REFUND REQUEST]: ${refundReason.trim()}`,
         },
       )
       .then((response) => {
@@ -308,10 +308,10 @@ export default function StaffOrdersPage() {
         setRefundDialogOpen(false)
         setRefundReason("")
         showToast({
-          title: "Đã gửi yêu cầu",
-          description: `Yêu cầu hoàn tiền cho đơn ${
+          title: "Request sent",
+          description: `Refund request for order ${
             response.data.order.code ?? response.data.order.id
-          } đã được ghi nhận.`,
+          } has been recorded.`,
           type: "success",
         })
       })
@@ -319,9 +319,9 @@ export default function StaffOrdersPage() {
         const message =
           axios.isAxiosError(error) && error.response?.data?.message
             ? error.response.data.message
-            : "Không thể gửi yêu cầu hoàn tiền"
+            : "Unable to submit refund request"
         showToast({
-          title: "Gửi yêu cầu thất bại",
+          title: "Failed to submit request",
           description: message,
           type: "error",
         })
@@ -344,7 +344,7 @@ export default function StaffOrdersPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[#b8a47a]">
             Orders Management
           </p>
-          <h2 className="text-2xl font-bold text-[#1f1b16]">Quản lý vận đơn</h2>
+          <h2 className="text-2xl font-bold text-[#1f1b16]">Order Management</h2>
         </div>
 
         {/* Filter Pills */}
@@ -364,7 +364,7 @@ export default function StaffOrdersPage() {
                   )}
                   onClick={() => setOrderStatusFilter(status)}
                 >
-                  {status === "all" ? "Tất cả" : orderStatusLabel[status]}
+                  {status === "all" ? "All" : orderStatusLabel[status]}
                 </Button>
               );
             }
@@ -382,20 +382,20 @@ export default function StaffOrdersPage() {
               <Input
                 value={orderSearchTerm}
                 onChange={(event) => setOrderSearchTerm(event.target.value)}
-                placeholder="Tìm kiếm theo Mã đơn, Tên khách, SĐT..."
+                placeholder="Search by Order Code, Customer Name, Phone Number..."
                 className="h-10 rounded-xl border-[#ead7b9] bg-[#fdfbf7] pl-9 text-sm focus-visible:ring-[#c87d2f]"
               />
             </div>
             <div className="flex items-center justify-between text-xs text-[#7a6f60]">
               <span>
-                Hiển thị <strong>{filteredOrders.length}</strong> đơn hàng
+                Displaying <strong>{filteredOrders.length}</strong> orders
               </span>
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-6 gap-1 hover:text-[#c87d2f]"
               >
-                <Filter className="h-3 w-3" /> Lọc nâng cao
+                <Filter className="h-3 w-3" /> Advanced filter
               </Button>
             </div>
           </CardHeader>
@@ -404,11 +404,11 @@ export default function StaffOrdersPage() {
             <table className="w-full text-left text-sm">
               <thead className="sticky top-0 bg-[#f9f4ea] text-xs font-semibold uppercase text-[#7a6f60]">
                 <tr>
-                  <th className="px-4 py-3">Mã đơn</th>
-                  <th className="px-4 py-3">Khách hàng</th>
-                  <th className="hidden md:table-cell px-4 py-3">Ngày đặt</th>
-                  <th className="px-4 py-3 text-right">Tổng tiền</th>
-                  <th className="px-4 py-3 text-center">Trạng thái</th>
+                  <th className="px-4 py-3">Order code</th>
+                  <th className="px-4 py-3">Customer</th>
+                  <th className="hidden md:table-cell px-4 py-3">Order date</th>
+                  <th className="px-4 py-3 text-right">Total amount</th>
+                  <th className="px-4 py-3 text-center">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#f0e4cc]">
@@ -433,7 +433,7 @@ export default function StaffOrdersPage() {
                       colSpan={5}
                       className="py-12 text-center text-[#9a8f7f]"
                     >
-                      Không tìm thấy đơn hàng phù hợp.
+                      No matching orders found.
                     </td>
                   </tr>
                 ) : (
@@ -458,7 +458,7 @@ export default function StaffOrdersPage() {
                           {isReturnRequested && (
                             <span
                               className="ml-2 inline-block h-2 w-2 rounded-full bg-red-500 animate-pulse"
-                              title="Có yêu cầu hoàn tiền"
+                              title="Refund requested"
                             />
                           )}
                         </td>
@@ -512,7 +512,7 @@ export default function StaffOrdersPage() {
                       </Badge>
                       {selectedOrderReturnRequested && (
                         <Badge variant="destructive" className="animate-pulse">
-                          Yêu cầu hoàn tiền
+                          Refund request
                         </Badge>
                       )}
                     </div>
@@ -532,7 +532,7 @@ export default function StaffOrdersPage() {
                 <div className="grid grid-cols-2 gap-4 mt-4">
                   <div className="p-3 rounded-xl bg-[#f4f1ea] border border-[#e6decb]">
                     <p className="text-[10px] uppercase tracking-wider text-[#9a8f7f] mb-1">
-                      Trạng thái
+                      Status
                     </p>
                     <div className="flex items-center gap-2">
                       <span
@@ -548,7 +548,7 @@ export default function StaffOrdersPage() {
                   </div>
                   <div className="p-3 rounded-xl bg-[#f4f1ea] border border-[#e6decb]">
                     <p className="text-[10px] uppercase tracking-wider text-[#9a8f7f] mb-1">
-                      Tổng thanh toán
+                      Total payment
                     </p>
                     <p className="font-bold text-[#c87d2f] text-sm">
                       {formatCurrency(selectedOrder.totals.total)}
@@ -567,22 +567,22 @@ export default function StaffOrdersPage() {
                 {isDetailLoading && (
                   <div className="flex items-center gap-2 text-sm text-[#7a6f60]">
                     <LoadingSpinner className="h-4 w-4 text-[#c87d2f]" />
-                    Đang tải chi tiết đơn hàng...
+                    Loading order details...
                   </div>
                 )}
 
                 {/* Shipping Info */}
                 <div>
                   <h4 className="flex items-center gap-2 text-sm font-semibold text-[#1f1b16] mb-3">
-                    <MapPin className="h-4 w-4 text-[#c87d2f]" /> Thông tin giao
-                    nhận
+                    <MapPin className="h-4 w-4 text-[#c87d2f]" /> Shipping
+                    information
                   </h4>
                   <div className="text-sm text-[#6c6252] pl-6 leading-relaxed">
                     <p>
-                      {selectedOrder.address?.line || "Không có địa chỉ giao hàng"}
+                      {selectedOrder.address?.line || "No shipping address"}
                     </p>
                     <p className="text-[#9a8f7f] text-xs mt-1">
-                      Giao hàng tiêu chuẩn (COD)
+                      Standard delivery (COD)
                     </p>
                   </div>
                 </div>
@@ -590,12 +590,12 @@ export default function StaffOrdersPage() {
                 {/* Product List */}
                 <div>
                   <h4 className="flex items-center gap-2 text-sm font-semibold text-[#1f1b16] mb-3">
-                    <Package className="h-4 w-4 text-[#c87d2f]" /> Sản phẩm (
+                    <Package className="h-4 w-4 text-[#c87d2f]" /> Products (
                     {selectedOrder.items.length})
                   </h4>
                   {selectedOrder.items.length === 0 ? (
                     <p className="pl-2 text-sm text-[#9a8f7f]">
-                      Chưa có sản phẩm nào trong đơn.
+                      There are no products in this order.
                     </p>
                   ) : (
                     <div className="space-y-3 pl-2">
@@ -632,16 +632,16 @@ export default function StaffOrdersPage() {
               {/* Detail Footer Actions */}
               <div className="flex-shrink-0 p-6 border-t border-[#f0e4cc] bg-white">
                 <div className="grid grid-cols-2 gap-3">
-                  {/* Nút cập nhật trạng thái */}
+                  {/* Status update button */}
                   <Button
                     className="bg-[#1f1b16] text-white hover:bg-[#332b22] rounded-full"
                     onClick={() => setStatusDialogOpen(true)}
                     disabled={isDetailLoading || isStatusSaving}
                   >
-                    Cập nhật trạng thái
+                    Update status
                   </Button>
 
-                  {/* Menu hành động phụ */}
+                  {/* Secondary action menu */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -649,23 +649,23 @@ export default function StaffOrdersPage() {
                         className="rounded-full border-[#ead7b9] hover:bg-[#fcf9f4]"
                         disabled={isDetailLoading}
                       >
-                        Hành động khác <MoreVertical className="ml-2 h-4 w-4" />
+                        Other actions <MoreVertical className="ml-2 h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">
-                      <DropdownMenuLabel>Tùy chọn xử lý</DropdownMenuLabel>
+                      <DropdownMenuLabel>Action options</DropdownMenuLabel>
                       <DropdownMenuSeparator />
                       {/* <DropdownMenuItem className="cursor-pointer" onClick={() => {
-                                // Logic in hóa đơn
-                                showToast({ title: "Đang in", description: "Đang tạo file PDF hóa đơn...", type: "info" })
+                                // Invoice printing logic
+                                showToast({ title: "Printing", description: "Generating invoice PDF file...", type: "info" })
                             }}>
-                                <Package className="mr-2 h-4 w-4" /> In phiếu giao hàng
+                                <Package className="mr-2 h-4 w-4" /> Print delivery note
                             </DropdownMenuItem> */}
                       <DropdownMenuItem
                         className="cursor-pointer text-red-600 focus:text-red-700 focus:bg-red-50"
                         onClick={() => setRefundDialogOpen(true)}
                       >
-                        <RotateCcw className="mr-2 h-4 w-4" /> Yêu cầu hoàn tiền
+                        <RotateCcw className="mr-2 h-4 w-4" /> Refund request
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -675,7 +675,7 @@ export default function StaffOrdersPage() {
           ) : (
             <div className="h-full flex flex-col items-center justify-center text-[#9a8f7f] border-2 border-dashed border-[#ead7b9] rounded-xl bg-[#fdfbf7]/50">
               <Package className="h-12 w-12 mb-3 opacity-20" />
-              <p>Chọn một đơn hàng để xem chi tiết</p>
+              <p>Select an order to view details</p>
             </div>
           )}
         </div>
@@ -687,9 +687,9 @@ export default function StaffOrdersPage() {
       <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cập nhật trạng thái đơn hàng</DialogTitle>
+            <DialogTitle>Update order status</DialogTitle>
             <DialogDescription>
-              Thay đổi trạng thái hiện tại của đơn #{selectedOrder?.id}
+              Change the current status of order #{selectedOrder?.id}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-2 py-4">
@@ -720,12 +720,12 @@ export default function StaffOrdersPage() {
                       </span>
                       <span className="text-[10px] text-muted-foreground font-normal">
                         {status === "new"
-                          ? "Đơn hàng mới tạo, chưa xử lý."
+                          ? "Newly created order, not yet processed."
                           : status === "processing"
-                          ? "Đang đóng gói và vận chuyển."
+                          ? "Being packed and shipped."
                           : status === "delivered"
-                          ? "Khách hàng đã nhận được hàng."
-                          : "Đơn hàng hoàn tất."}
+                          ? "The customer has received the goods."
+                          : "Order completed."}
                       </span>
                     </div>
                   </div>
@@ -744,28 +744,28 @@ export default function StaffOrdersPage() {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-600">
-              <AlertCircle className="h-5 w-5" /> Yêu cầu hoàn tiền
+              <AlertCircle className="h-5 w-5" /> Refund request
             </DialogTitle>
             <DialogDescription>
-              Gửi yêu cầu hoàn tiền/trả hàng cho đơn #{selectedOrder?.id}.{" "}
+              Send a refund/return request for order #{selectedOrder?.id}.{" "}
               <br />
-              Yêu cầu sẽ được chuyển đến Admin để phê duyệt.
+              The request will be sent to Admin for approval.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="refund-reason">Lý do hoàn tiền</Label>
+              <Label htmlFor="refund-reason">Refund reason</Label>
               <Textarea
                 id="refund-reason"
-                placeholder="VD: Sản phẩm lỗi, Khách đổi ý, Sai size..."
+                placeholder="e.g.: Defective product, customer changed mind, wrong size..."
                 value={refundReason}
                 onChange={(e) => setRefundReason(e.target.value)}
                 className="min-h-[100px]"
               />
             </div>
             <div className="bg-yellow-50 border border-yellow-100 rounded-lg p-3 text-xs text-yellow-800">
-              <strong>Lưu ý:</strong> Hành động này sẽ không hoàn tiền ngay lập
-              tức. Tiền chỉ được hoàn sau khi Admin xác nhận.
+              <strong>Note:</strong> This action will not refund immediately. The
+              money will only be refunded after the Admin confirms.
             </div>
           </div>
           <DialogFooter>
@@ -773,14 +773,14 @@ export default function StaffOrdersPage() {
               variant="outline"
               onClick={() => setRefundDialogOpen(false)}
             >
-              Hủy bỏ
+              Cancel
             </Button>
             <Button
               variant="destructive"
               onClick={submitRefundRequest}
               disabled={!refundReason.trim()}
             >
-              Gửi yêu cầu
+              Submit request
             </Button>
           </DialogFooter>
         </DialogContent>
