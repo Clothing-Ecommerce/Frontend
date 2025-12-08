@@ -24,8 +24,8 @@ export function DeleteAddressDialog({ open, onOpenChange, addressLabel, onConfir
               <AlertTriangle className="w-6 h-6 text-red-600" />
             </div>
             <div>
-              <DialogTitle>Xóa địa chỉ</DialogTitle>
-              <DialogDescription>Bạn có chắc chắn muốn xóa địa chỉ "{addressLabel}" không?</DialogDescription>
+              <DialogTitle>Delete Address</DialogTitle>
+              <DialogDescription>Are you sure you want to delete the address "{addressLabel}"?</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -33,17 +33,17 @@ export function DeleteAddressDialog({ open, onOpenChange, addressLabel, onConfir
         <div className="space-y-4">
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <p className="text-sm text-red-800">
-              <strong>Lưu ý:</strong> Hành động này không thể hoàn tác. Địa chỉ sẽ bị xóa vĩnh viễn khỏi tài khoản của
-              bạn.
+              <strong>Note:</strong> This action cannot be undone. The address will be permanently deleted from your
+              account.
             </p>
           </div>
 
           <div className="flex gap-3">
             <Button onClick={handleConfirm} className="flex-1 bg-red-600 text-white hover:bg-red-700">
-              Xóa địa chỉ
+              Delete Address
             </Button>
             <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1 bg-transparent">
-              Hủy
+              Cancel
             </Button>
           </div>
         </div>
