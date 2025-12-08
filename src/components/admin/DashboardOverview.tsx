@@ -126,7 +126,7 @@ const formatCurrency = (value: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(value)
 
 const formatGrowth = (growth: number | null) => {
-  if (growth === null) return { label: "Không đổi", trend: "neutral" as const }
+  if (growth === null) return { label: "No change", trend: "neutral" as const }
   const percent = (growth * 100).toFixed(1)
   const label = `${growth >= 0 ? "+" : ""}${percent}%`
   const trend = growth > 0 ? ("up" as const) : growth < 0 ? ("down" as const) : ("neutral" as const)
@@ -212,13 +212,13 @@ function TabsContentLayout({
         <div className="flex items-center justify-between">
           <Select value={timeRange} onValueChange={(value) => onTimeRangeChange(value as ReportRange)}>
             <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Chọn khoảng thời gian" />
+              <SelectValue placeholder="Select time range" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="24h">24 giờ qua</SelectItem>
-              <SelectItem value="7d">7 ngày qua</SelectItem>
-              <SelectItem value="30d">30 ngày qua</SelectItem>
-              <SelectItem value="this_month">Tháng này</SelectItem>
+              <SelectItem value="24h">Last 24 hours</SelectItem>
+              <SelectItem value="7d">Last 7 days</SelectItem>
+              <SelectItem value="30d">Last 30 days</SelectItem>
+              <SelectItem value="this_month">This month</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -226,7 +226,7 @@ function TabsContentLayout({
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <KPICard
-          title="Tổng doanh thu"
+          title="Total Revenue"
           value={overview ? formatCurrency(overview.kpis.revenue.current) : "—"}
           change={formatGrowth(overview?.kpis.revenue.growth ?? null).label}
           trend={formatGrowth(overview?.kpis.revenue.growth ?? null).trend}
@@ -234,7 +234,7 @@ function TabsContentLayout({
           loading={loading}
         />
         <KPICard
-          title="Đơn hàng mới"
+          title="New Orders"
           value={overview ? overview.kpis.newOrders.current.toLocaleString("vi-VN") : "—"}
           change={formatGrowth(overview?.kpis.newOrders.growth ?? null).label}
           trend={formatGrowth(overview?.kpis.newOrders.growth ?? null).trend}
@@ -242,7 +242,7 @@ function TabsContentLayout({
           loading={loading}
         />
         <KPICard
-          title="Sản phẩm đã bán"
+          title="Products Sold"
           value={overview ? overview.kpis.productsSold.current.toLocaleString("vi-VN") : "—"}
           change={formatGrowth(overview?.kpis.productsSold.growth ?? null).label}
           trend={formatGrowth(overview?.kpis.productsSold.growth ?? null).trend}
@@ -250,7 +250,7 @@ function TabsContentLayout({
           loading={loading}
         />
         <KPICard
-          title="Khách hàng mới"
+          title="New Customers"
           value={overview ? overview.kpis.newCustomers.current.toLocaleString("vi-VN") : "—"}
           change={formatGrowth(overview?.kpis.newCustomers.growth ?? null).label}
           trend={formatGrowth(overview?.kpis.newCustomers.growth ?? null).trend}
@@ -262,8 +262,8 @@ function TabsContentLayout({
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-4">
           <CardHeader>
-            <CardTitle>Biểu đồ doanh thu</CardTitle>
-            <CardDescription>Doanh thu và số lượng đơn theo từng mốc thời gian</CardDescription>
+            <CardTitle>Revenue Chart</CardTitle>
+            <CardDescription>Revenue and number of orders by time period</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
             <div className="h-[300px] w-full">
@@ -282,7 +282,7 @@ function TabsContentLayout({
                     contentStyle={{ backgroundColor: "#fff", borderRadius: "8px", border: "1px solid #e2e8f0" }}
                     formatter={(value: number, name) => [
                       name === "revenue" ? formatCurrency(value) : value,
-                      name === "revenue" ? "Doanh thu" : "Đơn hàng",
+                      name === "revenue" ? "Revenue" : "Orders",
                     ]}
                   />
                   <Line type="monotone" dataKey="revenue" stroke="#0f172a" strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
@@ -295,8 +295,8 @@ function TabsContentLayout({
 
         <Card className="col-span-3">
           <CardHeader>
-            <CardTitle>Doanh thu theo danh mục</CardTitle>
-            <CardDescription>Tỷ trọng doanh thu các nhóm hàng</CardDescription>
+            <CardTitle>Revenue by Category</CardTitle>
+            <CardDescription>Revenue share by product groups</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="h-[300px] w-full">
@@ -320,11 +320,11 @@ function TabsContentLayout({
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <CardTitle>Cảnh báo tồn kho</CardTitle>
-              <CardDescription>Các sản phẩm bán chạy có tồn kho thấp</CardDescription>
+              <CardTitle>Inventory Alerts</CardTitle>
+              <CardDescription>Best-selling products with low inventory</CardDescription>
             </div>
             <Badge variant="destructive" className="flex items-center gap-1">
-              <AlertTriangle size={12} /> Cần nhập hàng
+              <AlertTriangle size={12} /> Need restocking
             </Badge>
           </CardHeader>
           <CardContent>
@@ -337,26 +337,26 @@ function TabsContentLayout({
                     </div>
                     <div>
                       <p className="text-sm font-medium text-slate-900">{item.name}</p>
-                      <p className="text-xs text-slate-500">Tồn kho: {"inventory" in item ? item.inventory : "N/A"}</p>
+                      <p className="text-xs text-slate-500">Inventory: {"inventory" in item ? item.inventory : "N/A"}</p>
                     </div>
                   </div>
                   <div className="text-right">
                     <p className={`text-sm font-bold ${"severity" in item && item.severity === "high" ? "text-red-600" : "text-amber-600"}`}>
-                      {"inventory" in item ? item.inventory : 0} cái
+                      {"inventory" in item ? item.inventory : 0} units
                     </p>
-                    {"orders" in item && <p className="text-xs text-slate-500">Đã bán: {item.orders}</p>}
+                    {"orders" in item && <p className="text-xs text-slate-500">Sold: {item.orders}</p>}
                   </div>
                 </div>
               ))}
-              {!lowStockAlerts.length && !bestSellers.length && <p className="text-sm text-slate-500">Chưa có dữ liệu tồn kho.</p>}
+              {!lowStockAlerts.length && !bestSellers.length && <p className="text-sm text-slate-500">No inventory data yet.</p>}
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Khu vực mua hàng nhiều nhất</CardTitle>
-            <CardDescription>Top tỉnh thành có lượng đơn cao</CardDescription>
+            <CardTitle>Top Purchasing Locations</CardTitle>
+            <CardDescription>Top provinces/cities by order volume</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -374,7 +374,7 @@ function TabsContentLayout({
                   <span className="text-sm font-medium">{item.percentage}%</span>
                 </div>
               ))}
-              {!topLocations.length && <p className="text-sm text-slate-500">Chưa có dữ liệu địa lý.</p>}
+              {!topLocations.length && <p className="text-sm text-slate-500">No geographic data yet.</p>}
             </div>
           </CardContent>
         </Card>
@@ -415,7 +415,7 @@ function KPICard({
             {trend === "neutral" && <span className="mr-1">—</span>}
             {change}
           </span>
-          so với kỳ trước
+          compared to previous period
         </p>
       </CardContent>
     </Card>
