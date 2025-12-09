@@ -1,63 +1,97 @@
+import { useEffect, useState } from "react";
+import axios from "axios";
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Heart, Truck, RotateCcw, Shield } from "lucide-react";
+import { Heart, Loader2, RotateCcw, Shield, Truck } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel"
+import ProductCard from "@/components/products/ProductCard";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
+import { Input } from "@/components/ui/input";
+import api from "@/utils/axios";
+import type { BestSellingProduct } from "@/types/productType";
 
-const bestSellingProducts = [
-    {
-      name: "Classic Blazer",
-      price: "$299",
-      originalPrice: "$399",
-      image: "/placeholder.svg?height=300&width=250&text=Classic+Blazer",
-    },
-    {
-      name: "Premium Watch",
-      price: "$199",
-      originalPrice: "$249",
-      image: "/placeholder.svg?height=300&width=250&text=Premium+Watch",
-    },
-    {
-      name: "Leather Shoes",
-      price: "$159",
-      originalPrice: "$199",
-      image: "/placeholder.svg?height=300&width=250&text=Leather+Shoes",
-    },
-    {
-      name: "Cotton Shirt",
-      price: "$79",
-      originalPrice: "$99",
-      image: "/placeholder.svg?height=300&width=250&text=Cotton+Shirt",
-    },
-    {
-      name: "Denim Jeans",
-      price: "$129",
-      originalPrice: "$159",
-      image: "/placeholder.svg?height=300&width=250&text=Denim+Jeans",
-    },
-    {
-      name: "Wool Sweater",
-      price: "$89",
-      originalPrice: "$119",
-      image: "/placeholder.svg?height=300&width=250&text=Wool+Sweater",
-    },
-    {
-      name: "Casual Sneakers",
-      price: "$149",
-      originalPrice: "$179",
-      image: "/placeholder.svg?height=300&width=250&text=Casual+Sneakers",
-    },
-    {
-      name: "Leather Belt",
-      price: "$59",
-      originalPrice: "$79",
-      image: "/placeholder.svg?height=300&width=250&text=Leather+Belt",
-    },
-  ];
+type Brand = {
+  id: string;
+  name: string;
+  logoUrl: string | null;
+};
 
 export default function HomePage() {
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [loadingBrands, setLoadingBrands] = useState(true);
+  const [bestSellingProducts, setBestSellingProducts] = useState<BestSellingProduct[]>([]);
+  const [loadingBestSellers, setLoadingBestSellers] = useState(false);
+  const [bestSellerError, setBestSellerError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isCancelled = false;
+
+    (async () => {
+      try {
+        const response = await api.get<Brand[]>("/brands/");
+        if (isCancelled) return;
+
+        const normalized = Array.isArray(response.data)
+          ? response.data
+              .filter((brand) => brand.id !== "all")
+              .map((brand) => ({
+                id: String(brand.id),
+                name: brand.name ?? "",
+                logoUrl: brand.logoUrl ?? null,
+              }))
+              .filter((brand) => brand.name.length)
+          : [];
+
+        setBrands(normalized);
+      } catch (error) {
+        console.error("Failed to load brands for homepage", error);
+      } finally {
+        if (!isCancelled) {
+          setLoadingBrands(false);
+        }
+      }
+    })();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const fetchBestSellers = async () => {
+      setLoadingBestSellers(true);
+      setBestSellerError(null);
+
+      try {
+        const res = await api.get<{ products: BestSellingProduct[] }>(
+          "/products/best-sellers",
+          {
+            params: { limit: 8 },
+            signal: controller.signal,
+          }
+        );
+
+        setBestSellingProducts(res.data.products);
+      } catch (error) {
+        if (axios.isCancel(error)) return;
+        console.error("Error fetching best selling products:", error);
+        setBestSellerError("Unable to load best-selling products at the moment.");
+      } finally {
+        setLoadingBestSellers(false);
+      }
+    };
+
+    fetchBestSellers();
+
+    return () => {
+      controller.abort();
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-white">
       <Header />
@@ -144,96 +178,37 @@ export default function HomePage() {
             </h2>
             <p className="text-gray-600">Discover our most popular items</p>
         </div>
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-          {/* CHANEL */}
-          <div className="relative group overflow-hidden rounded-lg">
-            <img
-              src="/placeholder.svg?height=300&width=400"
-              alt="CHANEL"
-              width={400}
-              height={300}
-              className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
-            />
-            <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-end p-6">
-              {/* <p className="text-white text-sm mb-1">FOR MEN ONLINE</p> */}
-              <h3 className="text-white text-xl font-bold mb-3">
-                CHANEL
-              </h3>
-              <Button
-                variant="outline"
-                className="bg-transparent border-white text-white hover:bg-white hover:text-black w-fit"
-              >
-                SHOP NOW
-              </Button>
+        <div className="max-w-7xl mx-auto">
+          {loadingBrands ? (
+            <p className="text-center text-gray-500">Loading brands...</p>
+          ) : brands.length === 0 ? (
+            <p className="text-center text-gray-500">No brands available right now.</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
+              {brands.map((brand) => (
+                <div
+                  key={brand.id}
+                  className="group rounded-lg border border-gray-100 bg-gray-50 p-4 transition hover:-translate-y-1 hover:shadow-md"
+                >
+                  <div className="flex h-24 items-center justify-center bg-white rounded-md overflow-hidden">
+                    {brand.logoUrl ? (
+                      <img
+                        src={brand.logoUrl}
+                        alt={brand.name}
+                        className="h-16 w-full object-contain transition duration-300 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-amber-50 text-amber-700 font-semibold">
+                        {brand.name.charAt(0)}
+                      </div>
+                    )}
+                  </div>
+                  <p className="mt-3 text-center text-sm font-semibold text-gray-800">{brand.name}</p>
+                </div>
+              ))}
             </div>
-          </div>
-
-          {/* GUCCI */}
-          <div className="relative group overflow-hidden rounded-lg">
-            <img
-              src="/placeholder.svg?height=300&width=400"
-              alt="GUCCI"
-              width={400}
-              height={300}
-              className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
-            />
-            <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-end p-6">
-              {/* <p className="text-white text-sm mb-1">MEN'S SNEAKER</p> */}
-              <h3 className="text-white text-xl font-bold mb-3">
-                GUCCI
-              </h3>
-              <Button
-                variant="outline"
-                className="bg-transparent border-white text-white hover:bg-white hover:text-black w-fit"
-              >
-                SHOP NOW
-              </Button>
-            </div>
-          </div>
-
-          {/* H&M */}
-          <div className="relative group overflow-hidden rounded-lg">
-            <img
-              src="/placeholder.svg?height=300&width=400"
-              alt="H&M"
-              width={400}
-              height={300}
-              className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
-            />
-            <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-end p-6">
-              {/* <p className="text-white text-sm mb-1">COLLECTION OF 2019</p> */}
-              <h3 className="text-white text-xl font-bold mb-3">
-                H&M
-              </h3>
-              <Button
-                variant="outline"
-                className="bg-transparent border-white text-white hover:bg-white hover:text-black w-fit"
-              >
-                SHOP NOW
-              </Button>
-            </div>
-          </div>
-
-          {/* YODY */}
-          <div className="relative group overflow-hidden rounded-lg">
-            <img
-              src="/placeholder.svg?height=300&width=400"
-              alt="YODY"
-              width={400}
-              height={300}
-              className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
-            />
-            <div className="absolute inset-0 bg-black bg-opacity-40 flex flex-col justify-end p-6">
-              {/* <p className="text-white text-sm mb-1">MEN'S SHOES</p> */}
-              <h3 className="text-white text-xl font-bold mb-3">YODY</h3>
-              <Button
-                variant="outline"
-                className="bg-transparent border-white text-white hover:bg-white hover:text-black w-fit"
-              >
-                SHOP NOW
-              </Button>
-            </div>
-          </div>
+          )}
         </div>
       </section>
 
@@ -248,44 +223,82 @@ export default function HomePage() {
           </div>
 
           <div className="relative px-12">
-            <Carousel
-              opts={{
-                align: "start",
-                loop: true,
-              }}
-              className="w-full"
-            >
-              <CarouselContent className="-ml-2 md:-ml-4">
-                {bestSellingProducts.map((product, index) => (
-                  <CarouselItem key={index} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3 xl:basis-1/4">
-                    <div className="bg-white rounded-lg shadow-sm overflow-hidden group hover:shadow-lg transition-shadow duration-300">
-                      <div className="relative overflow-hidden">
-                        <img
-                          src={product.image || "/placeholder.svg"}
-                          alt={product.name}
-                          width={250}
-                          height={300}
-                          className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
+            {loadingBestSellers ? (
+              <div className="flex flex-col items-center gap-3 py-12 text-gray-600">
+                <Loader2 className="h-6 w-6 animate-spin" />
+                <span>Loading best sellers...</span>
+              </div>
+            ) : bestSellerError ? (
+              <p className="text-center text-sm text-red-500 py-8">
+                {bestSellerError}
+              </p>
+            ) : !bestSellingProducts.length ? (
+              <p className="text-center text-sm text-gray-500 py-8">
+                No best-selling products to show yet.
+              </p>
+            ) : (
+              <Carousel
+                opts={{
+                  align: "start",
+                  loop: true,
+                }}
+                className="w-full"
+              >
+                <CarouselContent className="-ml-2 md:-ml-4">
+                  {bestSellingProducts.map((product) => {
+                    const productImage = product.image?.url ?? "/placeholder.svg";
+                    const productAlt = product.image?.alt ?? product.name;
+                    const isInStock =
+                      typeof product.inStock === "boolean"
+                        ? product.inStock
+                        : product.totalStock > 0;
+
+                    return (
+                      <CarouselItem
+                        key={product.id}
+                        className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/3 xl:basis-1/4"
+                      >
+                        <ProductCard
+                          product={{
+                            id: product.id,
+                            name: product.name,
+                            brandName: product.brand?.name ?? undefined,
+                            price: product.effectivePrice,
+                            originalPrice: product.compareAtPrice ?? undefined,
+                            imageUrl: productImage,
+                            imageAlt: productAlt,
+                            inStock: isInStock,
+                          }}
+                          to={`/products/${product.id}`}
+                          overlays={{
+                            topRight: (
+                              <button
+                                type="button"
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-white/90 text-gray-600 shadow-sm ring-1 ring-black/5 transition hover:bg-rose-50 hover:text-rose-500"
+                              >
+                                <Heart className="w-4 h-4" />
+                              </button>
+                            ),
+                          }}
+                          badgeSlot={
+                            <div className="flex flex-wrap gap-2">
+                              <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-amber-200">
+                                Best Seller
+                              </Badge>
+                              <Badge variant="outline" className="border-gray-200 text-gray-700">
+                                Sold {product.unitsSold.toLocaleString("vi-VN")}
+                              </Badge>
+                            </div>
+                          }
                         />
-                        <div className="absolute top-4 right-4">
-                          <Heart className="w-5 h-5 text-gray-400 hover:text-red-500 cursor-pointer" />
-                        </div>
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-semibold text-gray-900 mb-2">{product.name}</h3>
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg font-bold text-gray-900">{product.price}</span>
-                          <span className="text-sm text-gray-500 line-through">{product.originalPrice}</span>
-                        </div>
-                        <Button className="w-full mt-3 bg-black text-white hover:bg-gray-800">Add to Cart</Button>
-                      </div>
-                    </div>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <CarouselPrevious className="bg-white border-gray-300 hover:bg-gray-50" />
-              <CarouselNext className="bg-white border-gray-300 hover:bg-gray-50" />
-            </Carousel>
+                      </CarouselItem>
+                    );
+                  })}
+                </CarouselContent>
+                <CarouselPrevious className="bg-white border-gray-300 hover:bg-gray-50" />
+                <CarouselNext className="bg-white border-gray-300 hover:bg-gray-50" />
+              </Carousel>
+            )}
           </div>
         </div>
       </section>
