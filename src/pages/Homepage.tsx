@@ -269,6 +269,7 @@ export default function HomePage() {
                             imageAlt: productAlt,
                             inStock: isInStock,
                           }}
+                          className="h-full"
                           to={`/products/${product.id}`}
                           overlays={{
                             topRight: (
