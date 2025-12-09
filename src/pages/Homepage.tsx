@@ -330,7 +330,7 @@ export default function HomePage() {
               Learn More
             </Button>
           </div>
-          <div className="relative">
+          {/* <div className="relative">
             <img
               src="/placeholder.svg?height=400&width=500"
               alt="About Gentleman Jones"
@@ -338,12 +338,12 @@ export default function HomePage() {
               height={400}
               className="w-full h-auto object-cover rounded-lg"
             />
-          </div>
+          </div> */}
         </div>
       </section>
 
       {/* Testimonials Section */}
-      <section className="bg-gradient-to-r from-amber-50 to-amber-100 py-16 px-4">
+      {/* <section className="bg-gradient-to-r from-amber-50 to-amber-100 py-16 px-4">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
@@ -380,11 +380,11 @@ export default function HomePage() {
             ].map((testimonial, index) => (
               <div key={index} className="bg-white p-6 rounded-lg shadow-sm">
                 <div className="flex items-center mb-4">
-                  {/* {[...Array(testimonial.rating)].map((_, i) => (
+                  {[...Array(testimonial.rating)].map((_, i) => (
                     <span key={i} className="text-amber-400 text-lg">
                       ★
                     </span>
-                  ))} */}
+                  ))}
                   {Array.from({ length: testimonial.rating }).map((_, i) => (
                     <span key={i} className="text-amber-400 text-lg">
                       ★
@@ -404,10 +404,10 @@ export default function HomePage() {
             ))}
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Newsletter Section */}
-      <section className="bg-black py-16 px-4">
+      {/* <section className="bg-black py-16 px-4">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl font-bold text-white mb-4">Stay in Style</h2>
           <p className="text-gray-300 mb-8">
@@ -428,7 +428,7 @@ export default function HomePage() {
             We respect your privacy. Unsubscribe at any time.
           </p>
         </div>
-      </section>
+      </section> */}
       <Footer />
     </div>
   );

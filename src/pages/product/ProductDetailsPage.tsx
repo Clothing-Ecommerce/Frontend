@@ -1026,12 +1026,12 @@ export default function ProductDetailsPage() {
                   <Share2 className="h-5 w-5" />
                 </Button>
               </div>
-              <Button
+              {/* <Button
                 variant="outline"
                 className="w-full h-12 text-lg bg-transparent"
               >
                 Buy Now
-              </Button>
+              </Button> */}
             </div>
             {/* Features */}
             <div className="grid grid-cols-3 gap-4 py-6 border-t border-b">
@@ -1271,10 +1271,10 @@ export default function ProductDetailsPage() {
         onFilesChange={handleEditFilesChange}
         onRemoveFile={handleRemoveEditFile}
         mode="edit"
-        title="Chỉnh sửa đánh giá"
-        description="Cập nhật nội dung đánh giá của bạn."
-        submitButtonLabel="Lưu thay đổi"
-        cancelButtonLabel="Hủy"
+        title="Edit Review"
+        description="Update your review content."
+        submitButtonLabel="Save changes"
+        cancelButtonLabel="Cancel"
         existingMediaPreviews={(editExistingMedia ?? []).map((media) => ({
           id: media.id,
           type: media.type,

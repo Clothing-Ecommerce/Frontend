@@ -158,14 +158,14 @@ export default function RegisterPage() {
         <div className="bg-white rounded-lg shadow-lg p-8 transform transition-all duration-300 hover:scale-[1.01]">
           {/* Logo */}
           <div className="text-center mb-8">
-            <div className="flex items-center justify-center gap-2 mb-4">
+            {/* <div className="flex items-center justify-center gap-2 mb-4">
               <div className="w-10 h-10 bg-amber-600 rounded-full flex items-center justify-center">
                 <span className="text-white font-bold text-xl">G</span>
               </div>
               <span className="text-xl font-bold text-gray-800">
                 GENTLEMAN JONES
               </span>
-            </div>
+            </div> */}
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
               Create Account
             </h1>
@@ -410,7 +410,7 @@ export default function RegisterPage() {
           </form>
 
           {/* Divider */}
-          <div className="mt-6">
+          {/* <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-300" />
@@ -421,10 +421,10 @@ export default function RegisterPage() {
                 </span>
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Social Registration */}
-          <div className="mt-6 grid grid-cols-2 gap-3">
+          {/* <div className="mt-6 grid grid-cols-2 gap-3">
             <Button
               type="button"
               variant="outline"
@@ -464,7 +464,7 @@ export default function RegisterPage() {
               </svg>
               Facebook
             </Button>
-          </div>
+          </div> */}
 
           {/* Sign In Link */}
           <div className="mt-6 text-center">

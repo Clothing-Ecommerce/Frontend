@@ -172,7 +172,7 @@ export const ReviewsSection = ({
                 Based on {totalReviews} reviews from real customers.
               </p>
             </div>
-            <div className="lg:w-2/4 space-y-3">
+            <div className="lg:w-4/4 space-y-3">
               {ratingFilters.map((rating) => {
                 const count = ratingCounts[rating] ?? 0;
                 const percent = totalReviews
@@ -196,7 +196,7 @@ export const ReviewsSection = ({
                 );
               })}
             </div>
-            <div className="lg:w-1/4">
+            {/* <div className="lg:w-1/4">
               <div className="rounded-2xl bg-blue-50 p-6 text-center">
                 <h4 className="text-base font-semibold text-blue-700">
                   Share your experience
@@ -208,7 +208,7 @@ export const ReviewsSection = ({
                   Write a review
                 </Button>
               </div>
-            </div>
+            </div> */}
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">

@@ -133,16 +133,16 @@ export default function LoginPage() {
         <div className="bg-white rounded-lg shadow-lg p-8">
           {/* Logo */}
           <div className="text-center mb-8">
-            <div className="flex items-center justify-center gap-2 mb-4">
+            {/* <div className="flex items-center justify-center gap-2 mb-4">
               <div className="w-10 h-10 bg-amber-600 rounded-full flex items-center justify-center">
                 <span className="text-white font-bold text-xl">G</span>
               </div>
               <span className="text-xl font-bold text-gray-800">
                 GENTLEMAN JONES
               </span>
-            </div>
+            </div> */}
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              Welcome Back
+              Welcome to Fashion Store
             </h1>
             <p className="text-gray-600">Sign in to your account to continue</p>
           </div>
@@ -212,7 +212,7 @@ export default function LoginPage() {
               )}
             </div>
 
-            <div className="flex items-center justify-between">
+            {/* <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Checkbox
                   id="rememberMe"
@@ -234,7 +234,7 @@ export default function LoginPage() {
               >
                 Forgot password?
               </Link>
-            </div>
+            </div> */}
 
             <Button
               type="submit"
@@ -253,7 +253,7 @@ export default function LoginPage() {
           </form>
 
           {/* Divider */}
-          <div className="mt-6">
+          {/* <div className="mt-6">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-300" />
@@ -262,10 +262,10 @@ export default function LoginPage() {
                 <span className="px-2 bg-white text-gray-500">Or continue with</span>
               </div>
             </div>
-          </div>
+          </div> */}
 
           {/* Social Login */}
-          <div className="mt-6 grid grid-cols-2 gap-3">
+          {/* <div className="mt-6 grid grid-cols-2 gap-3">
             <Button
               type="button"
               variant="outline"
@@ -305,7 +305,7 @@ export default function LoginPage() {
               </svg>
               Facebook
             </Button>
-          </div>
+          </div> */}
 
           {/* Sign Up Link */}
           <div className="mt-6 text-center">
