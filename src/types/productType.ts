@@ -145,6 +145,11 @@ export interface ProductCard {
   inStock: boolean;
 }
 
+export interface BestSellingProduct extends ProductCard {
+  unitsSold: number;
+  revenue: number;
+}
+
 export interface ProductListResponse {
   products: ProductCard[];
   total: number;
