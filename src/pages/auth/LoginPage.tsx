@@ -79,7 +79,7 @@ export default function LoginPage() {
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
 
-      toast.success("Login successful!", "Welcome back to Gentleman Jones");
+      toast.success("Login successful!", "Welcome back to Fashion Store");
 
       setTimeout(() => {
         navigate("/");
@@ -138,7 +138,7 @@ export default function LoginPage() {
                 <span className="text-white font-bold text-xl">G</span>
               </div>
               <span className="text-xl font-bold text-gray-800">
-                GENTLEMAN JONES
+                FASHION STORE
               </span>
             </div> */}
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
