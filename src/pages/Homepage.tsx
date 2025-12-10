@@ -309,10 +309,10 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
             <h2 className="text-3xl font-bold text-gray-900 mb-6">
-              About Gentleman Jones
+              About Fashion Store
             </h2>
             <p className="text-gray-600 mb-4">
-              For over a decade, Gentleman Jones has been the premier
+              For over a decade, Fashion Store has been the premier
               destination for sophisticated men's fashion. We curate the finest
               collection of clothing, accessories, and lifestyle products that
               embody timeless elegance and modern style.
@@ -330,105 +330,8 @@ export default function HomePage() {
               Learn More
             </Button>
           </div>
-          {/* <div className="relative">
-            <img
-              src="/placeholder.svg?height=400&width=500"
-              alt="About Gentleman Jones"
-              width={500}
-              height={400}
-              className="w-full h-auto object-cover rounded-lg"
-            />
-          </div> */}
         </div>
       </section>
-
-      {/* Testimonials Section */}
-      {/* <section className="bg-gradient-to-r from-amber-50 to-amber-100 py-16 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              What Our Customers Say
-            </h2>
-            <p className="text-gray-600">
-              Trusted by thousands of satisfied customers
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              {
-                name: "Michael Chen",
-                role: "Business Executive",
-                content:
-                  "Exceptional quality and service. The blazer I purchased fits perfectly and the attention to detail is remarkable.",
-                rating: 5,
-              },
-              {
-                name: "David Rodriguez",
-                role: "Entrepreneur",
-                content:
-                  "Gentleman Jones has become my go-to for professional attire. Their style advice is invaluable.",
-                rating: 5,
-              },
-              {
-                name: "James Wilson",
-                role: "Creative Director",
-                content:
-                  "From casual to formal, they have everything I need. The quality is consistently outstanding.",
-                rating: 5,
-              },
-            ].map((testimonial, index) => (
-              <div key={index} className="bg-white p-6 rounded-lg shadow-sm">
-                <div className="flex items-center mb-4">
-                  {[...Array(testimonial.rating)].map((_, i) => (
-                    <span key={i} className="text-amber-400 text-lg">
-                      ★
-                    </span>
-                  ))}
-                  {Array.from({ length: testimonial.rating }).map((_, i) => (
-                    <span key={i} className="text-amber-400 text-lg">
-                      ★
-                    </span>
-                  ))}
-                </div>
-                <p className="text-gray-600 mb-4 italic">
-                  "{testimonial.content}"
-                </p>
-                <div>
-                  <p className="font-semibold text-gray-900">
-                    {testimonial.name}
-                  </p>
-                  <p className="text-sm text-gray-500">{testimonial.role}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section> */}
-
-      {/* Newsletter Section */}
-      {/* <section className="bg-black py-16 px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">Stay in Style</h2>
-          <p className="text-gray-300 mb-8">
-            Subscribe to our newsletter and be the first to know about new
-            arrivals, exclusive offers, and style tips.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-            <Input
-              type="email"
-              placeholder="Enter your email address"
-              className="flex-1 bg-white border-white"
-            />
-            <Button className="bg-amber-600 text-white hover:bg-amber-700 px-8">
-              Subscribe
-            </Button>
-          </div>
-          <p className="text-gray-400 text-sm mt-4">
-            We respect your privacy. Unsubscribe at any time.
-          </p>
-        </div>
-      </section> */}
       <Footer />
     </div>
   );
