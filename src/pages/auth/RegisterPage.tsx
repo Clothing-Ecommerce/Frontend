@@ -163,7 +163,7 @@ export default function RegisterPage() {
                 <span className="text-white font-bold text-xl">G</span>
               </div>
               <span className="text-xl font-bold text-gray-800">
-                GENTLEMAN JONES
+                FASHION STORE
               </span>
             </div> */}
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
