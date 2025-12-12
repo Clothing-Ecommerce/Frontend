@@ -183,7 +183,7 @@ export default function Header({
 
   const managementPath = useMemo(() => {
     const role = typeof user?.role === "string" ? user.role.toLowerCase() : "";
-    if (role === "admin") return "/admin/dashboard";
+    if (role === "admin") return "/admin/reports";
     if (role === "staff") return "/staff/dashboard";
     return null;
   }, [user?.role]);

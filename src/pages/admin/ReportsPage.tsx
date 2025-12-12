@@ -202,7 +202,7 @@ export default function ReportsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900">Reports &amp; Analytics</h2>
+          <h2 className="text-2xl font-bold tracking-tight text-slate-900">Dashboard</h2>
           <p className="text-sm text-slate-500">Overview of business performance, inventory, and customers.</p>
         </div>
         <div className="flex items-center gap-2">
@@ -217,9 +217,9 @@ export default function ReportsPage() {
               <SelectItem value="this_month">This month</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" className="gap-2" disabled>
+          {/* <Button variant="outline" className="gap-2" disabled>
             Export report
-          </Button>
+          </Button> */}
         </div>
       </div>
 
@@ -538,7 +538,7 @@ export default function ReportsPage() {
           <div className="grid gap-4 md:grid-cols-5">
             <Card className="col-span-2">
               <CardHeader>
-                <CardTitle>VIP customers</CardTitle>
+                <CardTitle>TOP customers</CardTitle>
                 <CardDescription>Top spenders in the period</CardDescription>
               </CardHeader>
               <CardContent>

@@ -67,9 +67,9 @@ import { ToastContainer } from "@/components/ui/toast"
 import { useToast } from "@/hooks/useToast"
 
 const statusLabel: Record<AdminProductStockStatus, string> = {
-  "in-stock": "Còn hàng",
-  "low-stock": "Sắp hết",
-  "out-of-stock": "Hết hàng",
+  "in-stock": "In stock",
+  "low-stock": "Low stock",
+  "out-of-stock": "Out of stock",
 }
 
 const PAGE_SIZE = 12
@@ -285,12 +285,12 @@ export default function ProductsPage() {
   const renderStatus = (status: AdminProductStockStatus) => {
     const baseClass = "border-[#ead7b9]"
     if (status === "in-stock") {
-      return <Badge className={cn(baseClass, "bg-green-100 text-green-700 hover:bg-green-200")}>Còn hàng</Badge>
+      return <Badge className={cn(baseClass, "bg-green-100 text-green-700 hover:bg-green-200")}>In stock</Badge>
     }
     if (status === "low-stock") {
-      return <Badge className={cn(baseClass, "bg-yellow-100 text-yellow-700 hover:bg-yellow-200")}>Sắp hết</Badge>
+      return <Badge className={cn(baseClass, "bg-yellow-100 text-yellow-700 hover:bg-yellow-200")}>Low stock</Badge>
     }
-    return <Badge className={cn(baseClass, "bg-red-100 text-red-700 hover:bg-red-200")}>Hết hàng</Badge>
+    return <Badge className={cn(baseClass, "bg-red-100 text-red-700 hover:bg-red-200")}>Out of stock</Badge>
   }
 
   const totalProducts = pagination?.totalItems ?? 0
@@ -378,7 +378,7 @@ export default function ProductsPage() {
     api
       .delete(`/admin/products/${deleteTarget.id}`)
       .then(() => {
-        toast.success("Xoá sản phẩm thành công", deleteTarget.name)
+        toast.success("Product deleted successfully.", deleteTarget.name)
         setDeleteTarget(null)
         setRefreshKey((prev) => prev + 1)
       })
@@ -388,7 +388,7 @@ export default function ProductsPage() {
           axios.isAxiosError(deleteError) && deleteError.response?.data?.message
             ? deleteError.response.data.message
             : "Không thể xoá sản phẩm"
-        toast.error("Xoá sản phẩm thất bại", message)
+        toast.error("Delete failed product", message)
       })
       .finally(() => {
         setIsDeleting(false)
@@ -458,7 +458,7 @@ export default function ProductsPage() {
     api
       .patch(`/admin/products/${editProduct.id}`, payload)
       .then(() => {
-        toast.success("Cập nhật sản phẩm thành công", name)
+        toast.success("Product update successful", name)
         setIsEditOpen(false)
         resetEditState()
         setRefreshKey((prev) => prev + 1)

@@ -166,7 +166,7 @@ export default function WishlistPage() {
         ) : !hasItems ? (
           <div className="bg-white border border-amber-100 rounded-2xl shadow-sm p-10 text-center">
             <Package className="w-12 h-12 text-amber-400 mx-auto mb-4" />
-            <h2 className="text-2xl font-semibold text-gray-900">Wishlist trống</h2>
+            <h2 className="text-2xl font-semibold text-gray-900">Empty Wishlist </h2>
             <p className="text-gray-600 max-w-xl mx-auto">
               You have not added any products to your wishlist. Explore our store and save the products you want to follow.
             </p>

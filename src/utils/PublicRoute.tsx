@@ -13,7 +13,7 @@ const PublicRoute: React.FC = () => {
   if (isAuthenticated && user) {
     // Điều hướng về dashboard tương ứng
     if (user.role === "ADMIN") {
-      return <Navigate to="/admin/dashboard" replace />;
+      return <Navigate to="/admin/reports" replace />;
     }
     if (user.role === "STAFF") {
       return <Navigate to="/staff/dashboard" replace />;

@@ -19,18 +19,18 @@ import { cn } from "@/lib/utils"
 import { useMemo } from "react"
 
 const navItems = [
-  { label: "Dashboard", to: "/admin/dashboard", icon: LayoutDashboard },
+  // { label: "Dashboard", to: "/admin/dashboard", icon: LayoutDashboard },
+  { label: "Dashboard", to: "/admin/reports", icon: BarChart3 },
   { label: "Orders", to: "/admin/orders", icon: ShoppingBag },
   { label: "Products", to: "/admin/products", icon: PackageSearch },
   { label: "Categories", to: "/admin/categories", icon: Layers },
   // { label: "Inventory & Shipping (remove)", to: "/admin/inventory", icon: Warehouse },
   // { label: "Customers", to: "/admin/customers", icon: Users },
-  { label: "Reports & Analytics", to: "/admin/reports", icon: BarChart3 },
   { label: "Users", to: "/admin/users", icon: ShieldCheck },
   // { label: "Settings", to: "/admin/settings", icon: Settings },
   // { label: "Support (Refactor)", to: "/admin/support", icon: LifeBuoy },
   // { label: "Promotions", to: "/admin/marketing", icon: Megaphone },
-  { label: "Audit Log", to: "/admin/audit", icon: History },
+  // { label: "Audit Log", to: "/admin/audit", icon: History },
 ] as const
 
 export default function AdminLayout() {
@@ -44,7 +44,7 @@ export default function AdminLayout() {
 
   const adminProfile = {
     name: "Administrator",
-    email: "admin@hypercommerce.vn",
+    email: "admin@gmail.com",
     phone: "+84 912 345 678",
   }
 

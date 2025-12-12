@@ -85,7 +85,7 @@ function App() {
         {/* === ADMIN ROUTES (Chỉ dành riêng cho Admin) === */}
         <Route element={<PrivateRoute allowedRoles={["ADMIN"]} />}>
           <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route index element={<Navigate to="reports" replace />} />
             <Route path="dashboard" element={<AdminDashboardPage />} />
             <Route path="orders" element={<AdminOrdersPage />} />
             <Route path="products" element={<AdminProductsPage />} />

@@ -210,7 +210,7 @@ export default function StaffProductsPage() {
             <div className="relative">
               <Search className="absolute left-3 top-2.5 h-4 w-4 text-[#c87d2f]" />
               <Input 
-                placeholder="Search by product name, SKU..." 
+                placeholder="Search by product name..." 
                 className="pl-9 border-[#ead7b9] bg-[#fdfbf7] focus-visible:ring-[#c87d2f]"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}

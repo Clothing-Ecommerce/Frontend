@@ -71,16 +71,17 @@ import type { AdminUser, AdminUserResponse, AdminUserRole, AdminUserStatus } fro
 const ROLE_TO_PAYLOAD: Record<AdminUserRole, string> = {
   Admin: "admin",
   Staff: "staff",
-  Customer: "customer",
+  // Customer: "customer",
 }
 
 const PAYLOAD_TO_ROLE: Record<string, AdminUserRole> = {
   admin: "Admin",
   staff: "Staff",
-  customer: "Customer",
+  // customer: "Customer",
 }
 
-const ROLES: AdminUserRole[] = ["Admin", "Staff", "Customer"]
+// const ROLES: AdminUserRole[] = ["Admin", "Staff", "Customer"]
+const ROLES: AdminUserRole[] = ["Admin", "Staff"]
 
 const mapApiUser = (user: AdminUserResponse): AdminUser => ({
   id: user.id,

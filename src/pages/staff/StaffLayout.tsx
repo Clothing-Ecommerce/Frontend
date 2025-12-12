@@ -88,12 +88,12 @@ function formatDateTime(iso: string) {
 const navItems: Array<{ key: StaffSectionKey; label: string; icon: React.ElementType; to: string }> = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, to: "/staff/dashboard" },
   { key: "orders", label: "Orders", icon: ClipboardList, to: "/staff/orders" },
-  { key: "inventory", label: "Inventory (admin)", icon: Boxes, to: "/staff/inventory" },
+  // { key: "inventory", label: "Inventory (admin)", icon: Boxes, to: "/staff/inventory" },
   { key: "products", label: "Products", icon: Tag, to: "/staff/products" },
-  { key: "customers", label: "Customers (unused)", icon: Users, to: "/staff/customers" },
-  { key: "support", label: "Support (unused)", icon: LifeBuoy, to: "/staff/support" },
-  { key: "reports", label: "Reports (unused)", icon: BarChart3, to: "/staff/reports" },
-  { key: "profile", label: "Profile", icon: UserCog, to: "/staff/profile" },
+  // { key: "customers", label: "Customers (unused)", icon: Users, to: "/staff/customers" },
+  // { key: "support", label: "Support (unused)", icon: LifeBuoy, to: "/staff/support" },
+  // { key: "reports", label: "Reports (unused)", icon: BarChart3, to: "/staff/reports" },
+  // { key: "profile", label: "Profile", icon: UserCog, to: "/staff/profile" },
 ]
 
 export default function StaffLayout() {

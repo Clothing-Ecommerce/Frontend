@@ -286,7 +286,8 @@ export interface AdminOrderStatusUpdateResponse {
   changed: boolean
 }
 
-export type AdminUserRole = "Admin" | "Staff" | "Customer";
+// export type AdminUserRole = "Admin" | "Staff" | "Customer";
+export type AdminUserRole = "Admin" | "Staff";
 
 export type AdminUserStatus = "active" | "suspended";
 

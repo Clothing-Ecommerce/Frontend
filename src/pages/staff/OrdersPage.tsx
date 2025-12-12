@@ -382,7 +382,7 @@ export default function StaffOrdersPage() {
               <Input
                 value={orderSearchTerm}
                 onChange={(event) => setOrderSearchTerm(event.target.value)}
-                placeholder="Search by Order Code, Customer Name, Phone Number..."
+                placeholder="Search by Order Code, Customer Name..."
                 className="h-10 rounded-xl border-[#ead7b9] bg-[#fdfbf7] pl-9 text-sm focus-visible:ring-[#c87d2f]"
               />
             </div>
@@ -390,13 +390,13 @@ export default function StaffOrdersPage() {
               <span>
                 Displaying <strong>{filteredOrders.length}</strong> orders
               </span>
-              <Button
+              {/* <Button
                 variant="ghost"
                 size="sm"
                 className="h-6 gap-1 hover:text-[#c87d2f]"
               >
                 <Filter className="h-3 w-3" /> Advanced filter
-              </Button>
+              </Button> */}
             </div>
           </CardHeader>
 
@@ -512,7 +512,7 @@ export default function StaffOrdersPage() {
                       </Badge>
                       {selectedOrderReturnRequested && (
                         <Badge variant="destructive" className="animate-pulse">
-                          Refund request
+                          Cancel request
                         </Badge>
                       )}
                     </div>

@@ -580,7 +580,7 @@ export default function OrdersPage() {
             </ol>
           </div>
 
-          <div className="space-y-2">
+          {/* <div className="space-y-2">
             <h4 className="text-sm font-semibold text-slate-800">Notes</h4>
             <div className="space-y-2 text-xs text-slate-600">
               {notes.length === 0 ? (
@@ -595,21 +595,21 @@ export default function OrdersPage() {
                 ))
               )}
             </div>
-          </div>
+          </div> */}
         </div>
 
         <div className="space-y-3">
           <Button type="button" className="w-full gap-2" onClick={() => onUpdateStatus(effectiveStatus)}>
             <Package className="h-4 w-4" /> Update order
           </Button>
-          <div className="flex flex-wrap gap-2">
+          {/* <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" className="flex-1">
               Track shipment
             </Button>
             <Button type="button" variant="outline" className="flex-1">
               Export invoice
             </Button>
-          </div>
+          </div> */}
         </div>
       </div>
     )

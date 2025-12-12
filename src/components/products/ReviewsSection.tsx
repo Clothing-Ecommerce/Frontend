@@ -223,7 +223,7 @@ export const ReviewsSection = ({
                 Be the first to share your thoughts about this product.
               </p>
             </div>
-            <Button type="button">Write a review now</Button>
+            {/* <Button type="button">Write a review now</Button> */}
           </div>
         )}
       </div>

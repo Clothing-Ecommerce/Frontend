@@ -22,7 +22,7 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ allowedRoles }) => {
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     // Điều hướng thông minh dựa trên Role thực tế
     if (user.role === "ADMIN") {
-      return <Navigate to="/admin/dashboard" replace />;
+      return <Navigate to="/admin/reports" replace />;
     }
     if (user.role === "STAFF") {
       return <Navigate to="/staff/dashboard" replace />;
