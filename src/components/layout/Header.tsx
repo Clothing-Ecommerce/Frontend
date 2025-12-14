@@ -385,10 +385,7 @@ export default function Header({
                         {suggest.products.slice(0, 6).map((p) => (
                           <li key={`p-${p.id}`}>
                             <Link
-                              // Tuỳ routing chi tiết SP; fallback dùng search
-                              to={`/products/all?search=${encodeURIComponent(
-                                p.name
-                              )}`}
+                              to={`/products/${p.id}`}
                               className="flex items-center gap-2 px-2 py-2 rounded hover:bg-amber-50"
                               onClick={() => setShowSuggest(false)}
                             >

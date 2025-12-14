@@ -38,6 +38,10 @@ function readInitialCategories(sp: URLSearchParams): string[] {
   return single && single !== "all" ? [single] : [];
 }
 
+function readInitialSearch(sp: URLSearchParams): string {
+  return (sp.get("search") ?? "").trim();
+}
+
 export default function ProductsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
@@ -54,10 +58,14 @@ export default function ProductsPage() {
     readInitialCategories(searchParams)
   );
 
+  const [searchQuery, setSearchQuery] = useState(() =>
+    readInitialSearch(searchParams)
+  );
+
   const isAllCategories = selectedCategories.length === 0;
 
   // ========== Others ==========
-  const [searchQuery, setSearchQuery] = useState("");
+  // const [searchQuery, setSearchQuery] = useState("");
   const [selectedBrand, setSelectedBrand] = useState<string>("all");
   const [priceRange, setPriceRange] = useState([0, 500]);
   const [sortBy, setSortBy] = useState("featured");
@@ -93,6 +101,7 @@ export default function ProductsPage() {
   const clearCategories = () => {
     setSelectedCategories([]);
     const p = new URLSearchParams(searchParams);
+    p.delete("search");
     p.delete("category");
     p.delete("categories");
     setSearchParams(p, { replace: true });
@@ -173,8 +182,14 @@ const handleToggleWishlist = useCallback(
     ) {
       setSelectedCategories(next);
     }
+
+    const nextSearch = readInitialSearch(searchParams);
+    if (nextSearch !== searchQuery) {
+      setSearchQuery(nextSearch);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+  
 
   useEffect(() => {
     if (!isAuthenticated) {
