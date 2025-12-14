@@ -42,6 +42,11 @@ function readInitialSearch(sp: URLSearchParams): string {
   return (sp.get("search") ?? "").trim();
 }
 
+function readInitialBrand(sp: URLSearchParams): string {
+  const brand = sp.get("brand");
+  return brand && brand !== "all" ? brand : "all";
+}
+
 export default function ProductsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
@@ -62,11 +67,15 @@ export default function ProductsPage() {
     readInitialSearch(searchParams)
   );
 
+  const [selectedBrand, setSelectedBrand] = useState<string>(() =>
+    readInitialBrand(searchParams)
+  );
+
   const isAllCategories = selectedCategories.length === 0;
 
   // ========== Others ==========
   // const [searchQuery, setSearchQuery] = useState("");
-  const [selectedBrand, setSelectedBrand] = useState<string>("all");
+  // const [selectedBrand, setSelectedBrand] = useState<string>("all");
   const [priceRange, setPriceRange] = useState([0, 500]);
   const [sortBy, setSortBy] = useState("featured");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -104,6 +113,7 @@ export default function ProductsPage() {
     p.delete("search");
     p.delete("category");
     p.delete("categories");
+    p.delete("brand");
     setSearchParams(p, { replace: true });
   };
 
@@ -187,6 +197,11 @@ const handleToggleWishlist = useCallback(
     if (nextSearch !== searchQuery) {
       setSearchQuery(nextSearch);
     }
+
+    const nextBrand = readInitialBrand(searchParams);
+    if (nextBrand !== selectedBrand) {
+      setSelectedBrand(nextBrand);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
   
@@ -215,6 +230,17 @@ const handleToggleWishlist = useCallback(
       isCancelled = true;
     };
   }, [isAuthenticated]);
+
+  const updateBrandParam = (brand: string) => {
+    setSelectedBrand(brand);
+    const p = new URLSearchParams(searchParams);
+    if (!brand || brand === "all") {
+      p.delete("brand");
+    } else {
+      p.set("brand", brand);
+    }
+    setSearchParams(p, { replace: true });
+  };
 
   // Fetch brands
   useEffect(() => {
@@ -410,18 +436,18 @@ const handleToggleWishlist = useCallback(
               {/* Brand Filter */}
               <div className="mb-6">
                 <Label
-                  htmlFor="brand"
-                  className="text-sm font-medium text-gray-700 mb-2 block"
-                >
-                  Brand
-                </Label>
-                <Select
-                  onValueChange={(val) => setSelectedBrand(val)}
+                htmlFor="brand"
+                className="text-sm font-medium text-gray-700 mb-2 block"
+              >
+                Brand
+              </Label>
+              <Select
+                  onValueChange={(val) => updateBrandParam(val)}
                   value={selectedBrand ?? "all"}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select brand" />
-                  </SelectTrigger>
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select brand" />
+                </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Brands</SelectItem>
                     {brands

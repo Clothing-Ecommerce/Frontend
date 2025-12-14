@@ -186,26 +186,31 @@ export default function HomePage() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-6">
               {brands.map((brand) => (
-                <div
+                <Link
                   key={brand.id}
-                  className="group rounded-lg border border-gray-100 bg-gray-50 p-4 transition hover:-translate-y-1 hover:shadow-md"
+                  to={`/products?brand=${encodeURIComponent(brand.id)}`}
+                  className="block"
                 >
-                  <div className="flex h-24 items-center justify-center bg-white rounded-md overflow-hidden">
-                    {brand.logoUrl ? (
-                      <img
-                        src={brand.logoUrl}
-                        alt={brand.name}
-                        className="h-16 w-full object-contain transition duration-300 group-hover:scale-105"
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-amber-50 text-amber-700 font-semibold">
-                        {brand.name.charAt(0)}
-                      </div>
-                    )}
+                  <div className="group rounded-lg border border-gray-100 bg-gray-50 p-4 transition hover:-translate-y-1 hover:shadow-md">
+                    <div className="flex h-24 items-center justify-center bg-white rounded-md overflow-hidden">
+                      {brand.logoUrl ? (
+                        <img
+                          src={brand.logoUrl}
+                          alt={brand.name}
+                          className="h-16 w-full object-contain transition duration-300 group-hover:scale-105"
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center bg-amber-50 text-amber-700 font-semibold">
+                          {brand.name.charAt(0)}
+                        </div>
+                      )}
+                    </div>
+                    <p className="mt-3 text-center text-sm font-semibold text-gray-800">
+                      {brand.name}
+                    </p>
                   </div>
-                  <p className="mt-3 text-center text-sm font-semibold text-gray-800">{brand.name}</p>
-                </div>
+                </Link>
               ))}
             </div>
           )}
