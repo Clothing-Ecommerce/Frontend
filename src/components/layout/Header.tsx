@@ -476,7 +476,7 @@ export default function Header({
                 HOME
               </Link>
             </li>
-            <li>
+            {/* <li>
               <Link to="/products/new" className="hover:text-gray-900 py-4">
                 NEW ARRIVALS
               </Link>
@@ -488,7 +488,7 @@ export default function Header({
               >
                 SALE
               </Link>
-            </li>
+            </li> */}
 
             {/* MEN */}
             <li className="relative group">
