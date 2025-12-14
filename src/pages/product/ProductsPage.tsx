@@ -496,7 +496,7 @@ const handleToggleWishlist = useCallback(
               </div>
 
               {/* Special Filters */}
-              <div className="mb-6">
+              {/* <div className="mb-6">
                 <h4 className="text-sm font-medium text-gray-700 mb-3">
                   Special
                 </h4>
@@ -550,7 +550,7 @@ const handleToggleWishlist = useCallback(
                     </Label>
                   </div>
                 </div>
-              </div>
+              </div> */}
             </div>
           </div>
 
