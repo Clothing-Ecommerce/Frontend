@@ -520,6 +520,20 @@ export default function ProductDetailsPage() {
     return exists ? base : [userReview, ...base];
   }, [product, userReview]);
 
+  const reviewStats = useMemo(() => {
+    const reviews = product?.reviews ?? [];
+    const total = reviews.length;
+    const average =
+      total > 0
+        ? reviews.reduce((sum, review) => sum + review.rating, 0) / total
+        : 0;
+
+    return {
+      total,
+      average,
+    };
+  }, [product?.reviews]);
+
   const currentUserId = (() => {
     if (typeof user?.id === "number") return user.id;
     if (typeof user?.id === "string") {
@@ -882,14 +896,16 @@ export default function ProductDetailsPage() {
                     <Star
                       key={i}
                       className={`h-5 w-5 ${
-                        i < Math.floor(0)
+                        i < Math.round(reviewStats.average)
                           ? "text-yellow-400 fill-current"
                           : "text-gray-300"
                       }`}
                     />
                   ))}
                 </div>
-                <span className="text-sm text-gray-600 ml-2">0 reviews</span>
+                <span className="text-sm text-gray-600 ml-2">
+                  {reviewStats.average.toFixed(1)} ({reviewStats.total} reviews)
+                </span>
               </div>
               <div className="flex items-center space-x-4 mb-6">
                 <span className="text-3xl font-bold text-gray-900">
