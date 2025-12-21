@@ -5,7 +5,7 @@ import { AlertTriangle, ArrowDownRight, ArrowUpRight, DollarSign, Package, Shopp
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+// import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -127,6 +127,14 @@ const COLORS = ["#0f172a", "#334155", "#64748b", "#94a3b8"]
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(value)
+
+const formatCompactNumber = (value: number) => {
+  const absValue = Math.abs(value)
+  if (absValue >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)}B`
+  if (absValue >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`
+  if (absValue >= 1_000) return `${(value / 1_000).toFixed(1)}K`
+  return value.toString()
+}
 
 const formatGrowth = (growth: number | null) => {
   if (growth === null) return { label: "No change", trend: "neutral" as const }
@@ -282,11 +290,21 @@ export default function ReportsPage() {
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                       <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
                       <YAxis
+                        yAxisId="revenue"
                         stroke="#64748b"
                         fontSize={12}
                         tickLine={false}
                         axisLine={false}
-                        tickFormatter={(value) => `${Math.round((value as number) / 1_000_000)}M`}
+                        tickFormatter={(value) => formatCompactNumber(value as number)}
+                      />
+                      <YAxis
+                        yAxisId="orders"
+                        orientation="right"
+                        stroke="#f59e0b"
+                        fontSize={12}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(value) => formatCompactNumber(value as number)}
                       />
                       <Tooltip
                         contentStyle={{ backgroundColor: "#fff", borderRadius: "8px", border: "1px solid #e2e8f0" }}
@@ -295,8 +313,23 @@ export default function ReportsPage() {
                           name === "revenue" ? "Revenue" : "Orders",
                         ]}
                       />
-                      <Line type="monotone" dataKey="revenue" stroke="#0f172a" strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
-                      <Line type="monotone" dataKey="orders" stroke="#f59e0b" strokeWidth={2} dot={false} />
+                      <Line
+                        type="monotone"
+                        dataKey="revenue"
+                        yAxisId="revenue"
+                        stroke="#0f172a"
+                        strokeWidth={2}
+                        dot={false}
+                        activeDot={{ r: 5 }}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="orders"
+                        yAxisId="orders"
+                        stroke="#f59e0b"
+                        strokeWidth={2}
+                        dot={false}
+                      />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
