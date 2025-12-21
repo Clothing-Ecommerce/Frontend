@@ -62,6 +62,7 @@ import type {
   AdminCreateProductRequest,
   AdminCreateProductResponse,
   AdminProductDetail,
+  AdminProductDetailVariant,
 } from "@/types/adminType"
 import { ToastContainer } from "@/components/ui/toast"
 import { useToast } from "@/hooks/useToast"
@@ -197,6 +198,7 @@ export default function ProductsPage() {
   const [editError, setEditError] = useState<string | null>(null)
   const [isEditLoading, setIsEditLoading] = useState(false)
   const [isSavingEdit, setIsSavingEdit] = useState(false)
+  const [editVariants, setEditVariants] = useState<AdminProductDetailVariant[]>([])
   const [editForm, setEditForm] = useState({
     name: "",
     slug: "",
@@ -357,6 +359,7 @@ export default function ProductsPage() {
           brandId: product.brand?.id ? String(product.brand.id) : "",
           description: product.description ?? "",
         })
+        setEditVariants(product.variants ?? [])
       })
       .catch((fetchError) => {
         if (axios.isCancel(fetchError)) return
@@ -413,6 +416,7 @@ export default function ProductsPage() {
       brandId: "",
       description: "",
     })
+    setEditVariants([])
   }
 
   const handleEditSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -434,6 +438,13 @@ export default function ProductsPage() {
     if (!Number.isFinite(categoryId) || categoryId <= 0) {
       return setEditError("Danh mục không hợp lệ")
     }
+    const hasInvalidStock = editVariants.some(
+      (variant) =>
+        !Number.isFinite(Number(variant.stock)) || Number(variant.stock) < 0,
+    )
+    if (hasInvalidStock) {
+      return setEditError("Tồn kho phải lớn hơn hoặc bằng 0")
+    }
 
     const payload = {
       name,
@@ -449,6 +460,15 @@ export default function ProductsPage() {
         alt: image.alt,
         isPrimary: image.isPrimary,
         sortOrder: image.sortOrder,
+      })),
+      variants: editVariants.map((variant) => ({
+        id: variant.id,
+        sku: variant.sku,
+        price: variant.price,
+        stock: Number.isFinite(Number(variant.stock)) ? Number(variant.stock) : 0,
+        sizeId: variant.sizeId,
+        colorId: variant.colorId,
+        isActive: variant.isActive,
       })),
     }
 
@@ -1311,6 +1331,50 @@ export default function ProductsPage() {
                     placeholder="Short description..."
                     className="min-h-[120px] border-[#ead7b9] focus-visible:ring-[#c87d2f]"
                   />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-[#1f1b16]">Variants</p>
+                <div className="space-y-2">
+                  {editVariants.length === 0 && (
+                    <p className="text-sm text-[#6c6252]">No variants yet.</p>
+                  )}
+                  {editVariants.map((variant) => (
+                    <div
+                      key={variant.id}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#ead7b9] bg-white px-3 py-2 text-sm text-[#4a4337]"
+                    >
+                      <div className="space-y-1">
+                        <p className="font-medium text-[#1f1b16]">SKU: {variant.sku ?? "—"}</p>
+                        <p className="text-xs text-[#6c6252]">
+                          Color: {variant.colorName ?? "None"} | Size: {variant.sizeName ?? "None"}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor={`edit-variant-stock-${variant.id}`} className="text-xs">
+                          Stock
+                        </Label>
+                        <Input
+                          id={`edit-variant-stock-${variant.id}`}
+                          type="number"
+                          min={0}
+                          value={variant.stock}
+                          onChange={(e) => {
+                            const nextValue = Number(e.target.value)
+                            setEditVariants((prev) =>
+                              prev.map((item) =>
+                                item.id === variant.id
+                                  ? { ...item, stock: nextValue }
+                                  : item,
+                              ),
+                            )
+                          }}
+                          className="h-9 w-[110px] border-[#ead7b9] text-right focus-visible:ring-[#c87d2f]"
+                        />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
