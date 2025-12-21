@@ -125,6 +125,14 @@ const COLORS = ["#0f172a", "#334155", "#64748b", "#94a3b8"]
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 }).format(value)
 
+const formatCompactNumber = (value: number) => {
+  const absValue = Math.abs(value)
+  if (absValue >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(1)}B`
+  if (absValue >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`
+  if (absValue >= 1_000) return `${(value / 1_000).toFixed(1)}K`
+  return value.toString()
+}
+
 const formatGrowth = (growth: number | null) => {
   if (growth === null) return { label: "No change", trend: "neutral" as const }
   const percent = (growth * 100).toFixed(1)
@@ -262,8 +270,8 @@ function TabsContentLayout({
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-4">
           <CardHeader>
-            <CardTitle>Revenue Chart</CardTitle>
-            <CardDescription>Revenue and number of orders by time period</CardDescription>
+            <CardTitle>Revenue chart</CardTitle>
+            <CardDescription>Revenue and order volume over time</CardDescription>
           </CardHeader>
           <CardContent className="pl-2">
             <div className="h-[300px] w-full">
@@ -272,11 +280,22 @@ function TabsContentLayout({
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                   <XAxis dataKey="name" stroke="#64748b" fontSize={12} tickLine={false} axisLine={false} />
                   <YAxis
+                    yAxisId="revenue"
                     stroke="#64748b"
                     fontSize={12}
                     tickLine={false}
                     axisLine={false}
-                    tickFormatter={(value) => `${Math.round((value as number) / 1_000_000)}M`}
+                    tickFormatter={(value) => formatCompactNumber(value as number)}
+                  />
+                  <YAxis
+                    yAxisId="orders"
+                    orientation="right"
+                    stroke="#f59e0b"
+                    fontSize={12}
+                    allowDecimals={false}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => Math.round(value as number).toString()}
                   />
                   <Tooltip
                     contentStyle={{ backgroundColor: "#fff", borderRadius: "8px", border: "1px solid #e2e8f0" }}
@@ -285,8 +304,16 @@ function TabsContentLayout({
                       name === "revenue" ? "Revenue" : "Orders",
                     ]}
                   />
-                  <Line type="monotone" dataKey="revenue" stroke="#0f172a" strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
-                  <Line type="monotone" dataKey="orders" stroke="#f59e0b" strokeWidth={2} dot={false} />
+                  <Line
+                    type="monotone"
+                    dataKey="revenue"
+                    yAxisId="revenue"
+                    stroke="#0f172a"
+                    strokeWidth={2}
+                    dot={false}
+                    activeDot={{ r: 5 }}
+                  />
+                  <Line type="monotone" dataKey="orders" yAxisId="orders" stroke="#f59e0b" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
