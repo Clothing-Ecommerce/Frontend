@@ -302,9 +302,10 @@ export default function ReportsPage() {
                         orientation="right"
                         stroke="#f59e0b"
                         fontSize={12}
+                        allowDecimals={false}
                         tickLine={false}
                         axisLine={false}
-                        tickFormatter={(value) => formatCompactNumber(value as number)}
+                        tickFormatter={(value) => Math.round(value as number).toString()}
                       />
                       <Tooltip
                         contentStyle={{ backgroundColor: "#fff", borderRadius: "8px", border: "1px solid #e2e8f0" }}
